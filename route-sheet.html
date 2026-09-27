@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Route sheet</title>
+<!--
+  INTERNAL, STAFF-ONLY. Not customer-facing, unlike report.html/review.html next to it.
+
+  This page carries a customer's gate code, alarm code, and key location -- the exact
+  data job-report/submit-review are forbidden from ever returning. The `t=` token in the
+  URL is the only credential and it is a 48-hour bearer credential for that data. Treat a
+  generated link the way START-HERE.md #4 says to treat a Make webhook URL: never paste
+  it into chat, a doc, or a commit. It is meant to be opened once, printed, and left in
+  a browser history that isn't yours to search.
+
+  Host next to report.html / review.html / booking-widget.html. Link as:
+      https://<your-host>/route-sheet.html?t=<token>&lang=en
+      https://<your-host>/route-sheet.html?t=<token>&lang=es
+  Two separate printouts, not one bilingual page -- the app opens this URL twice, once
+  per language, per the "print twice" requirement.
+
+  Static for the same platform reason as report.html: Supabase rewrites text/html on the
+  default functions domain to text/plain. See supabase/functions/route-sheet/index.ts.
+-->
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #fff; color: #111; margin: 0; padding: 18px; line-height: 1.45; max-width: 720px; margin: 0 auto;
+  }
+  header { border-bottom: 3px solid #111; padding-bottom: 10px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; }
+  .org-name { font-size: 22px; font-weight: 800; margin: 0; }
+  .org-phone { font-size: 13px; color: #444; margin: 2px 0 0; }
+  .crew { font-size: 14px; font-weight: 700; text-align: right; }
+  h1 { font-size: 19px; margin: 0 0 2px; }
+  .meta { font-size: 14px; color: #333; margin: 0 0 14px; }
+  section { margin: 0 0 14px; border: 1px solid #ccc; border-radius: 6px; padding: 10px 12px; }
+  section h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; margin: 0 0 6px; color: #555; }
+  section p { margin: 2px 0; font-size: 15px; }
+  .row { display: flex; gap: 6px; }
+  .row .k { font-weight: 700; min-width: 120px; }
+  .do { border-color: #16a34a; }
+  .dont { border-color: #dc2626; }
+  .do h2 { color: #166534; }
+  .dont h2 { color: #991b1b; }
+  .empty { color: #888; font-style: italic; }
+  footer { margin-top: 18px; padding-top: 12px; border-top: 1px solid #ccc; text-align: center; font-size: 13px; color: #444; }
+  .lang-toggle { text-align: center; margin-bottom: 10px; font-size: 12px; }
+  .lang-toggle a { color: #444; text-decoration: underline; margin: 0 6px; }
+  @media print {
+    .lang-toggle, .noprint { display: none; }
+    body { padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="lang-toggle noprint" id="langToggle"></div>
+<div id="app">Loading…</div>
+<script>
+const STR = {
+  en: {
+    title: 'Route sheet', access: 'Access instructions', entry: 'Entry method', gate: 'Gate code',
+    alarm: 'Alarm code', alarmNotes: 'Alarm notes', key: 'Key location', parking: 'Parking', pets: 'Pets',
+    accessNotes: 'Access notes', doTitle: 'Do', dontTitle: "Don't", other: 'Other information', none: 'None on file',
+    footer: 'If you’re happy with our work, a Google review really helps our small business.',
+    reviewLink: 'Leave a review', crewLabel: 'Crew', loadError: 'This link is invalid or has expired. Ask your manager for a new one.',
+    printBtn: 'Print', switchLang: 'Ver en español',
+  },
+  es: {
+    title: 'Hoja de ruta', access: 'Instrucciones de acceso', entry: 'Método de entrada', gate: 'Código de la reja',
+    alarm: 'Código de alarma', alarmNotes: 'Notas de alarma', key: 'Ubicación de la llave', parking: 'Estacionamiento', pets: 'Mascotas',
+    accessNotes: 'Notas de acceso', doTitle: 'Hacer', dontTitle: 'No hacer', other: 'Otra información', none: 'Ninguno registrado',
+    footer: 'Si está satisfecho con nuestro trabajo, una reseña en Google realmente ayuda a nuestro pequeño negocio.',
+    reviewLink: 'Dejar una reseña', crewLabel: 'Equipo', loadError: 'Este enlace no es válido o ha expirado. Pida uno nuevo a su gerente.',
+    printBtn: 'Imprimir', switchLang: 'View in English',
+  },
+};
+
+var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+function qs(name) { return new URL(location.href).searchParams.get(name); }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function field(k, v) { return v ? `<p class="row"><span class="k">${esc(k)}:</span> <span>${esc(v)}</span></p>` : ''; }
+
+async function main() {
+  const token = qs('t');
+  const lang = qs('lang') === 'es' ? 'es' : 'en';
+  const t = STR[lang];
+  document.documentElement.lang = lang;
+  document.title = t.title;
+
+  const other = lang === 'es' ? 'en' : 'es';
+  document.getElementById('langToggle').innerHTML =
+    `<a href="?t=${encodeURIComponent(token || '')}&lang=${other}">${t.switchLang}</a> · <a href="#" onclick="window.print();return false;">${t.printBtn}</a>`;
+
+  const app = document.getElementById('app');
+  if (!token) { app.textContent = t.loadError; return; }
+
+  let data;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/route-sheet?t=${encodeURIComponent(token)}`);
+    if (!res.ok) throw new Error('bad status');
+    data = await res.json();
+    if (data.error) throw new Error(data.error);
+  } catch (e) {
+    app.textContent = t.loadError;
+    return;
+  }
+
+  const accessRows = [
+    field(t.entry, data.customer.entry_method),
+    field(t.gate, data.customer.gate_code),
+    field(t.alarm, data.customer.alarm_code),
+    field(t.alarmNotes, data.customer.alarm_notes),
+    field(t.key, data.customer.key_location),
+    field(t.parking, data.customer.parking_notes),
+    field(t.pets, data.customer.pets),
+    field(t.accessNotes, data.customer.access_notes),
+  ].join('');
+
+  app.innerHTML = `
+    <header>
+      <div>
+        <p class="org-name">${esc(data.org.name)}</p>
+        ${data.org.phone ? `<p class="org-phone">${esc(data.org.phone)}</p>` : ''}
+      </div>
+      ${data.crew.length ? `<div class="crew">${t.crewLabel}: ${esc(data.crew.join(', '))}</div>` : ''}
+    </header>
+    <h1>${esc(data.customer.full_name)}</h1>
+    <p class="meta">${esc(data.customer.address)} &middot; ${esc(data.job.scheduled_date)} ${esc(data.job.start_time || '')} &middot; ${esc(data.job.service_label || '')}</p>
+    <section>
+      <h2>${t.access}</h2>
+      ${accessRows || `<p class="empty">${t.none}</p>`}
+    </section>
+    <section class="do">
+      <h2>${t.doTitle}</h2>
+      <p>${data.customer.do_notes ? esc(data.customer.do_notes) : `<span class="empty">${t.none}</span>`}</p>
+    </section>
+    <section class="dont">
+      <h2>${t.dontTitle}</h2>
+      <p>${data.customer.dont_notes ? esc(data.customer.dont_notes) : `<span class="empty">${t.none}</span>`}</p>
+    </section>
+    <section>
+      <h2>${t.other}</h2>
+      <p>${data.customer.other_notes ? esc(data.customer.other_notes) : `<span class="empty">${t.none}</span>`}</p>
+    </section>
+    <footer>
+      <p>${t.footer}</p>
+      ${data.org.google_review_url ? `<p><a href="${esc(data.org.google_review_url)}">${t.reviewLink}</a></p>` : ''}
+    </footer>
+  `;
+}
+main();
+</script>
+</body>
+</html>

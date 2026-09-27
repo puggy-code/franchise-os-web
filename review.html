@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<title>Rate your cleaning</title>
+<!--
+  Customer-facing review form.
+
+  Host this next to report.html and booking-widget.html and link to it as:
+      https://<your-host>/review.html?t=<token>
+
+  It talks to the submit-review edge function over JSON. The page is static on
+  purpose: Supabase rewrites text/html from the default functions domain to
+  text/plain (anti-phishing), so the function cannot serve the form itself.
+  See supabase/functions/submit-review/index.ts.
+
+  The token in the URL is the only credential. Nothing here needs a Supabase key.
+-->
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #f6f5fb; color: #15121f; margin: 0; padding: 24px 16px 48px; line-height: 1.5;
+  }
+  .card { background: #fff; border-radius: 18px; padding: 24px; max-width: 480px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p { color: #6b6880; margin: 0 0 16px; }
+  .stars { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 6px; margin: 4px 0 18px; }
+  .stars input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .stars label { font-size: 40px; line-height: 1; cursor: pointer; color: #d1d5db; transition: color .12s; }
+  .stars input:checked ~ label,
+  .stars label:hover,
+  .stars label:hover ~ label { color: #f59e0b; }
+  /* Visible keyboard focus — the whole form is one required choice. */
+  .stars input:focus-visible + label { outline: 2px solid #7c3aed; outline-offset: 3px; border-radius: 4px; }
+  textarea, input[type=text] {
+    width: 100%; border: 1px solid #e6e3f0; border-radius: 12px;
+    padding: 12px; font-size: 16px; font-family: inherit; color: #15121f; background: #fff;
+  }
+  textarea { min-height: 90px; resize: vertical; }
+  input[type=text] { margin-top: 10px; }
+  button {
+    display: block; width: 100%; background: #7c3aed; color: #fff; border: 0;
+    border-radius: 12px; padding: 14px; font-size: 17px; font-weight: 700; margin-top: 12px; cursor: pointer;
+  }
+  button[disabled] { opacity: .5; cursor: default; }
+  .btn {
+    display: block; width: 100%; background: #7c3aed; color: #fff; text-decoration: none;
+    border-radius: 12px; padding: 14px; font-size: 17px; font-weight: 700; margin-top: 12px; text-align: center;
+  }
+  .err { color: #dc2626; font-weight: 700; margin-top: 10px; }
+  .prev { background: #f6f5fb; border-radius: 12px; padding: 12px; font-size: 14px; color: #6b6880; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="card" id="root"><p>Loading…</p></div>
+
+<script>
+  // ---- configure this once, to match your Supabase project ----------------
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  // ------------------------------------------------------------------------
+
+  var FN = SUPABASE_URL + '/functions/v1/submit-review';
+  var root = document.getElementById('root');
+  var token = (new URLSearchParams(location.search).get('t') || '').trim();
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function expired() {
+    root.innerHTML =
+      '<h1>Link expired</h1>' +
+      '<p>This review link is no longer valid.</p>';
+  }
+
+  function thanks(googleUrl) {
+    root.innerHTML =
+      '<h1>Thank you!</h1>' +
+      '<p>We appreciate your feedback.</p>' +
+      (googleUrl
+        ? '<p>Would you share that on Google? It helps our local team a lot.</p>' +
+          '<a class="btn" href="' + esc(googleUrl) + '">Leave a Google review</a>'
+        : '');
+  }
+
+  function form(d) {
+    var prev = d.existing
+      ? '<div class="prev">You rated this ' + d.existing.rating + ' of 5. Changing it below replaces your earlier rating.</div>'
+      : '';
+
+    // Reversed order so the CSS sibling selector can light up the stars to the left.
+    var stars = [5, 4, 3, 2, 1].map(function (n) {
+      var checked = d.existing && d.existing.rating === n ? ' checked' : '';
+      return '<input type="radio" id="s' + n + '" name="rating" value="' + n + '"' + checked +
+             '><label for="s' + n + '" title="' + n + '">★</label>';
+    }).join('');
+
+    root.innerHTML =
+      '<h1>How did we do?</h1>' +
+      '<p>Rate your ' + esc(d.org.name) + ' cleaning.</p>' +
+      prev +
+      '<form id="f"><div class="stars">' + stars + '</div>' +
+      '<textarea name="comment" placeholder="Anything we should know?">' +
+      esc(d.existing && d.existing.comment) + '</textarea>' +
+      '<input type="text" name="reviewer_name" placeholder="Your name (optional)" value="' +
+      esc(d.existing && d.existing.reviewer_name) + '">' +
+      '<button type="submit" id="go">Send</button>' +
+      '<div class="err" id="err" hidden></div></form>';
+
+    var f = document.getElementById('f');
+    var go = document.getElementById('go');
+    var err = document.getElementById('err');
+
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var picked = f.querySelector('input[name=rating]:checked');
+      if (!picked) {
+        err.hidden = false;
+        err.textContent = 'Please choose a star rating.';
+        return;
+      }
+      err.hidden = true;
+      go.disabled = true;
+      go.textContent = 'Sending…';
+
+      fetch(FN, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          t: token,
+          rating: Number(picked.value),
+          comment: f.comment.value,
+          reviewer_name: f.reviewer_name.value
+        })
+      })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (res) { thanks(res.google_review_url); })
+        .catch(function () {
+          go.disabled = false;
+          go.textContent = 'Send';
+          err.hidden = false;
+          err.textContent = 'That did not send. Please try again.';
+        });
+    });
+  }
+
+  if (!/^[0-9a-f]{32}$/.test(token)) {
+    expired();
+  } else {
+    fetch(FN + '?t=' + encodeURIComponent(token))
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(form)
+      .catch(expired);
+  }
+</script>
+</body>
+</html>

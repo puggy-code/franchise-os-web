@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<title>Your clean report</title>
+<!--
+  Customer-facing clean report, in three stages:
+
+      1. RATE   — the report is withheld until the customer rates the clean.
+                  The gate is enforced by the job-report function, not here, so
+                  it cannot be skipped by opening devtools.
+      2. REPORT — room by room, photos, and a PDF they can keep.
+      3. REFER  — name a friend, get them a gift card, code printed on the PDF.
+
+  Host this next to review.html and booking-widget.html and link to it as:
+      https://<your-host>/report.html?t=<token>
+
+  The page is static on purpose: Supabase rewrites text/html from the default
+  functions domain to text/plain (anti-phishing), so an edge function cannot serve
+  it. See supabase/functions/job-report/index.ts.
+
+  The token in the URL is the only credential. Nothing here needs a Supabase key.
+-->
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #f6f5fb; color: #15121f; margin: 0; padding: 20px 16px 48px; line-height: 1.5;
+  }
+  .wrap { max-width: 620px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 18px; padding: 22px; margin: 0 0 16px; }
+  h1 { font-size: 25px; margin: 0 0 4px; letter-spacing: -.2px; }
+  h2 { font-size: 13px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .6px; color: #6b6880; }
+  h3 { font-size: 12px; margin: 22px 0 8px; text-transform: uppercase; letter-spacing: .6px; color: #7c3aed; }
+  h3:first-child { margin-top: 0; }
+  p { color: #6b6880; margin: 0 0 14px; }
+  .meta { margin: 0; font-size: 15px; }
+  .crew { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .who { background: #f6f5fb; border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 14px; }
+  .summary { display: flex; align-items: baseline; gap: 8px; }
+  .big { font-size: 34px; font-weight: 800; letter-spacing: -1px; }
+  .bar { height: 8px; border-radius: 999px; background: #e6e3f0; overflow: hidden; margin-top: 10px; }
+  .bar > i { display: block; height: 8px; background: #7c3aed; border-radius: 999px; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  li { display: flex; gap: 10px; padding: 7px 0; border-bottom: 1px solid #f1eff7; font-size: 16px; align-items: flex-start; }
+  li:last-child { border-bottom: 0; }
+  .tick { color: #16a34a; font-weight: 900; flex: none; width: 18px; }
+  .na { color: #b9b6c6; font-weight: 900; flex: none; width: 18px; }
+  .na-text { color: #9c99ab; }
+  .reason { display: block; color: #9c99ab; font-size: 13px; }
+  figure { margin: 0; }
+  figcaption { font-size: 12px; color: #9c99ab; margin-top: 4px; }
+  img { width: 100%; border-radius: 12px; display: block; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  @media (max-width: 460px) { .grid { grid-template-columns: 1fr 1fr; } }
+  .btn, button {
+    display: block; width: 100%; background: #7c3aed; color: #fff; text-decoration: none; border: 0;
+    border-radius: 12px; padding: 15px; font-size: 17px; font-weight: 700; text-align: center;
+    font-family: inherit; cursor: pointer;
+  }
+  button[disabled] { opacity: .5; cursor: default; }
+  .ghost { background: #f6f5fb; color: #5b21b6; }
+  .foot { text-align: center; color: #9c99ab; font-size: 13px; margin-top: 22px; }
+
+  /* Rating gate */
+  .stars { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 6px; margin: 4px 0 18px; }
+  .stars input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .stars label { font-size: 42px; line-height: 1; cursor: pointer; color: #d1d5db; transition: color .12s; }
+  .stars input:checked ~ label,
+  .stars label:hover,
+  .stars label:hover ~ label { color: #f59e0b; }
+  .stars input:focus-visible + label { outline: 2px solid #7c3aed; outline-offset: 3px; border-radius: 4px; }
+  .rated { color: #f59e0b; font-size: 20px; letter-spacing: 2px; }
+
+  /* Referral */
+  input[type=text], input[type=tel], input[type=email], textarea {
+    width: 100%; border: 1px solid #e6e3f0; border-radius: 12px; padding: 12px;
+    font-size: 16px; font-family: inherit; color: #15121f; background: #fff; margin-bottom: 10px;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .gift {
+    background: linear-gradient(135deg, #7c3aed, #5b21b6); color: #fff;
+    border-radius: 16px; padding: 20px; text-align: center;
+  }
+  .gift .amt { font-size: 40px; font-weight: 800; letter-spacing: -1px; }
+  .gift .code {
+    display: inline-block; background: rgba(255,255,255,.18); border-radius: 10px;
+    padding: 8px 18px; font-size: 22px; font-weight: 800; letter-spacing: 3px; margin-top: 10px;
+  }
+  .gift p { color: rgba(255,255,255,.85); margin: 6px 0 0; }
+  .err { color: #dc2626; font-weight: 700; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="root">
+  <div class="card"><p>Loading your report…</p></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js"></script>
+<script>
+  // ---- configure this once, to match your Supabase project ----------------
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  // ------------------------------------------------------------------------
+
+  var FN = SUPABASE_URL + '/functions/v1';
+  var root = document.getElementById('root');
+  var token = (new URLSearchParams(location.search).get('t') || '').trim();
+  var DATA = null;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function card(inner) { return '<div class="card">' + inner + '</div>'; }
+  function money(cents) { return '$' + Math.round((cents || 0) / 100); }
+
+  function expired() {
+    root.innerHTML = card('<h1>Link expired</h1><p>This report link is no longer valid.</p>');
+  }
+
+  function prettyDate(iso) {
+    if (!iso) return '';
+    var p = String(iso).split('-').map(Number);
+    if (!p[0]) return iso;
+    // Built in UTC so the date does not slide a day in the viewer's timezone.
+    return new Date(Date.UTC(p[0], p[1] - 1, p[2])).toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC'
+    });
+  }
+
+  // ---------------------------------------------------------------- stage 1
+  // The rating gate. The server withholds the report until a rating exists, so
+  // this screen is the only thing a customer can reach first.
+  function renderGate(d) {
+    var stars = [5, 4, 3, 2, 1].map(function (n) {
+      return '<input type="radio" id="s' + n + '" name="rating" value="' + n + '">' +
+             '<label for="s' + n + '" title="' + n + '">★</label>';
+    }).join('');
+
+    root.innerHTML = card(
+      '<h1>How did we do?</h1>' +
+      '<p>Rate your ' + esc(d.org.name) + ' cleaning to see the full report from ' +
+      esc(prettyDate(d.job.scheduled_date)) + ' — room by room, with photos.</p>' +
+      '<form id="f"><div class="stars">' + stars + '</div>' +
+      '<textarea name="comment" placeholder="Anything we should know?"></textarea>' +
+      '<input type="text" name="reviewer_name" placeholder="Your name (optional)">' +
+      '<button type="submit" id="go">See my report</button>' +
+      '<div class="err" id="err" hidden></div></form>'
+    );
+
+    var f = document.getElementById('f'), go = document.getElementById('go'), err = document.getElementById('err');
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var picked = f.querySelector('input[name=rating]:checked');
+      if (!picked) { err.hidden = false; err.textContent = 'Please choose a star rating.'; return; }
+      err.hidden = true; go.disabled = true; go.textContent = 'One moment…';
+
+      fetch(FN + '/submit-review', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          t: d.review_token, rating: Number(picked.value),
+          comment: f.comment.value, reviewer_name: f.reviewer_name.value
+        })
+      })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        // Re-fetch rather than assume: the report is built server-side and the
+        // gate has only just opened.
+        .then(load)
+        .catch(function () {
+          go.disabled = false; go.textContent = 'See my report';
+          err.hidden = false; err.textContent = 'That did not send. Please try again.';
+        });
+    });
+  }
+
+  // ---------------------------------------------------------------- stage 2
+  function photoBlock(label, items) {
+    if (!items || !items.length) return '';
+    return '<h3>' + esc(label) + '</h3><div class="grid">' + items.map(function (p) {
+      return '<figure><img src="' + esc(p.url) + '" alt="' + esc(label) + '">' +
+             (p.room ? '<figcaption>' + esc(p.room) + '</figcaption>' : '') + '</figure>';
+    }).join('') + '</div>';
+  }
+
+  function referralBlock(d) {
+    var amount = money(d.referral.gift_cents);
+
+    if (d.referral.made) {
+      return card(
+        '<div class="gift"><div class="amt">' + esc(amount) + '</div>' +
+        '<p>for ' + esc(d.referral.made.friend_name) + '</p>' +
+        '<div class="code">' + esc(d.referral.made.code) + '</div>' +
+        '<p>Share this code with them — it is on your PDF too.</p></div>'
+      );
+    }
+
+    return card(
+      '<h2>Give a friend ' + esc(amount) + '</h2>' +
+      '<p>Know a neighbour who could use us? Tell us who, and we will put ' + esc(amount) +
+      ' toward their first clean. You will get a code to pass along.</p>' +
+      '<form id="rf">' +
+      '<input type="text" name="friend_name" placeholder="Their name" required>' +
+      '<input type="tel" name="friend_phone" placeholder="Their phone number">' +
+      '<input type="email" name="friend_email" placeholder="Or their email">' +
+      '<button type="submit" id="rgo">Send the gift</button>' +
+      '<div class="err" id="rerr" hidden></div></form>' +
+      // Said plainly, because it is true and because it is what keeps this the
+      // right side of TCPA: we are not going to cold-text their neighbour.
+      '<p style="font-size:13px;margin-top:12px">We will not contact them out of the blue — ' +
+      'the code is yours to give them.</p>'
+    );
+  }
+
+  function wireReferral(d) {
+    var rf = document.getElementById('rf');
+    if (!rf) return;
+    var go = document.getElementById('rgo'), err = document.getElementById('rerr');
+
+    rf.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var name = rf.friend_name.value.trim();
+      var phone = rf.friend_phone.value.trim();
+      var email = rf.friend_email.value.trim();
+      if (!name) { err.hidden = false; err.textContent = 'Please add their name.'; return; }
+      if (!phone && !email) { err.hidden = false; err.textContent = 'Add a phone number or an email so we can reach them.'; return; }
+
+      err.hidden = true; go.disabled = true; go.textContent = 'Sending…';
+      fetch(FN + '/submit-referral', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ t: token, friend_name: name, friend_phone: phone, friend_email: email })
+      })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (res) {
+          // Patch in place so the page does not reload and lose their scroll.
+          DATA.referral.made = res.referral;
+          render(DATA);
+          document.querySelector('.gift').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        })
+        .catch(function () {
+          go.disabled = false; go.textContent = 'Send the gift';
+          err.hidden = false; err.textContent = 'That did not send. Please try again.';
+        });
+    });
+  }
+
+  function render(d) {
+    DATA = d;
+    var pct = d.tasks.total ? Math.round((d.tasks.completed / d.tasks.total) * 100) : 0;
+
+    var head = card(
+      '<h1>' + esc(d.job.service_label || 'Your cleaning') + '</h1>' +
+      '<p class="meta">' + esc(prettyDate(d.job.scheduled_date)) + '</p>' +
+      (d.rating ? '<p class="rated">' + '★'.repeat(d.rating) + '</p>' : '') +
+      (d.crew.length
+        ? '<div class="crew">' + d.crew.map(function (n) { return '<span class="who">' + esc(n) + '</span>'; }).join('') + '</div>'
+        : '')
+    );
+
+    var summary = card(
+      '<h2>What we did</h2>' +
+      '<div class="summary"><span class="big">' + d.tasks.completed + '</span>' +
+      '<span>of ' + d.tasks.total + ' tasks completed</span></div>' +
+      '<div class="bar"><i style="width:' + pct + '%"></i></div>'
+    );
+
+    var list = d.tasks.rooms.length
+      ? d.tasks.rooms.map(function (r) {
+          return '<h3>' + esc(r.room) + '</h3><ul>' + r.tasks.map(function (t) {
+            return t.done
+              ? '<li><span class="tick">&#10003;</span><span>' + esc(t.label) + '</span></li>'
+              : '<li><span class="na">&mdash;</span><span class="na-text">' + esc(t.label) +
+                (t.reason ? '<span class="reason">Not applicable &mdash; ' + esc(t.reason) + '</span>' : '') +
+                '</span></li>';
+          }).join('') + '</ul>';
+        }).join('')
+      : '<p>No task list was recorded for this visit.</p>';
+
+    var photos = (d.photos.before.length || d.photos.after.length)
+      ? card('<h2>Photos</h2>' + photoBlock('Before', d.photos.before) + photoBlock('After', d.photos.after))
+      : '';
+
+    var pdf = card(
+      '<h2>Keep a copy</h2>' +
+      '<p>A one-page PDF with everything above, including your gift code.</p>' +
+      '<button class="ghost" id="pdf">Download PDF</button>'
+    );
+
+    root.innerHTML = head + summary + card(list) + photos + referralBlock(d) + pdf +
+      '<p class="foot">' + esc(d.org.name) + '</p>';
+
+    document.title = d.org.name + ' — your clean report';
+    wireReferral(d);
+    document.getElementById('pdf').addEventListener('click', function () { buildPdf(d, this); });
+  }
+
+  // ---------------------------------------------------------------- the PDF
+  /**
+   * Photos are fetched and inlined as data URLs. A photo that will not load is
+   * skipped rather than failing the whole document — a signed URL can expire, and
+   * a report without one picture still beats no report.
+   */
+  function asDataUrl(url) {
+    return fetch(url)
+      .then(function (r) { return r.ok ? r.blob() : Promise.reject(r.status); })
+      .then(function (b) {
+        return new Promise(function (resolve, reject) {
+          var fr = new FileReader();
+          fr.onload = function () { resolve(fr.result); };
+          fr.onerror = reject;
+          fr.readAsDataURL(b);
+        });
+      })
+      .catch(function () { return null; });
+  }
+
+  function buildPdf(d, btn) {
+    if (!window.jspdf) { alert('Could not build the PDF. Please try again.'); return; }
+    var label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Building…';
+
+    var shots = d.photos.before.concat(d.photos.after);
+    Promise.all(shots.map(function (p) { return asDataUrl(p.url); })).then(function (datas) {
+      var imgs = {};
+      shots.forEach(function (p, i) { if (datas[i]) imgs[p.url] = datas[i]; });
+
+      var doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'letter' });
+      var W = doc.internal.pageSize.getWidth();
+      var H = doc.internal.pageSize.getHeight();
+      var M = 48;
+      var y = M;
+
+      function room(forY) {
+        // Start a new page when the next block will not fit.
+        if (y + forY > H - M) { doc.addPage(); y = M; }
+      }
+      function rule() {
+        doc.setDrawColor(230, 227, 240);
+        doc.line(M, y, W - M, y);
+        y += 16;
+      }
+
+      // Header
+      doc.setTextColor(21, 18, 31);
+      doc.setFont('helvetica', 'bold').setFontSize(22);
+      doc.text(String(d.job.service_label || 'Your cleaning'), M, y);
+      y += 22;
+      doc.setFont('helvetica', 'normal').setFontSize(11).setTextColor(107, 104, 128);
+      doc.text(prettyDate(d.job.scheduled_date), M, y);
+      y += 14;
+      if (d.crew.length) { doc.text('Cleaned by ' + d.crew.join(', '), M, y); y += 14; }
+      if (d.rating) {
+        doc.setTextColor(245, 158, 11).setFont('helvetica', 'bold');
+        doc.text('★'.repeat(d.rating) + ' (' + d.rating + ' of 5)', M, y);
+        y += 16;
+      }
+      y += 4;
+      rule();
+
+      // Summary
+      doc.setTextColor(21, 18, 31).setFont('helvetica', 'bold').setFontSize(13);
+      doc.text(d.tasks.completed + ' of ' + d.tasks.total + ' tasks completed', M, y);
+      y += 22;
+
+      // Checklist, room by room
+      d.tasks.rooms.forEach(function (r) {
+        room(40);
+        doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(124, 58, 237);
+        doc.text(String(r.room).toUpperCase(), M, y);
+        y += 14;
+        doc.setFont('helvetica', 'normal').setFontSize(10);
+        r.tasks.forEach(function (t) {
+          room(16);
+          if (t.done) {
+            doc.setTextColor(22, 163, 74);
+            doc.text('v', M, y);
+            doc.setTextColor(21, 18, 31);
+            doc.text(String(t.label), M + 14, y);
+          } else {
+            doc.setTextColor(156, 153, 171);
+            doc.text('-', M, y);
+            doc.text(String(t.label) + (t.reason ? '  (not applicable: ' + t.reason + ')' : ''), M + 14, y);
+          }
+          y += 14;
+        });
+        y += 8;
+      });
+
+      // Photos, three across
+      function photoRow(title, list) {
+        var usable = list.filter(function (p) { return imgs[p.url]; });
+        if (!usable.length) return;
+        var gap = 12;
+        var w = (W - M * 2 - gap * 2) / 3;
+        var h = w * 0.75;
+        room(h + 40);
+        doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(124, 58, 237);
+        doc.text(title.toUpperCase(), M, y);
+        y += 12;
+        usable.slice(0, 3).forEach(function (p, i) {
+          var x = M + i * (w + gap);
+          try {
+            doc.addImage(imgs[p.url], 'JPEG', x, y, w, h);
+          } catch (e) { /* a corrupt image must not take the document down */ }
+          if (p.room) {
+            doc.setFont('helvetica', 'normal').setFontSize(8).setTextColor(156, 153, 171);
+            doc.text(String(p.room), x, y + h + 10);
+          }
+        });
+        y += h + 26;
+      }
+      photoRow('Before', d.photos.before);
+      photoRow('After', d.photos.after);
+
+      // Gift card
+      if (d.referral.made) {
+        room(110);
+        doc.setFillColor(124, 58, 237);
+        doc.roundedRect(M, y, W - M * 2, 96, 12, 12, 'F');
+        doc.setTextColor(255, 255, 255).setFont('helvetica', 'bold').setFontSize(26);
+        doc.text(money(d.referral.made.gift_cents), W / 2, y + 34, { align: 'center' });
+        doc.setFontSize(11).setFont('helvetica', 'normal');
+        doc.text('for ' + d.referral.made.friend_name, W / 2, y + 52, { align: 'center' });
+        doc.setFont('helvetica', 'bold').setFontSize(18);
+        doc.text(d.referral.made.code, W / 2, y + 78, { align: 'center' });
+        y += 112;
+      }
+
+      room(24);
+      doc.setFont('helvetica', 'normal').setFontSize(9).setTextColor(156, 153, 171);
+      doc.text(String(d.org.name), W / 2, H - 30, { align: 'center' });
+
+      doc.save('clean-report-' + (d.job.scheduled_date || 'report') + '.pdf');
+      btn.disabled = false;
+      btn.textContent = label;
+    });
+  }
+
+  // ---------------------------------------------------------------- bootstrap
+  function load() {
+    return fetch(FN + '/job-report?t=' + encodeURIComponent(token))
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (d) { (d.gated ? renderGate : render)(d); })
+      .catch(expired);
+  }
+
+  if (!/^[0-9a-f]{32}$/.test(token)) expired();
+  else load();
+</script>
+</body>
+</html>
