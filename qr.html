@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>QR code to print</title>
+<!--
+  Printable QR code for a marketing batch (2026-10-12; QR-ATTRIBUTION.md). Opened from the app: qr.html?u=<short link>&t=<label>&n=<how many per sheet>.
+  Draws the QR in the browser with qrcode-generator 1.4.4 from cdnjs (verified 200 on 2026-10-12). Nothing is sent anywhere.
+-->
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; margin: 0; padding: 16px; color: #15121f; }
+  .bar { display: flex; gap: 10px; align-items: center; margin: 0 0 16px; flex-wrap: wrap; }
+  button { background: #004aad; color: #fff; border: 0; border-radius: 10px; padding: 10px 16px; font-weight: 700; font-size: 15px; cursor: pointer; }
+  .sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .tile { border: 1px dashed #c9c5d8; border-radius: 12px; padding: 12px; text-align: center; break-inside: avoid; }
+  .tile svg { width: 100%; height: auto; display: block; }
+  .label { font-weight: 800; font-size: 15px; margin-top: 6px; }
+  .url { font-size: 11px; color: #6b6880; word-break: break-all; }
+  @media print { .bar { display: none; } body { padding: 0; } }
+</style>
+</head>
+<body>
+<div class="bar"><button onclick="window.print()">Print</button><span id="info"></span></div>
+<div class="sheet" id="sheet"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+  var p = new URLSearchParams(location.search);
+  var u = p.get('u') || '';
+  var label = p.get('t') || '';
+  var n = Math.max(1, Math.min(24, parseInt(p.get('n') || '1', 10) || 1));
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  if (!/^https:\/\//.test(u)) {
+    document.getElementById('sheet').innerHTML = '<p>Open this page from the app (Marketing batches > Print QR).</p>';
+  } else {
+    var qr = qrcode(0, 'M');
+    qr.addData(u);
+    qr.make();
+    var svg = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+    var html = '';
+    for (var i = 0; i < n; i++) html += '<div class="tile">' + svg + '<div class="label">' + esc(label) + '</div><div class="url">' + esc(u) + '</div></div>';
+    document.getElementById('sheet').innerHTML = html;
+    document.getElementById('info').textContent = n + ' on the sheet. Scan one with your phone to test before printing a batch.';
+  }
+</script>
+</body>
+</html>

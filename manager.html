@@ -1,0 +1,1301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Bookings · Two Hour Maids</title>
+<!--
+  MANAGER BOOKING APP (2026-10-18, MANAGER-PORTAL.md). A manager or hq_admin signs in with the app's phone + PIN and runs bookings:
+    Bookings   the next days, search, open one to move / change team / notes / cancel
+    Calendar   a week by time (9:00 / 11:40 / 2:40) with each team's bookings and what is still open; tap an open time to book it
+    Customers  search, a customer's details (edit), their bookings, book again
+    New        book a customer: phone lookup, service, size, how often, price, open time, team, notes
+  Everything goes through RLS as that person with the anon key (publishable by design). No service_role key, ever. Anyone else signed
+  in sees it read-only, without prices.
+
+  The rules are copies, kept in step by hand:
+    * prices: supabase/functions/_shared/housePrice.ts (= the booking page CONFIG and the text agent)
+    * time capacity: slot_board (0274/0275), the board the booking page and every booking path read; a clean over 2 h 25 min takes two
+      times in a row (_shared/slots.ts TWO_TIME_OVER_MIN)
+    * a team is free: 30 minutes of travel either side (_shared/reschedule.ts teamFreeAt)
+    * a new booking is written as ingest-booking writes one (customer matched by phone, job, special requests, booking.confirmed for
+      GoHighLevel, a repeat schedule only when organizations.recurring_from_bookings is on)
+    * cancel: src/lib/dispatch.ts cancelJob ($50 inside 48 hours, owed to the staff; prepaid refunds through refund-job; otherwise the
+      fee is queued as an outbox 'charge' when a card is on file)
+  The database refuses two jobs for one team at the same start (jobs_team_date_time_active_idx, 0276), and the sales tax trigger prices
+  tax from the zip on every insert and move.
+
+  ?demo=1 runs on fake data in this browser only (nothing is sent). ?demo=1&role=cleaner shows the read-only view.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --t-ink: #0B1A33; --t-ink-2: #3D4B63; --t-muted: #6B7790; --t-line: #E3E9F3; --t-soft: #F3F7FE;
+    --t-blue: #1F5EFF; --t-blue-ink: #1546C8; --t-blue-soft: #E9F0FF; --t-green: #0E8A5F; --t-green-soft: #E6F6EF;
+    --t-red: #E5484D; --t-red-soft: #FDECEC; --t-amber: #B76E00; --t-amber-soft: #FFF4E0;
+    --t-shadow: 0 1px 2px rgba(11,26,51,.06), 0 8px 24px -12px rgba(11,26,51,.18);
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--t-soft); }
+  body { font-family: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--t-ink);
+    -webkit-font-smoothing: antialiased; font-feature-settings: "tnum" 1, "lnum" 1; font-size: 15px; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: var(--t-blue); }
+  [hidden] { display: none !important; }
+  .wrap { max-width: 820px; margin: 0 auto; padding: 14px 16px 80px; }
+
+  .card { background: #fff; border: 1px solid var(--t-line); border-radius: 20px; box-shadow: var(--t-shadow); }
+  .pad { padding: 18px; margin-bottom: 12px; }
+  .pad > h2 { font-size: 17px; font-weight: 700; margin: 0 0 12px; display: flex; align-items: center; gap: 6px; }
+
+  /* sign in: the booking page's blue first panel */
+  .hero { background: linear-gradient(150deg, #1546C8 0%, #1F5EFF 55%, #4C86FF 100%); border-radius: 22px; padding: 26px 22px 22px;
+    box-shadow: 0 18px 40px -18px rgba(31,94,255,.65); color: #fff; max-width: 440px; margin: 8vh auto 0; }
+  .hero h1 { font-size: 26px; font-weight: 700; letter-spacing: -.4px; margin: 0 0 4px; }
+  .hero p { margin: 0 0 20px; color: rgba(255,255,255,.86); }
+  .hero label { display: block; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.92); margin-bottom: 12px; }
+  .hero input { display: block; width: 100%; margin-top: 6px; border: 0; border-radius: 14px; min-height: 56px; padding: 0 16px; font-size: 20px;
+    font-weight: 600; color: var(--t-ink); background: #fff; }
+  .hero input:focus { outline: none; box-shadow: 0 0 0 3px rgba(255,255,255,.55); }
+  .hero .go { width: 100%; margin-top: 6px; background: #fff; color: var(--t-blue-ink); border: 0; border-radius: 14px; min-height: 56px; font-size: 16px;
+    font-weight: 700; box-shadow: 0 8px 20px -10px rgba(11,26,51,.5); }
+  .hero .err { background: rgba(255,255,255,.16); color: #fff; border-radius: 12px; padding: 10px 12px; font-size: 14px; margin: 4px 0 10px; }
+
+  /* top bar + tabs */
+  .top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .brand { flex: 1; font-size: 13px; font-weight: 700; color: var(--t-muted); letter-spacing: .02em; }
+  .who { font-size: 13px; color: var(--t-muted); text-align: right; line-height: 1.3; }
+  .link { background: none; border: 0; color: var(--t-blue); font-weight: 600; padding: 8px 4px; min-height: 44px; }
+  .nav { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; }
+  .tabs { display: flex; flex: 1; background: #fff; border: 1px solid var(--t-line); border-radius: 16px; padding: 4px; gap: 4px; box-shadow: var(--t-shadow); }
+  .tab { flex: 1; border: 0; background: none; border-radius: 12px; min-height: 44px; font-weight: 600; color: var(--t-ink-2); text-decoration: none;
+    display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .tab.is-on { background: var(--t-blue-soft); color: var(--t-blue-ink); }
+  .newbtn { border: 0; background: var(--t-blue); color: #fff; border-radius: 16px; min-height: 54px; padding: 0 18px; font-weight: 700; font-size: 15px;
+    box-shadow: 0 8px 18px -10px rgba(31,94,255,.8); text-decoration: none; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .newbtn:hover { background: var(--t-blue-ink); }
+  @media (max-width: 520px) { .newbtn span { display: none; } .newbtn { padding: 0 16px; font-size: 22px; } .tab { font-size: 14px; } }
+  .ro { background: var(--t-amber-soft); color: var(--t-amber); border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+  .demo { background: var(--t-blue-soft); color: var(--t-blue-ink); border-radius: 12px; padding: 8px 12px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+
+  .tools { display: flex; gap: 8px; margin-bottom: 10px; }
+  .search { flex: 1; border: 1px solid var(--t-line); border-radius: 14px; min-height: 50px; padding: 0 14px; font-size: 16px; background: #fff; }
+  .search:focus, .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--t-blue); box-shadow: 0 0 0 3px rgba(31,94,255,.15); }
+  .iconbtn { border: 1px solid var(--t-line); background: #fff; color: var(--t-blue); border-radius: 14px; min-width: 50px; min-height: 50px; font-size: 18px; }
+  .seg { display: flex; gap: 6px; margin-bottom: 4px; flex-wrap: wrap; }
+  .seg button { border: 1.5px solid var(--t-line); background: #fff; border-radius: 999px; min-height: 40px; padding: 0 14px; font-weight: 600; font-size: 14px; color: var(--t-ink-2); }
+  .seg button.is-on { border-color: var(--t-blue); background: var(--t-blue-soft); color: var(--t-blue-ink); }
+
+  .day { font-size: 13px; font-weight: 700; color: var(--t-muted); text-transform: uppercase; letter-spacing: .05em; margin: 18px 4px 8px; }
+  .job { display: grid; grid-template-columns: 74px 1fr auto; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 14px 16px;
+    margin-bottom: 8px; border: 1px solid var(--t-line); border-radius: 18px; background: #fff; box-shadow: var(--t-shadow); min-height: 76px; }
+  .job:hover { border-color: #C9D6EE; }
+  .job.is-cancelled { opacity: .55; }
+  .slot { background: var(--t-blue-soft); color: var(--t-blue-ink); border-radius: 12px; padding: 8px 4px; text-align: center; font-weight: 700; font-size: 15px; }
+  .slot small { display: block; font-size: 11px; font-weight: 600; opacity: .8; }
+  .job .name { font-weight: 700; font-size: 16px; }
+  .job .sub { color: var(--t-muted); font-size: 13.5px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 46vw; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 3px 9px;
+    background: var(--t-soft); color: var(--t-ink-2); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+  .pill.warn { background: var(--t-amber-soft); color: var(--t-amber); }
+  .pill.bad { background: var(--t-red-soft); color: var(--t-red); }
+  .pill.ok { background: var(--t-green-soft); color: var(--t-green); }
+  .price { font-weight: 700; font-size: 16px; text-align: right; }
+  .price small { display: block; font-size: 12px; font-weight: 500; color: var(--t-muted); }
+  .empty { text-align: center; color: var(--t-muted); padding: 40px 16px; }
+  .h1 { font-size: 24px; font-weight: 700; letter-spacing: -.4px; margin: 6px 0 12px; display: flex; align-items: center; gap: 8px; }
+  .h1 .grow { flex: 1; }
+
+  /* calendar */
+  .weekbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .weekbar b { flex: 1; text-align: center; font-size: 17px; }
+  .calday { padding: 12px 14px; margin-bottom: 10px; }
+  .calday h3 { font-size: 15px; font-weight: 700; margin: 2px 0 8px; display: flex; justify-content: space-between; }
+  .calday h3 span { color: var(--t-muted); font-weight: 600; font-size: 13px; }
+  .calday.is-today { border-color: var(--t-blue); }
+  .calrow { display: grid; grid-template-columns: 70px 1fr auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--t-line); }
+  .calrow:first-of-type { border-top: 0; }
+  .caltime { font-weight: 700; font-size: 14px; color: var(--t-blue-ink); }
+  .calbooks { display: flex; flex-wrap: wrap; gap: 6px; }
+  .bchip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--t-line); background: #fff; border-radius: 10px; padding: 6px 10px;
+    font-size: 13.5px; font-weight: 600; min-height: 36px; }
+  .bchip:hover { border-color: #C9D6EE; }
+  .bchip.cont { opacity: .55; font-weight: 500; }
+  .open { border: 0; background: var(--t-green-soft); color: var(--t-green); border-radius: 10px; min-height: 36px; padding: 0 12px; font-weight: 700; font-size: 13px; white-space: nowrap; }
+  .open:disabled { cursor: default; }
+  .tag { font-size: 12.5px; font-weight: 600; color: var(--t-muted); white-space: nowrap; }
+  .tag.full { color: var(--t-red); }
+
+  /* customers */
+  .cust { display: block; width: 100%; text-align: left; padding: 14px 16px; margin-bottom: 8px; border: 1px solid var(--t-line); border-radius: 16px;
+    background: #fff; box-shadow: var(--t-shadow); }
+  .cust b { font-size: 16px; }
+  .cust div { color: var(--t-muted); font-size: 13.5px; margin-top: 2px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+  @media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } .grid2.keep { grid-template-columns: 1fr 1fr; } }
+
+  /* forms */
+  .field { display: block; font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  .field input, .field textarea, .field select { display: block; width: 100%; margin-top: 6px; border: 1px solid var(--t-line); border-radius: 12px;
+    min-height: 50px; padding: 12px 14px; font-size: 16px; background: #fff; }
+  .field textarea { min-height: 80px; resize: vertical; }
+  .field small { font-weight: 500; color: var(--t-muted); }
+  .found { background: var(--t-green-soft); color: var(--t-green); border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 600; margin: -2px 0 10px; }
+  .slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .opt { border: 1.5px solid var(--t-line); background: #fff; border-radius: 14px; min-height: 56px; padding: 8px 12px; font-weight: 700; font-size: 16px; }
+  .opt small { display: block; font-size: 11.5px; font-weight: 600; color: var(--t-muted); }
+  .opt.is-on { border-color: var(--t-blue); background: var(--t-blue-soft); color: var(--t-blue-ink); box-shadow: 0 0 0 3px rgba(31,94,255,.12); }
+  .opt:disabled { opacity: .45; cursor: not-allowed; }
+  .opt.full small { color: var(--t-red); }
+  .chips .opt { min-height: 48px; font-size: 15px; display: inline-flex; align-items: center; gap: 8px; }
+  .chips .opt small { display: inline; margin-left: 2px; }
+  .svc { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .svc .opt { text-align: left; }
+  @media (max-width: 520px) { .svc { grid-template-columns: 1fr; } }
+  .total { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 14px 0 2px; border-top: 1px solid var(--t-line); margin-top: 6px; }
+  .total b { font-size: 30px; font-weight: 700; letter-spacing: -.8px; }
+  .total span { color: var(--t-muted); font-size: 13px; }
+  .check { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; margin: 6px 0 10px; min-height: 40px; }
+  .check input { width: 20px; height: 20px; accent-color: var(--t-blue); }
+  .btn { width: 100%; border: 0; border-radius: 14px; min-height: 52px; font-size: 16px; font-weight: 700; margin-top: 10px; display: block; text-align: center;
+    text-decoration: none; line-height: 52px; padding: 0 12px; }
+  .btn.primary { background: var(--t-blue); color: #fff; box-shadow: 0 8px 18px -10px rgba(31,94,255,.8); }
+  .btn.primary:hover { background: var(--t-blue-ink); }
+  .btn.big { min-height: 60px; line-height: 60px; font-size: 17px; }
+  .btn.ghost { background: var(--t-soft); color: var(--t-blue-ink); }
+  .btn.danger { background: var(--t-red-soft); color: var(--t-red); }
+  .btn.danger.solid { background: var(--t-red); color: #fff; }
+  .btn:disabled { opacity: .5; cursor: progress; }
+  .msg { border-radius: 12px; padding: 10px 12px; font-size: 14px; margin-top: 10px; }
+  .msg.err { background: var(--t-red-soft); color: #A8282D; }
+  .msg.ok { background: var(--t-green-soft); color: var(--t-green); }
+  .msg.warn { background: var(--t-amber-soft); color: var(--t-amber); }
+  .done { text-align: center; padding: 28px 18px; }
+  .done .tick { width: 56px; height: 56px; border-radius: 50%; background: var(--t-green-soft); color: var(--t-green); font-size: 30px; line-height: 56px; margin: 0 auto 10px; }
+  .done h2 { margin: 0 0 6px; font-size: 22px; }
+  .done p { color: var(--t-ink-2); margin: 0 0 8px; }
+
+  /* the booking sheet */
+  .scrim { position: fixed; inset: 0; background: rgba(11,26,51,.42); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+  .sheet { background: #fff; width: 100%; max-width: 560px; max-height: 92vh; overflow: auto; border-radius: 22px 22px 0 0; padding: 18px 18px 28px; }
+  @media (min-width: 700px) { .scrim { align-items: center; } .sheet { border-radius: 22px; } }
+  .sheet-head { display: flex; align-items: flex-start; gap: 10px; }
+  .sheet-head h2 { font-size: 21px; font-weight: 700; letter-spacing: -.3px; margin: 0; flex: 1; }
+  .x { border: 0; background: var(--t-soft); width: 40px; height: 40px; border-radius: 12px; font-size: 20px; color: var(--t-ink-2); }
+  .facts { color: var(--t-ink-2); font-size: 14px; line-height: 1.5; margin: 6px 0 4px; }
+  .sec { border-top: 1px solid var(--t-line); margin-top: 16px; padding-top: 14px; }
+  .sec h3 { font-size: 15px; font-weight: 700; margin: 0 0 10px; display: flex; align-items: center; }
+  .req { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--t-line); border-radius: 12px; margin-bottom: 6px; }
+  .req span { flex: 1; font-size: 14.5px; }
+  .req.done span { color: var(--t-muted); text-decoration: line-through; }
+  .req button { border: 0; background: none; color: var(--t-red); font-weight: 700; font-size: 18px; width: 36px; height: 36px; border-radius: 10px; }
+  .addrow { display: flex; gap: 8px; }
+  .addrow input { flex: 1; border: 1px solid var(--t-line); border-radius: 12px; min-height: 48px; padding: 0 12px; font-size: 15px; }
+  .addrow button { border: 0; background: var(--t-blue); color: #fff; border-radius: 12px; min-width: 64px; font-weight: 700; }
+
+  /* (i) pop-ups, as on the booking page */
+  .info { position: relative; display: inline-block; vertical-align: middle; }
+  .info-btn { width: 18px; height: 18px; padding: 0; border-radius: 50%; border: 1.5px solid var(--t-muted); background: #fff; color: var(--t-muted);
+    font: italic 700 11px/1 Georgia, serif; margin-left: 4px; }
+  .info-pop { display: none; position: absolute; left: -8px; top: calc(100% + 8px); z-index: 30; width: 250px; background: var(--t-ink); color: #fff;
+    font-size: 12.5px; font-weight: 500; line-height: 1.5; border-radius: 12px; padding: 10px 12px; box-shadow: var(--t-shadow); text-transform: none; letter-spacing: 0; }
+  .info:hover .info-pop, .info:focus-within .info-pop, .info.is-open .info-pop { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- sign in -->
+  <form id="signin" class="hero" hidden novalidate>
+    <h1>Bookings</h1>
+    <p>Sign in with your app phone and PIN.</p>
+    <label>Phone<input id="si-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(612) 555-0100"></label>
+    <label>PIN<input id="si-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" placeholder="••••"></label>
+    <div id="si-err" class="err" hidden></div>
+    <button class="go" id="si-go" type="submit">Sign in</button>
+  </form>
+
+  <!-- the app -->
+  <div id="portal" hidden>
+    <div class="top">
+      <div class="brand">TWO HOUR MAIDS</div>
+      <div class="who" id="who"></div>
+      <button class="link" id="signout" type="button">Sign out</button>
+    </div>
+    <div class="nav">
+      <div class="tabs" role="tablist">
+        <a class="tab" href="#/bookings" data-tab="bookings">Bookings</a>
+        <a class="tab" href="#/calendar" data-tab="calendar">Calendar</a>
+        <a class="tab" href="#/customers" data-tab="customers">Customers</a>
+      </div>
+      <a class="newbtn" id="newbtn" href="#/new">+<span>New booking</span></a>
+    </div>
+    <div id="demo-note" class="demo" hidden>Demo data. Nothing is saved.</div>
+    <div id="ro-note" class="ro" hidden>View only</div>
+    <div id="view"></div>
+  </div>
+</div>
+
+<!-- booking sheet -->
+<div id="scrim" class="scrim" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="s-name">
+    <div class="sheet-head">
+      <h2 id="s-name"></h2>
+      <button class="x" id="s-close" type="button" aria-label="Close">&times;</button>
+    </div>
+    <div class="facts" id="s-facts"></div>
+    <div class="meta" id="s-meta"></div>
+
+    <div class="sec" id="sec-move">
+      <h3>Move<span class="info"><button type="button" class="info-btn" aria-label="About moving">i</button><span class="info-pop">A time is open while fewer teams are booked or held there than are working that day, the same board the booking page uses. The team stays on if it is free (30 minutes of travel either side). No fee for a move.</span></span></h3>
+      <label class="field">Date<input id="m-date" type="date"></label>
+      <div class="slots" id="m-slots"></div>
+      <div id="m-msg"></div>
+      <button class="btn primary" id="m-save" type="button" disabled>Move</button>
+      <button class="btn ghost" id="m-noteam" type="button" hidden>Move without a team</button>
+    </div>
+
+    <div class="sec" id="sec-team">
+      <h3>Team</h3>
+      <div class="chips" id="t-chips"></div>
+      <div id="t-msg"></div>
+    </div>
+
+    <div class="sec" id="sec-notes">
+      <h3>Notes<span class="info"><button type="button" class="info-btn" aria-label="About notes">i</button><span class="info-pop">Notes are for the team on this visit. Special requests show on the team's checklist and get ticked off on the job.</span></span></h3>
+      <label class="field">Job notes<textarea id="n-notes" maxlength="2000"></textarea></label>
+      <button class="btn ghost" id="n-save" type="button">Save notes</button>
+      <div id="n-msg"></div>
+      <div style="margin-top:14px" id="r-list"></div>
+      <div class="addrow" id="r-add">
+        <input id="r-text" type="text" maxlength="300" placeholder="Add a special request">
+        <button id="r-go" type="button">Add</button>
+      </div>
+      <div id="r-msg"></div>
+    </div>
+
+    <div class="sec" id="sec-customer">
+      <a class="btn ghost" id="s-cust" href="#">Customer</a>
+    </div>
+
+    <div class="sec" id="sec-cancel">
+      <h3>Cancel<span class="info"><button type="button" class="info-btn" aria-label="About cancelling">i</button><span class="info-pop">Inside 48 hours of the start, the $50 fee applies and goes in full to the scheduled staff. Paid by card: the rest is refunded. Card on file: the fee is charged. Offer a move first; a move is never charged.</span></span></h3>
+      <button class="btn danger" id="c-ask" type="button">Cancel this booking</button>
+      <div id="c-confirm" hidden>
+        <div class="msg warn" id="c-what"></div>
+        <button class="btn danger solid" id="c-go" type="button">Yes, cancel</button>
+        <button class="btn ghost" id="c-no" type="button">Keep it</button>
+      </div>
+      <div id="c-msg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---- config: the project URL and anon key the app ships (publishable by design) ----
+  var SUPABASE_URL = "https://isbhlmihbibdnajvicrj.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzYmhsbWloYmliZG5hanZpY3JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MzU4NDMsImV4cCI6MjEwNTAxMTg0M30.VOKtXSF8z8A9_NiaI6zq1w_qXcrgHdW4DjiT-C4haK0";
+  var AUTH_EMAIL_DOMAIN = "staff.franchise-os.local"; // src/lib/auth.ts
+  var LATE_CANCEL_WINDOW_HOURS = 48, LATE_CANCEL_FEE_CENTS = 5000; // src/lib/dispatch.ts
+  var SLOTS = [ // _shared/slots.ts
+    { key: "0900", time: "09:00", label: "9:00", ampm: "AM" },
+    { key: "1140", time: "11:40", label: "11:40", ampm: "AM" },
+    { key: "1440", time: "14:40", label: "2:40", ampm: "PM" }
+  ];
+  var SLOT_TOLERANCE_MIN = 15, TWO_TIME_OVER_MIN = 145;
+
+  // Prices: _shared/housePrice.ts. Keep in step with it, the booking page CONFIG and the text agent.
+  var PRICE = {
+    base: 22200, fourHour: 38500, sponge: 18900,
+    freq: { one_time: 0, weekly: 3300, every_other_week: 3300, every_4_weeks: 2200, every_6_weeks: 2200 },
+    bed: { "0": 0, "1": 0, "2": 1000, "3": 2000, "4": 3000, "5": 4000 },
+    bath: { "1": 0, "1.5": 500, "2": 1000, "2.5": 1500, "3": 2000, "3.5": 2500, "4": 3500, "4.5": 4500, "5": 5500, "5.5": 6500, "6": 9000,
+      "6.5": 11000, "7": 13000, "7.5": 19500 },
+    minutes: { two_hour: 120, works: 189, four_hour: 240 }
+  };
+  var SERVICES = [
+    { key: "two_hour", name: "Two Hour Clean", sub: "2 hours, 2 cleaners" },
+    { key: "works", name: "The Checklist Clean", sub: "Priced by the home" },
+    { key: "four_hour", name: "4-Hr Home Detailing", sub: "4 hours" }
+  ];
+  var FREQS = [
+    { key: "one_time", name: "One time" }, { key: "weekly", name: "Weekly" }, { key: "every_other_week", name: "Every 2 weeks" },
+    { key: "every_4_weeks", name: "Every 4 weeks" }, { key: "every_6_weeks", name: "Every 6 weeks" }
+  ];
+  var SERIES_FREQ = { weekly: "weekly", every_other_week: "biweekly", every_4_weeks: "every_4_weeks", every_6_weeks: "every_6_weeks" }; // ingest-booking
+  var SERIES_DAYS = { weekly: 7, biweekly: 14, every_4_weeks: 28, every_6_weeks: 42 };
+  var SERVICE_NAMES = { two_hour: "Two Hour Clean", works: "The Checklist Clean", checklist: "The Checklist Clean", four_hour: "4-Hr Home Detailing" };
+  var STATUS = { scheduled: ["Booked", ""], on_the_way: ["On the way", "ok"], in_progress: ["In progress", "ok"], completed: ["Done", "ok"], cancelled: ["Cancelled", "bad"] };
+  var JOB_SELECT = "id, org_id, customer_id, scheduled_date, start_time, end_time, service, service_label, status, team_id, address, notes, is_test, " +
+    "cancellation_reason, estimated_minutes, customer:customers(full_name, phone, address), team:teams(name, color), " +
+    "assignments:job_assignments(profile_id, profile:profiles!job_assignments_profile_id_fkey(full_name))";
+  var CUSTOMER_STATUS_COLUMNS = "booking_blocked_at, booking_blocked_reason, archived_at"; // 0321
+  var CUSTOMER_COLUMNS ="id, full_name, phone, email, address, zip, bedrooms, bathrooms, access_notes, parking_notes, pets, do_notes, dont_notes, " +
+    "special_instructions, notes, created_at";
+
+  var params = new URLSearchParams(location.search);
+  var DEMO = params.get("demo") === "1";
+
+  // ---- small helpers ----
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function toMin(t) { return Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5)); }
+  function fromMin(m) { return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0") + ":00"; }
+  function slotFor(t) { var m = toMin(t); return SLOTS.slice().sort(function (a, b) { return Math.abs(toMin(a.time) - m) - Math.abs(toMin(b.time) - m); })[0]; }
+  function slotByKey(k) { return SLOTS.filter(function (s) { return s.key === k; })[0]; }
+  function nextSlot(k) { var i = SLOTS.map(function (s) { return s.key; }).indexOf(k); return i >= 0 && i < SLOTS.length - 1 ? SLOTS[i + 1].key : null; }
+  function onSlot(t) { return Math.abs(toMin(slotFor(t).time) - toMin(t)) <= SLOT_TOLERANCE_MIN; }
+  function slotsHeld(start, end) { // same rule as slot_board
+    var s = toMin(start), e = end ? toMin(end) : s + 120, own = slotFor(start).key;
+    return SLOTS.filter(function (x) { return x.key === own || (s < toMin(x.time) + SLOT_TOLERANCE_MIN && e > toMin(x.time)); }).map(function (x) { return x.key; });
+  }
+  function jobMinutes(j) { return j.end_time ? toMin(j.end_time) - toMin(j.start_time) : 120; }
+  function spanFor(minutes) { return minutes > TWO_TIME_OVER_MIN ? 2 : 1; }
+  function clock(t) { var h = Number(t.slice(0, 2)), m = t.slice(3, 5); return ((h + 11) % 12 + 1) + ":" + m + (h < 12 ? " AM" : " PM"); }
+  function money(c) { return c == null ? "" : "$" + (c / 100).toFixed(c % 100 ? 2 : 0); }
+  // What the customer owes: amount_due (price + tax + service fee, 0320) once it exists, else total, else price.
+  function due(m) { return m.amount_due_cents != null ? m.amount_due_cents : m.total_cents != null ? m.total_cents : m.price_cents; }
+  function isoAdd(iso, n) { return new Date(Date.parse(iso + "T12:00:00Z") + n * 86400000).toISOString().slice(0, 10); }
+  function dow(iso) { return new Date(iso + "T12:00:00Z").getUTCDay(); }
+  function shortDate(iso) { return new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" }); }
+  function dayLabel(iso) {
+    var s = new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric", timeZone: "UTC" });
+    if (iso === today) return "Today · " + s;
+    if (iso === isoAdd(today, 1)) return "Tomorrow · " + s;
+    return s;
+  }
+  function localToday(tz) { return new Date().toLocaleString("sv-SE", { timeZone: tz }).slice(0, 10); }
+  function digits(p) { return String(p || "").replace(/\D/g, ""); }
+  function normalizePhone(input) { var d = digits(input); if (d.length === 10) return "+1" + d; if (d.length === 11 && d[0] === "1") return "+" + d; return "+" + d; }
+  function phoneVariants(p) { var d = digits(p).slice(-10); return ["+1" + d, d, "1" + d]; }
+  function prettyPhone(p) { var d = digits(p).slice(-10); return d.length === 10 ? "(" + d.slice(0, 3) + ") " + d.slice(3, 6) + "-" + d.slice(6) : (p || ""); }
+  function serviceName(j) { return j.service_label || SERVICE_NAMES[j.service] || (j.service || "").replace(/_/g, " "); }
+  function show(el, kind, text) { el.innerHTML = text ? '<div class="msg ' + kind + '">' + esc(text) + "</div>" : ""; }
+  function info(label, html) { return '<span class="info"><button type="button" class="info-btn" aria-label="' + esc(label) + '">i</button><span class="info-pop">' + html + "</span></span>"; }
+  function friendly(e) {
+    var code = e && (e.code || (e.error && e.error.code));
+    if (code === "23505") return "That time is already taken for this team.";
+    if (code === "42501") return "You can't change this.";
+    return (e && e.message) || "Something went wrong. Try again.";
+  }
+  function teamFreeAt(dayJobs, teamId, start, end, excludeId) { // _shared/reschedule.ts
+    var s = toMin(start), e = end ? toMin(end) : s + 120;
+    return !dayJobs.some(function (j) {
+      if (j.id === excludeId || j.team_id !== teamId || j.status === "cancelled") return false;
+      var js = toMin(j.start_time), je = j.end_time ? toMin(j.end_time) : js + 120;
+      return js < e + 30 && je + 30 > s;
+    });
+  }
+  function movedTimes(slotKey, start, end) { // keeps the job's length
+    var st = toMin(slotByKey(slotKey).time);
+    return { start_time: fromMin(st), end_time: end ? fromMin(st + toMin(end) - toMin(start)) : null };
+  }
+  /** _shared/housePrice.ts housePrice(), without catalog extras. */
+  function housePrice(service, bedrooms, bathrooms, frequency, sponge) {
+    var disc = PRICE.freq[frequency || "one_time"];
+    if (disc == null) return null;
+    if (service === "four_hour") return { cents: PRICE.fourHour, minutes: PRICE.minutes.four_hour };
+    if (service === "two_hour") return { cents: sponge && frequency === "one_time" ? PRICE.sponge : Math.max(0, PRICE.base - disc), minutes: PRICE.minutes.two_hour };
+    if (service !== "works") return null;
+    var bed = PRICE.bed[String(bedrooms)], bath = PRICE.bath[String(bathrooms)];
+    if (bed == null || bath == null) return null;
+    return { cents: Math.max(0, PRICE.base + bed + bath - disc), minutes: PRICE.minutes.works };
+  }
+  /**
+   * Which of the three times can take a clean of `span` times on a day, from slot_board rows. `own` = the slots the job being moved
+   * holds now (they count as free for it). Returns [{key, ok, note}].
+   */
+  function slotStates(rows, span, own) {
+    own = own || [];
+    function row(k) { return rows.filter(function (x) { return x.slot_key === k; })[0]; }
+    function free(k) { var r = row(k); return !!r && !r.closed && r.used - (own.indexOf(k) >= 0 ? 1 : 0) < r.capacity; }
+    return SLOTS.map(function (s) {
+      var r = row(s.key), n = nextSlot(s.key);
+      if (!r || r.closed) return { key: s.key, ok: false, note: "Closed" };
+      if (!free(s.key)) return { key: s.key, ok: false, note: "Full" };
+      if (span > 1 && !n) return { key: s.key, ok: false, note: "Too late" };
+      if (span > 1 && !free(n)) return { key: s.key, ok: false, note: "Next full" };
+      var left = r.capacity - (r.used - (own.indexOf(s.key) >= 0 ? 1 : 0));
+      return { key: s.key, ok: true, note: left + " open" };
+    });
+  }
+
+  // ---- data: the live project, or fake rows in this browser ----
+  var api = DEMO ? demoApi() : liveApi();
+
+  function liveApi() {
+    if (!window.supabase || !window.supabase.createClient) throw new Error("supabase-js did not load");
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "tdm-manager-portal" } });
+    function ok(r) { if (r.error) throw r.error; return r.data; }
+    function like(q) { return "%" + q.replace(/[%,()*]/g, " ").trim() + "%"; }
+    // Customer status (0321: Don't book, Archive). Read when the columns exist; before 0321 is pushed, the same query without them.
+    var hasStatus = true;
+    function withStatus(build) {
+      if (!hasStatus) return build(CUSTOMER_COLUMNS).then(ok);
+      return build(CUSTOMER_COLUMNS + ", " + CUSTOMER_STATUS_COLUMNS).then(function (r) {
+        if (r.error && r.error.code === "42703") { hasStatus = false; return build(CUSTOMER_COLUMNS).then(ok); }
+        return ok(r);
+      });
+    }
+    return {
+      session: function () { return sb.auth.getSession().then(function (r) { return r.data.session; }); },
+      signIn: function (phone, pin) {
+        return sb.auth.signInWithPassword({ email: normalizePhone(phone).replace("+", "") + "@" + AUTH_EMAIL_DOMAIN, password: "pin-" + pin })
+          .then(function (r) { if (r.error) throw new Error("Phone number or PIN is incorrect."); });
+      },
+      signOut: function () { return sb.auth.signOut(); },
+      me: function (uid) { return sb.from("profiles").select("id, org_id, full_name, role").eq("id", uid).maybeSingle().then(ok); },
+      org: function (id) {
+        return sb.from("organizations").select("slug, timezone, recurring_from_bookings").eq("id", id).maybeSingle()
+          .then(function (r) { return r.data || {}; });
+      },
+      teams: function () { return sb.from("teams").select("id, name, color").eq("is_active", true).order("name").then(ok); },
+      jobsBetween: function (from, to) {
+        return sb.from("jobs").select(JOB_SELECT).gte("scheduled_date", from).lte("scheduled_date", to).neq("status", "cancelled")
+          .order("scheduled_date").order("start_time").then(ok);
+      },
+      search: function (q, from) {
+        var term = like(q);
+        return sb.from("customers").select("id").or("full_name.ilike." + term + ",phone.ilike." + term + ",address.ilike." + term).limit(40).then(ok)
+          .then(function (cs) {
+            var ids = cs.map(function (c) { return c.id; });
+            var or = "address.ilike." + term + (ids.length ? ",customer_id.in.(" + ids.join(",") + ")" : "");
+            return sb.from("jobs").select(JOB_SELECT).or(or).gte("scheduled_date", from).order("scheduled_date").order("start_time").limit(60).then(ok);
+          });
+      },
+      money: function (ids) {
+        if (!ids.length) return Promise.resolve([]);
+        // "*" so the page works before and after 0320 (amount_due_cents / service_fee_cents) is pushed. Managers only; others get no rows.
+        return sb.from("job_money").select("*").in("job_id", ids).then(function (r) { return r.data || []; });
+      },
+      board: function (org, from, to) { return sb.rpc("slot_board", { p_org: org, p_start: from, p_end: to || from }).then(ok); },
+      dayJobs: function (day) { return sb.from("jobs").select("id, team_id, start_time, end_time, status").eq("scheduled_date", day).neq("status", "cancelled").then(ok); },
+      updateJob: function (id, patch) { return sb.from("jobs").update(patch).eq("id", id).neq("status", "cancelled").select("id").then(ok).then(function (rows) { if (!rows.length) throw new Error("Not saved. It may be cancelled, or you can't change it."); }); },
+      updateJobAny: function (id, patch) { return sb.from("jobs").update(patch).eq("id", id).then(ok); },
+      insertJob: function (row) { return sb.from("jobs").insert(row).select("id").single().then(ok).then(function (r) { return r.id; }); },
+      event: function (row) { return sb.from("job_events").insert(row).then(function () {}); },
+      clearPeople: function (jobId) { return sb.from("job_assignments").delete().eq("job_id", jobId).then(ok); },
+      requests: function (jobId) { return sb.from("job_special_requests").select("id, text, completed_at").eq("job_id", jobId).order("created_at").then(ok); },
+      addRequest: function (rows) { return sb.from("job_special_requests").insert(rows).then(ok); },
+      deleteRequest: function (id) { return sb.from("job_special_requests").delete().eq("id", id).then(ok); },
+      payState: function (jobId) { return sb.from("job_money").select("payment_status, stripe_payment_intent_id").eq("job_id", jobId).maybeSingle().then(function (r) { return r.data || {}; }); },
+      refund: function (jobId) { return sb.functions.invoke("refund-job", { body: { job_id: jobId } }).then(function (r) { if (r.error) throw r.error; return r.data || {}; }); },
+      card: function (customerId) { return sb.from("customers").select("stripe_customer_id, stripe_payment_method_id, full_name, email").eq("id", customerId).maybeSingle().then(function (r) { return r.data; }); },
+      outbox: function (row) { return sb.from("outbox").insert(row).then(function (r) { return !r.error; }); },
+      customers: function (q) {
+        return withStatus(function (cols) {
+          var b = sb.from("customers").select(cols);
+          if (q) { var t = like(q); b = b.or("full_name.ilike." + t + ",phone.ilike." + t + ",address.ilike." + t + ",email.ilike." + t).order("full_name"); }
+          else b = b.order("created_at", { ascending: false });
+          return b.limit(50);
+        });
+      },
+      customer: function (id) { return withStatus(function (cols) { return sb.from("customers").select(cols).eq("id", id).maybeSingle(); }); },
+      customerByPhone: function (p) {
+        return withStatus(function (cols) { return sb.from("customers").select(cols).in("phone", phoneVariants(p)).limit(1); }).then(function (r) { return r[0] || null; });
+      },
+      customerJobs: function (id) { return sb.from("jobs").select(JOB_SELECT).eq("customer_id", id).order("scheduled_date", { ascending: false }).limit(40).then(ok); },
+      insertCustomer: function (row) { return sb.from("customers").insert(row).select("id").single().then(ok).then(function (r) { return r.id; }); },
+      updateCustomer: function (id, patch) { return sb.from("customers").update(patch).eq("id", id).then(ok); },
+      insertSeries: function (row) { return sb.from("recurring_series").insert(row).select("id").single().then(ok).then(function (r) { return r.id; }); },
+      generateSeries: function (id) { return sb.rpc("generate_series_jobs", { p_series: id, p_horizon: 56 }).then(ok); },
+      geocode: function (address, zip) { // as ingest-booking does: free OpenStreetMap lookup, best effort, for the clock-in geofence
+        var q = [address, zip, "USA"].filter(Boolean).join(", ");
+        var ctl = window.AbortController ? new AbortController() : null;
+        var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 4000);
+        return fetch("https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(q), ctl ? { signal: ctl.signal } : {})
+          .then(function (r) { return r.json(); })
+          .then(function (rows) { clearTimeout(timer); return rows && rows.length ? { lat: Number(rows[0].lat), lng: Number(rows[0].lon) } : null; })
+          .catch(function () { clearTimeout(timer); return null; });
+      }
+    };
+  }
+
+  function demoApi() {
+    var role = params.get("role") || "manager";
+    var t0 = localToday("America/Chicago");
+    var teams = [{ id: "t1", name: "Team #1 - Jack/Maria", color: "#1F5EFF" }, { id: "t2", name: "Team #2 - Hadhabia/Tatiana", color: "#0E8A5F" }];
+    var names = ["Avery Lindqvist", "Sam Okafor", "Priya Natarajan", "Jordan Bell", "Morgan Reyes", "Casey Huang", "Riley Johansen", "Taylor Brooks"];
+    var streets = ["4127 Upton Ave S", "2210 Pleasant Ave", "5530 Xerxes Ave S", "812 Hennepin Ave E", "3409 Bryant Ave S", "1901 Grand St NE", "6120 Penn Ave S", "455 Lake St W"];
+    var zips = ["55410", "55404", "55410", "55413", "55408", "55418", "55419", "55408"];
+    var customers = names.map(function (n, i) {
+      return { id: "c" + i, full_name: n, phone: "+1612555010" + i, email: n.split(" ")[0].toLowerCase() + "@example.com", address: streets[i], zip: zips[i],
+        bedrooms: (i % 4) + 1, bathrooms: [1, 1.5, 2, 2.5][i % 4], access_notes: i === 2 ? "Key in the lockbox" : null, parking_notes: null, pets: i === 2 ? "Dog, friendly" : null,
+        do_notes: null, dont_notes: null, special_instructions: null, notes: null, created_at: new Date(Date.now() - i * 86400000).toISOString(),
+        booking_blocked_at: i === 6 ? new Date().toISOString() : null, booking_blocked_reason: i === 6 ? "Left a 1-star review" : null, archived_at: i === 7 ? new Date().toISOString() : null };
+    });
+    var jobs = [], money = [], reqs = [], n = 0;
+    function teamEmbed(id) { var t = teams.filter(function (x) { return x.id === id; })[0]; return t ? { name: t.name, color: t.color } : null; }
+    function custEmbed(id) { var c = customers.filter(function (x) { return x.id === id; })[0]; return c ? { full_name: c.full_name, phone: c.phone, address: c.address } : null; }
+    function addJob(row, priceCents) {
+      var id = "demo-" + (++n);
+      jobs.push(Object.assign({ id: id, org_id: "demo-org", status: "scheduled", service_label: null, notes: null, is_test: true, cancellation_reason: null, assignments: [] }, row,
+        { customer: custEmbed(row.customer_id), team: teamEmbed(row.team_id) }));
+      money.push({ job_id: id, price_cents: priceCents, total_cents: Math.round(priceCents * 1.0985), payment_status: "unpaid", stripe_payment_intent_id: null });
+      return id;
+    }
+    [-14, -7, 0, 0, 1, 1, 1, 2, 3, 3, 5, 6, 8, 9, 12].forEach(function (d, i) {
+      var slot = SLOTS[i % 3], ci = i % 8, works = i % 3 === 1 && slot.key !== "1440";
+      var mins = works ? 189 : 120, st = slot.time + ":00";
+      addJob({ customer_id: "c" + ci, scheduled_date: isoAdd(t0, d), start_time: st, end_time: fromMin(toMin(slot.time) + mins),
+        service: works ? "works" : "two_hour", team_id: i % 5 === 4 ? null : teams[i % 2].id, address: streets[ci], estimated_minutes: mins,
+        notes: i === 4 ? "Dog in the back room." : null, status: d < 0 ? "completed" : d === 0 && i === 2 ? "in_progress" : "scheduled" }, works ? 26200 : 22200);
+      if (i === 5) money[money.length - 1].payment_status = "paid", money[money.length - 1].stripe_payment_intent_id = "pi_demo";
+    });
+    reqs.push({ id: "r1", job_id: "demo-5", text: "Focus on the bathrooms", completed_at: null });
+    function delay(v) { return new Promise(function (res) { setTimeout(function () { res(v); }, 120); }); }
+    function clone(v) { return JSON.parse(JSON.stringify(v)); }
+    function find(id) { return jobs.filter(function (j) { return j.id === id; })[0]; }
+    function sorted(rows) { return rows.slice().sort(function (a, b) { return (a.scheduled_date + a.start_time).localeCompare(b.scheduled_date + b.start_time); }); }
+    var signed = true; // demo starts signed in: no phone or PIN is ever typed for fake data
+    return {
+      session: function () { return delay(signed ? { user: { id: "demo-me" } } : null); },
+      signIn: function () { signed = true; return delay(); },
+      signOut: function () { signed = false; return delay(); },
+      me: function () { return delay({ id: "demo-me", org_id: "demo-org", full_name: role === "cleaner" ? "Demo Cleaner" : "Demo Manager", role: role }); },
+      org: function () { return delay({ slug: "demo", timezone: "America/Chicago", recurring_from_bookings: false }); },
+      teams: function () { return delay(clone(teams)); },
+      jobsBetween: function (from, to) { return delay(clone(sorted(jobs.filter(function (j) { return j.status !== "cancelled" && j.scheduled_date >= from && j.scheduled_date <= to; })))); },
+      search: function (q, from) { q = q.toLowerCase(); return delay(clone(sorted(jobs.filter(function (j) { return j.scheduled_date >= from && (j.customer.full_name + " " + j.customer.phone + " " + j.address).toLowerCase().indexOf(q) >= 0; })))); },
+      money: function (ids) { return delay(role === "cleaner" ? [] : clone(money.filter(function (m) { return ids.indexOf(m.job_id) >= 0; }))); },
+      board: function (org, from, to) {
+        var out = [], now = new Date();
+        for (var day = from; day <= (to || from); day = isoAdd(day, 1)) {
+          SLOTS.forEach(function (s) {
+            var used = jobs.filter(function (j) { return j.status !== "cancelled" && j.scheduled_date === day && slotsHeld(j.start_time, j.end_time).indexOf(s.key) >= 0; }).length;
+            var past = day < t0 || (day === t0 && toMin(s.time) < now.getHours() * 60 + now.getMinutes() + 120);
+            var closed = dow(day) === 0 || past;
+            out.push({ day: day, slot_key: s.key, capacity: teams.length, used: used, open: !closed && used < teams.length, closed: closed });
+          });
+        }
+        return delay(out);
+      },
+      dayJobs: function (day) { return delay(clone(jobs.filter(function (j) { return j.scheduled_date === day && j.status !== "cancelled"; }))); },
+      updateJob: function (id, patch) {
+        var j = find(id);
+        if (!j || j.status === "cancelled") return Promise.reject(new Error("Not saved."));
+        var nt = patch.team_id !== undefined ? patch.team_id : j.team_id, nd = patch.scheduled_date || j.scheduled_date, ns = patch.start_time || j.start_time;
+        if (nt && jobs.some(function (o) { return o.id !== id && o.status !== "cancelled" && o.team_id === nt && o.scheduled_date === nd && o.start_time === ns; }))
+          return Promise.reject({ code: "23505", message: "duplicate" });
+        Object.keys(patch).forEach(function (k) { j[k] = patch[k]; });
+        if (patch.team_id !== undefined) j.team = teamEmbed(patch.team_id);
+        return delay();
+      },
+      updateJobAny: function () { return delay(); },
+      insertJob: function (row) {
+        if (row.team_id && jobs.some(function (o) { return o.status !== "cancelled" && o.team_id === row.team_id && o.scheduled_date === row.scheduled_date && o.start_time === row.start_time; }))
+          return Promise.reject({ code: "23505", message: "duplicate" });
+        return delay(addJob(row, row.price_cents));
+      },
+      event: function () { return delay(); },
+      clearPeople: function (jobId) { find(jobId).assignments = []; return delay(); },
+      requests: function (jobId) { return delay(clone(reqs.filter(function (r) { return r.job_id === jobId; }))); },
+      addRequest: function (rows) { [].concat(rows).forEach(function (row) { reqs.push({ id: "r" + Math.random(), job_id: row.job_id, text: row.text, completed_at: null }); }); return delay(); },
+      deleteRequest: function (id) { reqs = reqs.filter(function (r) { return r.id !== id; }); return delay(); },
+      payState: function (jobId) { return delay(clone(money.filter(function (m) { return m.job_id === jobId; })[0] || {})); },
+      refund: function () { return delay({ refunded: true, refund_cents: 19400, fee_kept_cents: 5000 }); },
+      card: function () { return delay({ stripe_customer_id: "cus_demo", stripe_payment_method_id: "pm_demo", full_name: "Demo", email: null }); },
+      outbox: function () { return delay(true); },
+      customers: function (q) {
+        q = (q || "").toLowerCase();
+        var rows = customers.filter(function (c) { return !q || (c.full_name + " " + c.phone + " " + c.address + " " + c.email).toLowerCase().indexOf(q) >= 0; });
+        return delay(clone(q ? rows.sort(function (a, b) { return a.full_name.localeCompare(b.full_name); }) : rows));
+      },
+      customer: function (id) { return delay(clone(customers.filter(function (c) { return c.id === id; })[0] || null)); },
+      customerByPhone: function (p) { var v = phoneVariants(p); return delay(clone(customers.filter(function (c) { return v.indexOf(c.phone) >= 0; })[0] || null)); },
+      customerJobs: function (id) { return delay(clone(sorted(jobs.filter(function (j) { return j.customer_id === id; })).reverse())); },
+      insertCustomer: function (row) { var c = Object.assign({ id: "c" + customers.length, created_at: new Date().toISOString() }, row); customers.unshift(c); return delay(c.id); },
+      updateCustomer: function (id, patch) { var c = customers.filter(function (x) { return x.id === id; })[0]; Object.assign(c, patch); jobs.forEach(function (j) { if (j.customer_id === id) j.customer = custEmbed(id); }); return delay(); },
+      insertSeries: function () { return delay("s1"); },
+      generateSeries: function () { return delay(); },
+      geocode: function () { return delay(null); }
+    };
+  }
+
+  // ---- state ----
+  var me = null, org = {}, canEdit = false, tz = "America/Chicago", today = localToday(tz);
+  var teams = [], moneyById = {}, current = null, pickedSlot = null, sheetDirty = false;
+  var bookingsRange = 14, calWeek = null;
+
+  // ---- sign in ----
+  $("signin").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var phone = $("si-phone").value, pin = $("si-pin").value.trim();
+    $("si-err").hidden = true;
+    if (digits(phone).length < 10) return fail("Enter your phone number.");
+    if (!/^\d{4}$/.test(pin)) return fail("PIN is 4 digits.");
+    $("si-go").disabled = true;
+    api.signIn(phone, pin).then(start).catch(function (err) { fail(err.message); }).then(function () { $("si-go").disabled = false; });
+    function fail(m) { $("si-err").textContent = m; $("si-err").hidden = false; }
+  });
+  $("signout").addEventListener("click", function () { api.signOut().then(function () { location.hash = ""; location.reload(); }); });
+
+  function start() {
+    return api.session().then(function (s) {
+      if (!s) { $("signin").hidden = false; $("portal").hidden = true; return; }
+      return api.me(s.user.id).then(function (p) {
+        if (!p) throw new Error("No staff profile for this sign-in.");
+        me = p;
+        canEdit = p.role === "hq_admin" || p.role === "manager";
+        return api.org(p.org_id);
+      }).then(function (o) {
+        org = o || {}; tz = org.timezone || "America/Chicago"; today = localToday(tz);
+        $("signin").hidden = true; $("portal").hidden = false;
+        $("who").innerHTML = esc(me.full_name) + "<br>" + esc(me.role.replace("_", " "));
+        $("ro-note").hidden = canEdit;
+        $("demo-note").hidden = !DEMO;
+        $("newbtn").hidden = !canEdit;
+        return api.teams();
+      }).then(function (t) { teams = t; route(); });
+    }).catch(function (err) {
+      $("signin").hidden = false; $("portal").hidden = true;
+      $("si-err").textContent = friendly(err); $("si-err").hidden = false;
+    });
+  }
+
+  // ---- pages ----
+  window.addEventListener("hashchange", function () { if (me) route(); });
+  function parseHash() {
+    var h = location.hash.replace(/^#\/?/, ""), q = "";
+    if (h.indexOf("?") >= 0) { q = h.slice(h.indexOf("?") + 1); h = h.slice(0, h.indexOf("?")); }
+    var parts = h.split("/");
+    return { page: parts[0] || "bookings", id: parts[1] ? decodeURIComponent(parts[1]) : null, q: new URLSearchParams(q) };
+  }
+  function route() {
+    var r = parseHash();
+    if (r.page === "new" && !canEdit) r.page = "bookings";
+    var tab = r.page === "customer" ? "customers" : r.page;
+    document.querySelectorAll(".tab").forEach(function (t) { t.classList.toggle("is-on", t.getAttribute("data-tab") === tab); });
+    $("newbtn").classList.toggle("is-on", r.page === "new");
+    var v = $("view");
+    if (r.page === "calendar") return pageCalendar(v, r);
+    if (r.page === "customers") return pageCustomers(v, r);
+    if (r.page === "customer") return pageCustomer(v, r.id);
+    if (r.page === "new") return pageNew(v, r.q);
+    return pageBookings(v);
+  }
+  function loading(v) { v.innerHTML = '<div class="empty">Loading…</div>'; }
+  function loadMoney(rows) {
+    return api.money(rows.map(function (j) { return j.id; })).then(function (m) { m.forEach(function (r) { moneyById[r.job_id] = r; }); return rows; });
+  }
+  var jobsById = {};
+  function remember(rows) { rows.forEach(function (j) { jobsById[j.id] = j; }); return rows; }
+
+  function jobRow(j) {
+    var s = slotFor(j.start_time), m = moneyById[j.id], st = STATUS[j.status] || [j.status, ""];
+    var slotHtml = onSlot(j.start_time) ? esc(s.label) + "<small>" + s.ampm + "</small>" : esc(clock(j.start_time).replace(/ (AM|PM)$/, "")) + "<small>" + clock(j.start_time).slice(-2) + "</small>";
+    return '<button type="button" class="job' + (j.status === "cancelled" ? " is-cancelled" : "") + '" data-job="' + esc(j.id) + '">' +
+      '<div class="slot">' + slotHtml + "</div>" +
+      "<div><div class=\"name\">" + esc(j.customer ? j.customer.full_name : "No customer") + "</div>" +
+      '<div class="sub">' + esc(j.address || (j.customer && j.customer.address) || "") + "</div>" +
+      '<div class="meta"><span class="pill">' + esc(serviceName(j)) + "</span>" +
+      (j.team ? '<span class="pill"><i class="dot" style="background:' + esc(j.team.color || "#6B7790") + '"></i>' + esc(j.team.name) + "</span>" : '<span class="pill warn">No team</span>') +
+      (st[0] !== "Booked" ? '<span class="pill ' + st[1] + '">' + esc(st[0]) + "</span>" : "") +
+      (j.is_test ? '<span class="pill">Test</span>' : "") + "</div></div>" +
+      '<div class="price">' + (m ? esc(money(due(m))) + (m.payment_status === "paid" ? "<small>Paid</small>" : "") : "") + "</div>" +
+      "</button>";
+  }
+  function jobList(rows, withDays) {
+    var html = "", lastDay = "";
+    rows.forEach(function (j) {
+      if (withDays && j.scheduled_date !== lastDay) { lastDay = j.scheduled_date; html += '<div class="day">' + esc(dayLabel(j.scheduled_date)) + "</div>"; }
+      html += jobRow(j);
+    });
+    return html;
+  }
+  document.addEventListener("click", function (e) {
+    var b = e.target.closest("[data-job]");
+    if (b && jobsById[b.getAttribute("data-job")]) open(jobsById[b.getAttribute("data-job")]);
+  });
+
+  // Bookings
+  var searchTimer = null;
+  function pageBookings(v) {
+    v.innerHTML =
+      '<div class="tools"><input id="q" class="search" type="search" placeholder="Search name, phone, address" autocomplete="off">' +
+      '<button class="iconbtn" id="refresh" type="button" aria-label="Refresh">&#8635;</button></div>' +
+      '<div class="seg" id="range">' + [[1, "Today"], [7, "7 days"], [14, "14 days"], [30, "30 days"]].map(function (r) {
+        return '<button type="button" data-days="' + r[0] + '"' + (bookingsRange === r[0] ? ' class="is-on"' : "") + ">" + r[1] + "</button>";
+      }).join("") + "</div>" +
+      '<div id="list"></div>';
+    $("q").addEventListener("input", function () { clearTimeout(searchTimer); searchTimer = setTimeout(load, 300); });
+    $("refresh").addEventListener("click", load);
+    $("range").addEventListener("click", function (e) {
+      var b = e.target.closest("[data-days]"); if (!b) return;
+      bookingsRange = Number(b.getAttribute("data-days"));
+      $("range").querySelectorAll("button").forEach(function (x) { x.classList.toggle("is-on", x === b); });
+      load();
+    });
+    function load() {
+      var q = $("q").value.trim();
+      $("range").hidden = q.length >= 2;
+      loading($("list"));
+      var p = q.length >= 2 ? api.search(q, isoAdd(today, -30)) : api.jobsBetween(today, isoAdd(today, bookingsRange - 1));
+      p.then(remember).then(loadMoney).then(function (rows) {
+        if (!$("list")) return;
+        $("list").innerHTML = rows.length ? jobList(rows, true) : '<div class="empty">' + (q.length >= 2 ? "No bookings found." : "No bookings yet." +
+          (canEdit ? '<br><a class="btn primary" style="max-width:260px;margin:14px auto 0" href="#/new">New booking</a>' : "")) + "</div>";
+      }).catch(function (err) { $("list").innerHTML = '<div class="empty">' + esc(friendly(err)) + "</div>"; });
+    }
+    load();
+  }
+
+  // Calendar: one week, each day by time, each time with its bookings and what is open
+  function pageCalendar(v, r) {
+    calWeek = r.q.get("week") || calWeek || today;
+    var end = isoAdd(calWeek, 6);
+    v.innerHTML = '<div class="weekbar"><a class="iconbtn" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="#/calendar?week=' + isoAdd(calWeek, -7) + '" aria-label="Last week">&#8249;</a>' +
+      "<b>" + esc(shortDate(calWeek)) + " – " + esc(shortDate(end)) + "</b>" +
+      '<a class="iconbtn" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="#/calendar?week=' + isoAdd(calWeek, 7) + '" aria-label="Next week">&#8250;</a></div>' +
+      (calWeek !== today ? '<div class="seg" style="justify-content:center;margin-bottom:12px"><button type="button" id="thisweek">Today</button></div>' : "") +
+      '<div id="cal"></div>';
+    if ($("thisweek")) $("thisweek").addEventListener("click", function () { location.hash = "#/calendar?week=" + today; });
+    loading($("cal"));
+    Promise.all([api.jobsBetween(calWeek, end).then(remember).then(loadMoney), api.board(me.org_id, calWeek, end)]).then(function (res) {
+      var rows = res[0], board = res[1], html = "";
+      for (var d = calWeek; d <= end; d = isoAdd(d, 1)) {
+        var dayJobs = rows.filter(function (j) { return j.scheduled_date === d; });
+        var dayBoard = board.filter(function (b) { return b.day === d; });
+        var allClosed = dayBoard.every(function (b) { return b.closed; });
+        var states = slotStates(dayBoard, 1, []);
+        html += '<div class="card calday' + (d === today ? " is-today" : "") + '"><h3>' + esc(dayLabel(d)) + "<span>" + dayJobs.length + (dayJobs.length === 1 ? " booking" : " bookings") + "</span></h3>";
+        if (allClosed && !dayJobs.length) { html += '<div class="tag">Closed</div></div>'; continue; }
+        SLOTS.forEach(function (s, i) {
+          var here = dayJobs.filter(function (j) { return slotFor(j.start_time).key === s.key; });
+          var cont = dayJobs.filter(function (j) { return slotFor(j.start_time).key !== s.key && slotsHeld(j.start_time, j.end_time).indexOf(s.key) >= 0; });
+          var st = states[i];
+          html += '<div class="calrow"><div class="caltime">' + s.label + " " + s.ampm.toLowerCase() + '</div><div class="calbooks">' +
+            here.map(function (j) { return chip(j, false); }).join("") + cont.map(function (j) { return chip(j, true); }).join("") +
+            (!here.length && !cont.length ? '<span class="tag">—</span>' : "") + "</div><div>" +
+            (st.ok ? (canEdit ? '<a class="open" style="display:inline-flex;align-items:center;text-decoration:none" href="#/new?date=' + d + "&slot=" + s.key + '">+ ' + esc(st.note) + "</a>" : '<span class="tag">' + esc(st.note) + "</span>")
+              : '<span class="tag' + (st.note === "Full" ? " full" : "") + '">' + esc(st.note) + "</span>") + "</div></div>";
+        });
+        html += "</div>";
+      }
+      $("cal").innerHTML = html;
+    }).catch(function (err) { $("cal").innerHTML = '<div class="empty">' + esc(friendly(err)) + "</div>"; });
+    function chip(j, cont) {
+      var first = j.customer ? j.customer.full_name.split(" ")[0] + (j.customer.full_name.split(" ")[1] ? " " + j.customer.full_name.split(" ")[1][0] + "." : "") : "Booking";
+      return '<button type="button" class="bchip' + (cont ? " cont" : "") + '" data-job="' + esc(j.id) + '"><i class="dot" style="background:' + esc(j.team ? j.team.color || "#6B7790" : "#B76E00") + '"></i>' +
+        esc(first) + (cont ? " (cont.)" : "") + "</button>";
+    }
+  }
+
+  // Customers
+  var custTimer = null;
+  function pageCustomers(v) {
+    v.innerHTML = '<div class="tools"><input id="cq" class="search" type="search" placeholder="Search name, phone, address, email" autocomplete="off"></div><div id="clist"></div>';
+    $("cq").addEventListener("input", function () { clearTimeout(custTimer); custTimer = setTimeout(load, 300); });
+    function load() {
+      var q = $("cq").value.trim();
+      loading($("clist"));
+      api.customers(q.length >= 2 ? q : "").then(function (rows) {
+        if (!$("clist")) return;
+        if (q.length < 2) rows = rows.filter(function (c) { return !c.archived_at; }); // archived show only when searched for (0321)
+        $("clist").innerHTML = (q.length < 2 && rows.length ? '<div class="day">Newest</div>' : "") + (rows.length ? rows.map(function (c) {
+          return '<a class="cust" style="text-decoration:none;color:inherit" href="#/customer/' + esc(c.id) + '"><b>' + esc(c.full_name) + "</b>" + statusPills(c) + "<div>" +
+            esc([prettyPhone(c.phone), [c.address, c.zip].filter(Boolean).join(" ")].filter(Boolean).join(" · ")) + "</div></a>";
+        }).join("") : '<div class="empty">No customers found.</div>');
+      }).catch(function (err) { $("clist").innerHTML = '<div class="empty">' + esc(friendly(err)) + "</div>"; });
+    }
+    load();
+  }
+
+  // Customer status (0321), set in the app's customer page: Don't book refuses online and text bookings; staff may still book by hand.
+  function statusPills(c) {
+    return (c.booking_blocked_at ? ' <span class="pill bad">Don\'t book</span>' : "") + (c.archived_at ? ' <span class="pill">Archived</span>' : "");
+  }
+  function blockedNote(c) {
+    return c.booking_blocked_at ? "Marked Don't book" + (c.booking_blocked_reason ? ": " + c.booking_blocked_reason : "") + ". Online and text bookings are refused; you can still book by hand." : "";
+  }
+  var CUSTOMER_FIELDS = [
+    ["full_name", "Name", "text"], ["phone", "Phone", "tel"], ["email", "Email", "email"], ["address", "Address", "text"], ["zip", "Zip", "text"],
+    ["bedrooms", "Bedrooms", "number"], ["bathrooms", "Bathrooms", "number"],
+    ["access_notes", "How to get in", "area"], ["parking_notes", "Parking", "area"], ["pets", "Pets", "text"],
+    ["do_notes", "Do", "area"], ["dont_notes", "Don't", "area"], ["special_instructions", "Special instructions", "area"], ["notes", "Office notes", "area"]
+  ];
+  function pageCustomer(v, id) {
+    loading(v);
+    Promise.all([api.customer(id), api.customerJobs(id).then(remember).then(loadMoney)]).then(function (res) {
+      var c = res[0], rows = res[1];
+      if (!c) { v.innerHTML = '<div class="empty">Customer not found.</div>'; return; }
+      var upcoming = rows.filter(function (j) { return j.scheduled_date >= today && j.status !== "cancelled" && j.status !== "completed"; }).reverse();
+      var past = rows.filter(function (j) { return upcoming.indexOf(j) < 0; });
+      function field(f) {
+        var val = c[f[0]] == null ? "" : c[f[0]], dis = canEdit ? "" : " readonly";
+        if (f[0] === "phone") val = prettyPhone(val);
+        if (f[2] === "area") return '<label class="field">' + f[1] + '<textarea data-f="' + f[0] + '" maxlength="1000"' + dis + ">" + esc(val) + "</textarea></label>";
+        return '<label class="field">' + f[1] + '<input data-f="' + f[0] + '" type="' + (f[2] === "number" ? "text" : f[2]) + '"' + (f[2] === "number" ? ' inputmode="decimal"' : "") + ' value="' + esc(val) + '"' + dis + "></label>";
+      }
+      var F = {}; CUSTOMER_FIELDS.forEach(function (f) { F[f[0]] = field(f); });
+      v.innerHTML =
+        '<div class="h1"><a class="iconbtn" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="#/customers" aria-label="Back">&#8249;</a><span class="grow">' + esc(c.full_name) + statusPills(c) + "</span></div>" +
+        (blockedNote(c) ? '<div class="msg warn" style="margin:0 0 12px">' + esc(blockedNote(c)) + "</div>" : "") +
+        (canEdit ? '<a class="btn primary big" style="margin:0 0 12px" href="#/new?customer=' + esc(c.id) + '">Book ' + esc(c.full_name.split(" ")[0]) + "</a>" : "") +
+        '<div class="card pad"><h2>Upcoming</h2>' + (upcoming.length ? jobList(upcoming, true) : '<div class="tag">None booked.</div>') + "</div>" +
+        '<div class="card pad"><h2>Contact</h2>' + F.full_name + '<div class="grid2">' + F.phone + F.email + "</div>" +
+        '<div class="grid2">' + F.address + F.zip + "</div></div>" +
+        '<div class="card pad"><h2>Home' + info("About the home", "Shown to the team on the job. Door and alarm codes stay in the app, masked; they are not shown here.") + "</h2>" +
+        '<div class="grid2 keep">' + F.bedrooms + F.bathrooms + "</div>" + F.access_notes + F.parking_notes + F.pets + F.do_notes + F.dont_notes + F.special_instructions + F.notes + "</div>" +
+        (canEdit ? '<button class="btn primary" id="c-save" type="button">Save</button><div id="c-save-msg"></div>' : "") +
+        (past.length ? '<div class="day" style="margin-top:22px">Past and cancelled</div>' + jobList(past, false) : "");
+      if (!canEdit) return;
+      $("c-save").addEventListener("click", function () {
+        var patch = {};
+        v.querySelectorAll("[data-f]").forEach(function (el) {
+          var k = el.getAttribute("data-f"), val = el.value.trim();
+          if (k === "phone") val = val ? normalizePhone(val) : "";
+          if (k === "bedrooms" || k === "bathrooms") val = val === "" ? null : Number(val);
+          patch[k] = val === "" ? null : val;
+        });
+        if (!patch.full_name) return show($("c-save-msg"), "err", "Name is required.");
+        if (patch.phone && digits(patch.phone).length < 11) return show($("c-save-msg"), "err", "Check the phone number.");
+        if ((patch.bedrooms != null && isNaN(patch.bedrooms)) || (patch.bathrooms != null && isNaN(patch.bathrooms))) return show($("c-save-msg"), "err", "Bedrooms and bathrooms are numbers.");
+        $("c-save").disabled = true;
+        api.updateCustomer(c.id, patch).then(function () { show($("c-save-msg"), "ok", "Saved."); $("c-save").disabled = false; })
+          .catch(function (err) { show($("c-save-msg"), "err", friendly(err)); $("c-save").disabled = false; });
+      });
+    }).catch(function (err) { v.innerHTML = '<div class="empty">' + esc(friendly(err)) + "</div>"; });
+  }
+
+  // New booking
+  function pageNew(v, q) {
+    var st = { customer: null, service: "two_hour", bed: "2", bath: "1", freq: "one_time", sponge: false, override: null,
+      date: q.get("date") || "", slot: q.get("slot") || null, team: "auto", board: null, dayJobs: null };
+    var bedOpts = [["0", "Studio"], ["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"], ["5", "5"]];
+    var bathOpts = Object.keys(PRICE.bath).sort(function (a, b) { return Number(a) - Number(b); });
+    v.innerHTML =
+      '<div class="h1">New booking</div>' +
+      '<div class="card pad"><h2>Customer</h2>' +
+        '<label class="field">Phone<input id="b-phone" type="tel" inputmode="tel" autocomplete="off" placeholder="(612) 555-0100"></label>' +
+        '<div id="b-found" class="found" hidden></div>' +
+        '<label class="field">Name<input id="b-name" type="text" autocomplete="off"></label>' +
+        '<label class="field">Email <small>(optional)</small><input id="b-email" type="email" autocomplete="off"></label>' +
+        '<div class="grid2"><label class="field">Address<input id="b-addr" type="text" autocomplete="off"></label>' +
+        '<label class="field">Zip<input id="b-zip" type="text" inputmode="numeric" maxlength="10" autocomplete="off"></label></div>' +
+      "</div>" +
+      '<div class="card pad"><h2>Clean</h2>' +
+        '<div class="svc" id="b-svc">' + SERVICES.map(function (s) { return '<button type="button" class="opt" data-svc="' + s.key + '">' + esc(s.name) + "<small>" + esc(s.sub) + "</small></button>"; }).join("") + "</div>" +
+        '<div class="grid2 keep" id="b-size" style="margin-top:12px"><label class="field">Bedrooms<select id="b-bed">' + bedOpts.map(function (o) { return '<option value="' + o[0] + '">' + o[1] + "</option>"; }).join("") + "</select></label>" +
+        '<label class="field">Bathrooms<select id="b-bath">' + bathOpts.map(function (o) { return '<option value="' + o + '">' + o + "</option>"; }).join("") + "</select></label></div>" +
+        '<div class="field" style="margin-top:12px">How often' + info("About repeat cleans", "The repeat discount is in the price. " + (org.recurring_from_bookings ? "The next visits are booked automatically." : "Repeat visits are not booked automatically yet (Automations, recurring from bookings is off): book each visit, or set a schedule in the app.")) + '</div>' +
+        '<div class="seg" id="b-freq">' + FREQS.map(function (f) { return '<button type="button" data-freq="' + f.key + '">' + esc(f.name) + "</button>"; }).join("") + "</div>" +
+        '<label class="check" id="b-sponge-row"><input type="checkbox" id="b-sponge">First-visit SPONGE price</label>' +
+        '<div class="total"><div><span>Price</span>' + info("About the price", "From the price list the website uses. Sales tax is added on the booking from the zip. Change it only for a special deal.") +
+        '<br><button type="button" class="link" id="b-change" style="padding:0;min-height:32px">Change price</button></div><b id="b-price">—</b></div>' +
+        '<label class="field" id="b-override-row" hidden>Price for this booking ($)<input id="b-override" type="text" inputmode="decimal"></label>' +
+      "</div>" +
+      '<div class="card pad"><h2>When</h2>' +
+        '<label class="field">Date<input id="b-date" type="date" min="' + today + '"></label>' +
+        '<div class="slots" id="b-slots"></div><div id="b-slot-msg"></div>' +
+        '<div class="field" style="margin-top:14px">Team</div><div class="chips" id="b-teams"></div>' +
+      "</div>" +
+      '<div class="card pad"><h2>Notes</h2>' +
+        '<label class="field">Notes for the team <small>(optional)</small><textarea id="b-notes" maxlength="2000"></textarea></label>' +
+        '<label class="field">Special requests <small>(one per line)</small><textarea id="b-reqs" maxlength="3000" placeholder="Focus on the bathrooms"></textarea></label>' +
+      "</div>" +
+      '<button class="btn primary big" id="b-go" type="button">Book it</button><div id="b-msg"></div>';
+
+    if (q.get("customer")) api.customer(q.get("customer")).then(function (c) { if (c) fillCustomer(c); });
+    $("b-phone").addEventListener("input", function () {
+      var d = digits($("b-phone").value);
+      if (d.length < 10) { if (st.customer) { st.customer = null; $("b-found").hidden = true; } return; }
+      api.customerByPhone(d).then(function (c) { if (c && digits($("b-phone").value).slice(-10) === digits(c.phone).slice(-10)) fillCustomer(c); });
+    });
+    function fillCustomer(c) {
+      st.customer = c;
+      $("b-phone").value = prettyPhone(c.phone);
+      $("b-name").value = c.full_name || ""; $("b-email").value = c.email || ""; $("b-addr").value = c.address || ""; $("b-zip").value = c.zip || "";
+      if (c.bedrooms != null && PRICE.bed[String(c.bedrooms)] != null) st.bed = String(c.bedrooms);
+      if (c.bathrooms != null && PRICE.bath[String(c.bathrooms)] != null) st.bath = String(c.bathrooms);
+      $("b-found").textContent = blockedNote(c) || "Returning customer";
+      $("b-found").className = c.booking_blocked_at ? "msg warn" : "found";
+      $("b-found").hidden = false;
+      paint();
+    }
+    $("b-svc").addEventListener("click", function (e) { var b = e.target.closest("[data-svc]"); if (!b) return; st.service = b.getAttribute("data-svc"); paint(); loadSlots(); });
+    $("b-freq").addEventListener("click", function (e) { var b = e.target.closest("[data-freq]"); if (!b) return; st.freq = b.getAttribute("data-freq"); paint(); });
+    $("b-bed").addEventListener("change", function () { st.bed = $("b-bed").value; paint(); });
+    $("b-bath").addEventListener("change", function () { st.bath = $("b-bath").value; paint(); });
+    $("b-sponge").addEventListener("change", function () { st.sponge = $("b-sponge").checked; paint(); });
+    $("b-change").addEventListener("click", function () { $("b-override-row").hidden = false; $("b-change").hidden = true; $("b-override").focus(); });
+    $("b-override").addEventListener("input", function () {
+      var n = Number($("b-override").value.replace(/[$,\s]/g, ""));
+      st.override = $("b-override").value.trim() === "" || !(n >= 0) ? null : Math.round(n * 100); paint();
+    });
+    $("b-date").value = st.date;
+    $("b-date").addEventListener("change", function () { st.date = $("b-date").value; st.slot = null; loadSlots(); });
+    $("b-slots").addEventListener("click", function (e) { var b = e.target.closest("[data-slot]"); if (!b || b.disabled) return; st.slot = b.getAttribute("data-slot"); paintSlots(); paintTeams(); });
+    $("b-teams").addEventListener("click", function (e) { var b = e.target.closest("[data-team]"); if (!b || b.disabled) return; st.team = b.getAttribute("data-team"); paintTeams(); });
+    $("b-go").addEventListener("click", submit);
+
+    function quote() { return housePrice(st.service, st.bed, st.bath, st.freq, st.sponge); }
+    function minutes() { var qq = quote(); return qq ? qq.minutes : 120; }
+    function priceCents() { var qq = quote(); return st.override != null ? st.override : qq ? qq.cents : null; }
+    function paint() {
+      $("b-svc").querySelectorAll("[data-svc]").forEach(function (b) { b.classList.toggle("is-on", b.getAttribute("data-svc") === st.service); });
+      $("b-freq").querySelectorAll("[data-freq]").forEach(function (b) { b.classList.toggle("is-on", b.getAttribute("data-freq") === st.freq); });
+      $("b-size").hidden = st.service !== "works";
+      $("b-bed").value = st.bed; $("b-bath").value = st.bath;
+      $("b-sponge-row").hidden = !(st.service === "two_hour" && st.freq === "one_time");
+      if ($("b-sponge-row").hidden) { st.sponge = false; $("b-sponge").checked = false; }
+      var c = priceCents();
+      $("b-price").textContent = c == null ? "—" : money(c);
+    }
+    function loadSlots() {
+      if (!st.date) { $("b-slots").innerHTML = SLOTS.map(function (s) { return '<button type="button" class="opt" disabled>' + s.label + " " + s.ampm.toLowerCase() + "<small>Pick a date</small></button>"; }).join(""); paintTeams(); return; }
+      var day = st.date;
+      $("b-slots").innerHTML = SLOTS.map(function (s) { return '<button type="button" class="opt" disabled>' + s.label + "<small>…</small></button>"; }).join("");
+      Promise.all([api.board(me.org_id, day), api.dayJobs(day)]).then(function (res) {
+        if (st.date !== day) return;
+        st.board = res[0]; st.dayJobs = res[1]; paintSlots(); paintTeams();
+      }).catch(function (err) { show($("b-slot-msg"), "err", friendly(err)); });
+    }
+    function paintSlots() {
+      if (!st.board) return;
+      var states = slotStates(st.board, spanFor(minutes()), []);
+      if (st.slot && !states.filter(function (x) { return x.key === st.slot && x.ok; }).length) st.slot = null;
+      $("b-slots").innerHTML = states.map(function (x) {
+        var s = slotByKey(x.key);
+        return '<button type="button" class="opt' + (x.ok ? "" : " full") + (st.slot === x.key ? " is-on" : "") + '" data-slot="' + x.key + '"' + (x.ok ? "" : " disabled") + ">" +
+          s.label + " " + s.ampm.toLowerCase() + "<small>" + esc(x.note) + "</small></button>";
+      }).join("");
+      show($("b-slot-msg"), "", "");
+      if (!states.some(function (x) { return x.ok; })) show($("b-slot-msg"), "warn", spanFor(minutes()) > 1 ? "No room that day for a clean this long. Try another day." : "Nothing open that day.");
+    }
+    function freeTeams() {
+      if (!st.slot || !st.dayJobs) return null;
+      var start = slotByKey(st.slot).time + ":00", end = fromMin(toMin(start) + minutes());
+      return teams.filter(function (t) { return teamFreeAt(st.dayJobs, t.id, start, end, null); }).map(function (t) { return t.id; });
+    }
+    function paintTeams() {
+      var free = freeTeams();
+      var opts = [{ id: "auto", name: "First free" }].concat(teams).concat([{ id: "none", name: "No team" }]);
+      $("b-teams").innerHTML = opts.map(function (t) {
+        var busy = free && t.color !== undefined && free.indexOf(t.id) < 0;
+        return '<button type="button" class="opt' + (st.team === t.id ? " is-on" : "") + '" data-team="' + esc(t.id) + '"' + (busy ? " disabled" : "") + ">" +
+          (t.color ? '<i class="dot" style="width:10px;height:10px;background:' + esc(t.color) + '"></i>' : "") + esc(t.name) + (busy ? "<small>busy</small>" : "") + "</button>";
+      }).join("");
+      if (free && st.team !== "auto" && st.team !== "none" && free.indexOf(st.team) < 0) { st.team = "auto"; paintTeams(); }
+    }
+
+    function submit() {
+      var name = $("b-name").value.trim(), phone = $("b-phone").value, email = $("b-email").value.trim() || null;
+      var addr = $("b-addr").value.trim(), zip = $("b-zip").value.trim(), price = priceCents(), mins = minutes();
+      var err = !name ? "Enter the customer's name." : digits(phone).length < 10 ? "Enter a 10-digit phone number." : !addr ? "Enter the address." :
+        !/^\d{5}/.test(zip) ? "Enter a 5-digit zip." : price == null ? "Pick the home size." : !st.date ? "Pick a date." : !st.slot ? "Pick a time." : null;
+      if (err) return show($("b-msg"), "err", err);
+      var start = slotByKey(st.slot).time + ":00", end = fromMin(toMin(start) + mins), day = st.date;
+      var notes = $("b-notes").value.trim() || null;
+      var reqs = $("b-reqs").value.split("\n").map(function (s) { return s.trim().slice(0, 300); }).filter(Boolean).slice(0, 10);
+      var svc = SERVICES.filter(function (s) { return s.key === st.service; })[0];
+      var teamId = null, customerId = null, jobId = null;
+      $("b-go").disabled = true; show($("b-msg"), "", "");
+      // Re-read the day right before writing: someone may have booked or held the time since the page opened.
+      Promise.all([api.board(me.org_id, day), api.dayJobs(day)]).then(function (res) {
+        var s = slotStates(res[0], spanFor(mins), []).filter(function (x) { return x.key === st.slot; })[0];
+        if (!s || !s.ok) { st.board = res[0]; st.dayJobs = res[1]; paintSlots(); throw new Error("That time just filled. Pick another."); }
+        var free = teams.filter(function (t) { return teamFreeAt(res[1], t.id, start, end, null); }).map(function (t) { return t.id; });
+        if (st.team === "auto") teamId = free[0] || null;
+        else if (st.team !== "none") { if (free.indexOf(st.team) < 0) throw new Error("That team is busy then. Pick another."); teamId = st.team; }
+        // Customer: the one picked, else matched on phone, else new (as ingest-booking does). Blank fields never overwrite.
+        return st.customer ? st.customer : api.customerByPhone(phone);
+      }).then(function (found) {
+        var patch = { full_name: name, phone: normalizePhone(phone), email: email, address: addr, zip: zip };
+        if (st.service === "works") { patch.bedrooms = Number(st.bed); patch.bathrooms = Number(st.bath); }
+        Object.keys(patch).forEach(function (k) { if (patch[k] == null || patch[k] === "") delete patch[k]; });
+        if (found) { customerId = found.id; return api.updateCustomer(found.id, patch); }
+        return api.insertCustomer(Object.assign({ org_id: me.org_id }, patch)).then(function (id) { customerId = id; });
+      }).then(function () {
+        return api.geocode(addr, zip);
+      }).then(function (g) {
+        return api.insertJob({
+          org_id: me.org_id, booking_id: "mgr-" + (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now()), customer_id: customerId,
+          scheduled_date: day, start_time: start, end_time: end, service: st.service, service_label: svc.name, price_cents: price,
+          status: "scheduled", address: addr, lat: g ? g.lat : null, lng: g ? g.lng : null, notes: notes, source: "manager",
+          team_id: teamId, estimated_minutes: mins, is_recurring: false, payment_status: "unpaid",
+          checklist_tier: "basic"
+        });
+      }).then(function (id) {
+        jobId = id;
+        var after = [];
+        if (reqs.length) after.push(api.addRequest(reqs.map(function (t) { return { org_id: me.org_id, job_id: id, text: t, source: "manager", created_by: me.id }; })));
+        if (teamId) after.push(api.event({ org_id: me.org_id, job_id: id, profile_id: me.id, type: "assigned", payload: { team_id: teamId } }));
+        // booking.confirmed for GoHighLevel, the same row ingest-booking queues (no access details in it).
+        after.push(api.outbox({ org_id: me.org_id, type: "ghl_event", payload: { event: "booking.confirmed", occurred_at: new Date().toISOString(),
+          contact: { full_name: name, email: email, phone: normalizePhone(phone) },
+          data: { job_id: id, booking_id: null, service: st.service, service_label: svc.name, date: day, time: st.slot, price_cents: price, frequency: st.freq, address: addr, zip: zip } } }));
+        var sf = SERIES_FREQ[st.freq];
+        if (sf && org.recurring_from_bookings) {
+          after.push(api.insertSeries({ org_id: me.org_id, customer_id: customerId, frequency: sf, start_date: isoAdd(day, SERIES_DAYS[sf]), start_time: start, end_time: end,
+            price_cents: price, service: st.service, service_label: svc.name, source: "booking" }).then(api.generateSeries));
+        }
+        return Promise.all(after.map(function (p) { return p.catch(function (e) { return e; }); }));
+      }).then(function (results) {
+        var failed = results.filter(function (r) { return r instanceof Error || (r && r.code); }).length;
+        v.innerHTML = '<div class="card done"><div class="tick">&#10003;</div><h2>Booked</h2><p>' + esc(name) + " · " + esc(dayLabel(day)) + ", " + esc(clock(start)) + "</p><p>" +
+          esc(svc.name) + " · " + esc(money(price)) + " + tax · " + esc(teamId ? teams.filter(function (t) { return t.id === teamId; })[0].name : "No team yet") + "</p>" +
+          (failed ? '<div class="msg warn">Booked, but ' + failed + " follow-up step(s) did not save. Check the requests on the booking.</div>" : "") +
+          '<a class="btn primary" href="#/bookings" id="d-open">Open booking</a><a class="btn ghost" href="#/customer/' + esc(customerId) + '">Customer</a>' +
+          '<button class="btn ghost" type="button" id="d-again">New booking</button></div>';
+        $("d-again").addEventListener("click", function () { pageNew(v, new URLSearchParams()); });
+        $("d-open").addEventListener("click", function () {
+          setTimeout(function () { api.jobsBetween(day, day).then(remember).then(loadMoney).then(function () { if (jobsById[jobId]) open(jobsById[jobId]); }); }, 50);
+        });
+      }).catch(function (e) {
+        show($("b-msg"), "err", friendly(e)); $("b-go").disabled = false;
+      });
+    }
+
+    paint(); loadSlots(); paintTeams();
+    if (st.date) $("b-date").value = st.date;
+  }
+
+  // ---- the booking sheet ----
+  function open(j) {
+    if (!j) return;
+    current = j; pickedSlot = null;
+    var m = moneyById[j.id], st = STATUS[j.status] || [j.status, ""];
+    $("s-name").textContent = j.customer ? j.customer.full_name : "Booking";
+    $("s-facts").innerHTML = esc(dayLabel(j.scheduled_date)) + " · " + esc(clock(j.start_time)) + (j.end_time ? "–" + esc(clock(j.end_time)) : "") + "<br>" +
+      esc(j.address || (j.customer && j.customer.address) || "") + (j.customer && j.customer.phone ? ' · <a href="tel:' + esc(j.customer.phone) + '">' + esc(prettyPhone(j.customer.phone)) + "</a>" : "");
+    var people = (j.assignments || []).map(function (a) { return a.profile && a.profile.full_name; }).filter(Boolean).join(", ");
+    $("s-meta").innerHTML = '<span class="pill">' + esc(serviceName(j)) + "</span>" +
+      '<span class="pill ' + st[1] + '">' + esc(st[0]) + "</span>" +
+      (m ? '<span class="pill">' + esc(money(due(m))) + (m.payment_status === "paid" ? " · Paid" : "") + "</span>" : "") +
+      (people ? '<span class="pill">' + esc(people) + "</span>" : "");
+    var editable = canEdit && j.status === "scheduled";
+    $("sec-move").hidden = !editable;
+    $("sec-cancel").hidden = !(canEdit && j.status !== "cancelled" && j.status !== "completed");
+    $("sec-customer").hidden = !j.customer_id;
+    $("s-cust").href = "#/customer/" + encodeURIComponent(j.customer_id || "");
+    $("s-cust").textContent = j.customer ? j.customer.full_name.split(" ")[0] + "'s details and bookings" : "Customer";
+    var notesOpen = canEdit && j.status !== "cancelled";
+    $("n-notes").value = j.notes || "";
+    $("n-notes").readOnly = !notesOpen; $("n-save").hidden = !notesOpen; $("r-add").hidden = !notesOpen;
+    ["m-msg", "t-msg", "n-msg", "r-msg", "c-msg"].forEach(function (id) { $(id).innerHTML = ""; });
+    $("c-confirm").hidden = true; $("c-ask").hidden = false;
+    $("m-date").value = j.scheduled_date; $("m-date").min = today;
+    renderTeams(); loadMoveSlots(); loadRequests();
+    $("scrim").hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+  function close() {
+    $("scrim").hidden = true; document.body.style.overflow = ""; current = null;
+    if (sheetDirty) { sheetDirty = false; route(); }
+  }
+  $("s-close").addEventListener("click", close);
+  $("s-cust").addEventListener("click", function () { sheetDirty = false; $("scrim").hidden = true; document.body.style.overflow = ""; current = null; });
+  $("scrim").addEventListener("click", function (e) { if (e.target === $("scrim")) close(); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("scrim").hidden) close(); });
+  document.addEventListener("click", function (e) { // (i) taps on phones
+    var b = e.target.closest(".info-btn");
+    document.querySelectorAll(".info.is-open").forEach(function (x) { if (!b || x !== b.parentNode) x.classList.remove("is-open"); });
+    if (b) b.parentNode.classList.toggle("is-open");
+  });
+  function changed(patch) { Object.keys(patch).forEach(function (k) { current[k] = patch[k]; }); sheetDirty = true; }
+
+  // move
+  $("m-date").addEventListener("change", loadMoveSlots);
+  function loadMoveSlots() {
+    if (!current || $("sec-move").hidden) return;
+    var day = $("m-date").value, j = current;
+    pickedSlot = null; $("m-save").disabled = true; $("m-noteam").hidden = true; $("m-msg").innerHTML = "";
+    if (!day) { $("m-slots").innerHTML = ""; return; }
+    $("m-slots").innerHTML = SLOTS.map(function (s) { return '<button type="button" class="opt" disabled>' + s.label + "<small>…</small></button>"; }).join("");
+    api.board(me.org_id, day).then(function (rows) {
+      if (!current || current.id !== j.id || $("m-date").value !== day) return;
+      var own = day === j.scheduled_date ? slotsHeld(j.start_time, j.end_time) : [];
+      var states = slotStates(rows, spanFor(jobMinutes(j)), own);
+      $("m-slots").innerHTML = states.map(function (x) {
+        var s = slotByKey(x.key), here = day === j.scheduled_date && x.key === slotFor(j.start_time).key && onSlot(j.start_time);
+        return '<button type="button" class="opt' + (x.ok || here ? "" : " full") + '" data-slot="' + x.key + '"' + (x.ok && !here ? "" : " disabled") + ">" +
+          s.label + " " + s.ampm.toLowerCase() + "<small>" + (here ? "Now" : esc(x.note)) + "</small></button>";
+      }).join("");
+    }).catch(function (err) { show($("m-msg"), "err", friendly(err)); });
+  }
+  $("m-slots").addEventListener("click", function (e) {
+    var b = e.target.closest(".opt[data-slot]");
+    if (!b || b.disabled) return;
+    pickedSlot = b.getAttribute("data-slot");
+    $("m-slots").querySelectorAll(".opt").forEach(function (x) { x.classList.toggle("is-on", x === b); });
+    $("m-save").disabled = false; $("m-noteam").hidden = true; $("m-msg").innerHTML = "";
+  });
+  $("m-save").addEventListener("click", function () { doMove(false); });
+  $("m-noteam").addEventListener("click", function () { doMove(true); });
+
+  function doMove(dropTeam) {
+    var j = current, day = $("m-date").value, slot = pickedSlot;
+    if (!j || !day || !slot) return;
+    var t = movedTimes(slot, j.start_time, j.end_time);
+    busy(true);
+    // Re-read the board and the day right before writing: someone may have booked or held the time since the sheet opened.
+    Promise.all([api.board(me.org_id, day), api.dayJobs(day)]).then(function (res) {
+      var rows = res[0], dayJobs = res[1];
+      var own = day === j.scheduled_date ? slotsHeld(j.start_time, j.end_time) : [];
+      var s = slotStates(rows, spanFor(jobMinutes(j)), own).filter(function (x) { return x.key === slot; })[0];
+      if (!s || !s.ok) throw new Error(s && s.note === "Next full" ? "This clean runs into the next time, and that one is full." : "That time is full. Pick another.");
+      var keepTeam = j.team_id && !dropTeam;
+      if (keepTeam && !teamFreeAt(dayJobs, j.team_id, t.start_time, t.end_time, j.id)) {
+        $("m-noteam").hidden = false;
+        throw new Error((j.team ? j.team.name : "The team") + " is busy then.");
+      }
+      var patch = { scheduled_date: day, start_time: t.start_time, end_time: t.end_time };
+      if (dropTeam) patch.team_id = null;
+      return api.updateJob(j.id, patch).then(function () {
+        if (dropTeam) { j.team = null; j.assignments = []; }
+        return Promise.all([
+          dropTeam ? api.clearPeople(j.id) : null,
+          api.event({ org_id: j.org_id, job_id: j.id, profile_id: me.id, type: "rescheduled",
+            payload: { from_date: j.scheduled_date, from_time: j.start_time, to_date: day, to_time: t.start_time, by: "manager_portal", team_cleared: !!dropTeam } })
+        ]).then(function () { return patch; });
+      });
+    }).then(function (patch) {
+      changed(patch);
+      open(j);
+      show($("m-msg"), "ok", "Moved to " + dayLabel(day) + ", " + clock(t.start_time) + (dropTeam ? ". Needs a team." : "."));
+    }).catch(function (err) { show($("m-msg"), "err", friendly(err)); })
+      .then(function () { busy(false); });
+  }
+
+  // team
+  function renderTeams() {
+    var j = current;
+    var opts = [{ id: null, name: "No team", color: null }].concat(teams);
+    $("t-chips").innerHTML = opts.map(function (t) {
+      return '<button type="button" class="opt' + ((j.team_id || null) === t.id ? " is-on" : "") + '" data-team="' + esc(t.id || "") + '"' + (canEdit && j.status === "scheduled" ? "" : " disabled") + ">" +
+        (t.color ? '<i class="dot" style="width:10px;height:10px;background:' + esc(t.color) + '"></i>' : "") + esc(t.name) + "</button>";
+    }).join("");
+  }
+  $("t-chips").addEventListener("click", function (e) {
+    var b = e.target.closest(".opt[data-team]");
+    if (!b || b.disabled || !current) return;
+    var j = current, teamId = b.getAttribute("data-team") || null;
+    if ((j.team_id || null) === teamId) return;
+    var team = teams.filter(function (t) { return t.id === teamId; })[0] || null;
+    busy(true); $("t-msg").innerHTML = "";
+    var check = teamId ? api.dayJobs(j.scheduled_date).then(function (dayJobs) {
+      if (!teamFreeAt(dayJobs, teamId, j.start_time, j.end_time, j.id)) throw new Error(team.name + " is busy then.");
+    }) : Promise.resolve();
+    check.then(function () { return api.updateJob(j.id, { team_id: teamId }); })
+      .then(function () { // assignTeam in src/lib/dispatch.ts
+        return api.event({ org_id: j.org_id, job_id: j.id, profile_id: me.id, type: "assigned", payload: { team_id: teamId } });
+      })
+      .then(function () {
+        j.team = team ? { name: team.name, color: team.color } : null;
+        changed({ team_id: teamId });
+        renderTeams();
+        show($("t-msg"), "ok", team ? team.name + " is on it." : "Team removed.");
+      })
+      .catch(function (err) { show($("t-msg"), "err", friendly(err)); })
+      .then(function () { busy(false); });
+  });
+
+  // notes
+  $("n-save").addEventListener("click", function () {
+    var j = current, notes = $("n-notes").value.trim() || null;
+    busy(true);
+    api.updateJob(j.id, { notes: notes }).then(function () { changed({ notes: notes }); show($("n-msg"), "ok", "Saved."); })
+      .catch(function (err) { show($("n-msg"), "err", friendly(err)); }).then(function () { busy(false); });
+  });
+
+  // special requests
+  function loadRequests() {
+    var j = current;
+    $("r-list").innerHTML = "";
+    api.requests(j.id).then(function (rows) {
+      if (!current || current.id !== j.id) return;
+      $("r-list").innerHTML = rows.map(function (r) {
+        return '<div class="req' + (r.completed_at ? " done" : "") + '"><span>' + esc(r.text) + "</span>" +
+          (canEdit && j.status !== "cancelled" && !r.completed_at ? '<button type="button" data-req="' + esc(r.id) + '" aria-label="Remove">&times;</button>' : "") + "</div>";
+      }).join("");
+    }).catch(function (err) { show($("r-msg"), "err", friendly(err)); });
+  }
+  $("r-list").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-req]");
+    if (!b) return;
+    busy(true);
+    api.deleteRequest(b.getAttribute("data-req")).then(loadRequests).catch(function (err) { show($("r-msg"), "err", friendly(err)); }).then(function () { busy(false); });
+  });
+  function addRequest() {
+    var text = $("r-text").value.trim().slice(0, 300), j = current;
+    if (!text) return;
+    busy(true);
+    api.addRequest([{ org_id: j.org_id, job_id: j.id, text: text, source: "manager", created_by: me.id }])
+      .then(function () { $("r-text").value = ""; $("r-msg").innerHTML = ""; loadRequests(); })
+      .catch(function (err) { show($("r-msg"), "err", friendly(err)); }).then(function () { busy(false); });
+  }
+  $("r-go").addEventListener("click", addRequest);
+  $("r-text").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); addRequest(); } });
+
+  // cancel: a copy of cancelJob (src/lib/dispatch.ts)
+  function feeApplies(j) { return (new Date(j.scheduled_date + "T" + j.start_time).getTime() - Date.now()) / 3600000 < LATE_CANCEL_WINDOW_HOURS; }
+  $("c-ask").addEventListener("click", function () {
+    var j = current, m = moneyById[j.id], prepaid = m && m.payment_status === "paid" && m.stripe_payment_intent_id;
+    $("c-what").textContent = feeApplies(j)
+      ? "Inside 48 hours: $50 fee, owed to the scheduled staff." + (prepaid ? " The rest is refunded to their card." : "")
+      : "More than 48 hours out: no fee." + (prepaid ? " Refunded in full to their card." : "");
+    $("c-ask").hidden = true; $("c-confirm").hidden = false;
+  });
+  $("c-no").addEventListener("click", function () { $("c-confirm").hidden = true; $("c-ask").hidden = false; });
+  $("c-go").addEventListener("click", function () {
+    var j = current, fee = feeApplies(j), prepaid = false, out = { refund: null, refundError: null, feeQueued: false };
+    busy(true);
+    api.payState(j.id).then(function (pay) {
+      prepaid = pay.payment_status === "paid" && !!pay.stripe_payment_intent_id;
+      var names = (j.assignments || []).map(function (a) { return a.profile && a.profile.full_name; }).filter(Boolean).join(", ") || "the assigned staff";
+      var reason = fee
+        ? "Cancelled within 48 hours of the appointment -- $" + (LATE_CANCEL_FEE_CENTS / 100).toFixed(0) + " fee, owed in full to " + names + " (not the company)."
+        : "Cancelled (outside the 48-hour window -- no fee).";
+      return api.updateJob(j.id, { status: "cancelled", cancelled_at: new Date().toISOString(), cancellation_reason: reason, cancellation_fee_cents: fee ? LATE_CANCEL_FEE_CENTS : null });
+    }).then(function () {
+      return api.event({ org_id: j.org_id, job_id: j.id, profile_id: me.id, type: "cancelled", payload: { fee_cents: fee ? LATE_CANCEL_FEE_CENTS : 0 } });
+    }).then(function () {
+      if (!prepaid) return;
+      return api.refund(j.id).then(function (r) { if (r.refunded) out.refund = r; })
+        .catch(function (e) { out.refundError = (e && e.message) || "The refund did not go through."; });
+    }).then(function () {
+      if (!fee || !j.customer_id || prepaid) return;
+      return api.card(j.customer_id).then(function (card) {
+        if (!card || !card.stripe_customer_id) return;
+        return api.outbox({ org_id: j.org_id, type: "charge", payload: {
+          job_id: j.id, amount_cents: LATE_CANCEL_FEE_CENTS, base_cents: LATE_CANCEL_FEE_CENTS, tip_cents: 0, currency: "usd",
+          stripe_customer_id: card.stripe_customer_id, stripe_payment_method_id: card.stripe_payment_method_id,
+          customer_name: card.full_name, customer_email: card.email, initiated: "cancellation_fee", idempotency_key: "cancel_" + j.id } })
+          .then(function (queued) {
+            if (!queued) return;
+            out.feeQueued = true;
+            // As cancelJob does; the job is cancelled now, so this one write is not limited to open jobs.
+            return api.updateJobAny(j.id, { payment_status: "authorized" });
+          });
+      });
+    }).then(function () {
+      changed({ status: "cancelled" });
+      open(j);
+      $("sec-cancel").hidden = false; $("c-ask").hidden = true;
+      var text = "Cancelled." + (out.refund ? " Refunded " + money(out.refund.refund_cents) + (out.refund.fee_kept_cents ? ", kept " + money(out.refund.fee_kept_cents) + "." : ".") : "") +
+        (fee && !prepaid ? (out.feeQueued ? " $50 fee queued for the card on file." : " $50 fee owed; no card on file.") : "");
+      show($("c-msg"), out.refundError ? "warn" : "ok", out.refundError ? text + " Refund failed: " + out.refundError + " Retry from the app's Dispatch." : text);
+    }).catch(function (err) { show($("c-msg"), "err", friendly(err)); })
+      .then(function () { busy(false); });
+  });
+
+  function busy(on) { $("scrim").style.cursor = on ? "progress" : ""; $("m-save").disabled = on || !pickedSlot; $("c-go").disabled = on; $("n-save").disabled = on; $("r-go").disabled = on; }
+
+  start();
+})();
+</script>
+</body>
+</html>

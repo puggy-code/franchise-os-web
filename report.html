@@ -66,6 +66,18 @@
   .foot { text-align: center; color: #9c99ab; font-size: 13px; margin-top: 22px; }
 
   /* Rating gate */
+  .rate { margin: 14px 0; }
+  .rate-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .rate-top span { color: #004aad; font-weight: 700; font-size: 13px; }
+  .rs { width: 100%; accent-color: #004aad; }
+  .rate-scale { display: flex; justify-content: space-between; font-size: 11px; color: #6b7280; }
+  .rc { width: 100%; box-sizing: border-box; margin-top: 6px; }
+  .chk { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0; font-size: 14px; }
+  .policy { font-size: 12.5px; color: #6b7280; border-left: 3px solid #e5e7eb; padding: 4px 10px; margin: 14px 0 0; }
+  #rcnote { width: 100%; box-sizing: border-box; min-height: 70px; margin: 8px 0; }
+  .btn { display: inline-block; background: #004aad; color: #fff; text-decoration: none; padding: 12px 18px; border-radius: 10px; font-weight: 700; margin-top: 10px; }
+  .superrow { display: flex; gap: 8px; align-items: center; margin: 0 0 12px; font-size: 15px; color: #3b0764; background: #f3e8ff; border-radius: 10px; padding: 10px 12px; }
+  .superrow[hidden] { display: none; }
   .stars { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 6px; margin: 4px 0 18px; }
   .stars input { position: absolute; opacity: 0; width: 0; height: 0; }
   .stars label { font-size: 42px; line-height: 1; cursor: pointer; color: #d1d5db; transition: color .12s; }
@@ -146,6 +158,7 @@
       '<p>Rate your ' + esc(d.org.name) + ' cleaning to see the full report from ' +
       esc(prettyDate(d.job.scheduled_date)) + ' — room by room, with photos.</p>' +
       '<form id="f"><div class="stars">' + stars + '</div>' +
+      '<label id="superrow" class="superrow" hidden><input type="checkbox" name="super"> <span>Above and beyond! Give us a <b>6 out of 5</b> super score.</span></label>' +
       '<textarea name="comment" placeholder="Anything we should know?"></textarea>' +
       '<input type="text" name="reviewer_name" placeholder="Your name (optional)">' +
       '<button type="submit" id="go">See my report</button>' +
@@ -153,6 +166,13 @@
     );
 
     var f = document.getElementById('f'), go = document.getElementById('go'), err = document.getElementById('err');
+    // The 6/5 option only appears once five stars are picked.
+    f.addEventListener('change', function () {
+      var p = f.querySelector('input[name=rating]:checked');
+      var show = !!p && p.value === '5';
+      document.getElementById('superrow').hidden = !show;
+      if (!show) f.super.checked = false;
+    });
     f.addEventListener('submit', function (e) {
       e.preventDefault();
       var picked = f.querySelector('input[name=rating]:checked');
@@ -162,7 +182,7 @@
       fetch(FN + '/submit-review', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          t: d.review_token, rating: Number(picked.value),
+          t: d.review_token, rating: Number(picked.value), super: !!(f.super && f.super.checked),
           comment: f.comment.value, reviewer_name: f.reviewer_name.value
         })
       })
@@ -186,65 +206,313 @@
     }).join('') + '</div>';
   }
 
+  // ---- Sharing with friends (Jack, 2026-10-10). The customer names up to six friends; we write each note in their own voice from the wording that
+  // works best; THEY send it from THEIR OWN phone (this page only opens their texting app). We never text the friend and never save a friend's number.
+  var REF_ASK = (new URLSearchParams(location.search)).get('a') || '';
+  var REF_PHONES = {}; // kept only in this page's memory, never sent to us
+
   function referralBlock(d) {
     var amount = money(d.referral.gift_cents);
-
-    if (d.referral.made) {
-      return card(
-        '<div class="gift"><div class="amt">' + esc(amount) + '</div>' +
-        '<p>for ' + esc(d.referral.made.friend_name) + '</p>' +
-        '<div class="code">' + esc(d.referral.made.code) + '</div>' +
-        '<p>Share this code with them — it is on your PDF too.</p></div>'
-      );
-    }
-
     return card(
-      '<h2>Give a friend ' + esc(amount) + '</h2>' +
-      '<p>Know a neighbour who could use us? Tell us who, and we will put ' + esc(amount) +
-      ' toward their first clean. You will get a code to pass along.</p>' +
+      '<h2>Know someone who could use a hand?</h2>' +
+      '<p>Send a friend, neighbor or coworker a note from your own phone. They get ' + esc(amount) + ' off their first clean, and if any of them books, your next clean is free.</p>' +
+      '<div id="reflist"></div>' +
       '<form id="rf">' +
-      '<input type="text" name="friend_name" placeholder="Their name" required>' +
-      '<input type="tel" name="friend_phone" placeholder="Their phone number">' +
-      '<input type="email" name="friend_email" placeholder="Or their email">' +
-      '<button type="submit" id="rgo">Send the gift</button>' +
+      '<input type="text" name="friend_name" placeholder="Their first name" required maxlength="60">' +
+      '<input type="tel" name="friend_phone" placeholder="Their mobile number (optional)">' +
+      '<p style="font-size:13px;margin:0">The number only addresses the text in YOUR messaging app. We never save it and we never text them.</p>' +
+      '<button type="submit" id="rgo">Write the note</button>' +
       '<div class="err" id="rerr" hidden></div></form>' +
-      // Said plainly, because it is true and because it is what keeps this the
-      // right side of TCPA: we are not going to cold-text their neighbour.
-      '<p style="font-size:13px;margin-top:12px">We will not contact them out of the blue — ' +
-      'the code is yours to give them.</p>'
+      '<p id="refleft" style="font-size:13px"></p>'
     );
+  }
+
+  function refCard(r, phone) {
+    var h = '<div class="gift" data-code="' + esc(r.code) + '"><p><b>' + esc(r.friend_name) + '</b> · code <b>' + esc(r.code) + '</b></p>' +
+      '<textarea class="refmsg" rows="5">' + esc(r.message || '') + '</textarea>' +
+      '<a class="btn refsend" href="#">' + (phone ? 'Open my texting app' : 'Open my texting app to choose them') + '</a>' +
+      (r.shared ? '<p style="font-size:13px">Opened on your phone before.</p>' : '') + '</div>';
+    return h;
   }
 
   function wireReferral(d) {
     var rf = document.getElementById('rf');
     if (!rf) return;
+    var list = document.getElementById('reflist'), left = document.getElementById('refleft');
     var go = document.getElementById('rgo'), err = document.getElementById('rerr');
+    var max = 6, count = 0;
+
+    function api(body) {
+      body.t = token; if (REF_ASK) body.a = REF_ASK;
+      return fetch(FN + '/submit-referral', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+        .then(function (r) { return r.json().catch(function () { return {}; }); });
+    }
+    function sync() {
+      left.textContent = count >= max ? 'That is the most you can add for this clean.' : 'You can add ' + (max - count) + ' more.';
+      rf.hidden = count >= max;
+    }
+    function addCard(r) {
+      var wrap = document.createElement('div');
+      wrap.innerHTML = refCard(r, REF_PHONES[r.code]);
+      var el = wrap.firstChild;
+      list.appendChild(el);
+      el.querySelector('.refsend').addEventListener('click', function (ev) {
+        ev.preventDefault();
+        var msg = el.querySelector('.refmsg').value;
+        var to = REF_PHONES[r.code] || '';
+        api({ action: 'shared', code: r.code });
+        // Opens THEIR texting app with the note filled in. Nothing is sent from here.
+        location.href = 'sms:' + to.replace(/[^0-9+]/g, '') + '?&body=' + encodeURIComponent(msg);
+      });
+    }
+
+    api({ action: 'start' }).then(function (res) {
+      if (res.ok) { max = res.max || 6; (res.referrals || []).forEach(function (r) { count++; addCard(r); }); }
+      sync();
+    });
 
     rf.addEventListener('submit', function (e) {
       e.preventDefault();
       var name = rf.friend_name.value.trim();
       var phone = rf.friend_phone.value.trim();
-      var email = rf.friend_email.value.trim();
-      if (!name) { err.hidden = false; err.textContent = 'Please add their name.'; return; }
-      if (!phone && !email) { err.hidden = false; err.textContent = 'Add a phone number or an email so we can reach them.'; return; }
+      if (!name) { err.hidden = false; err.textContent = 'Please add their first name.'; return; }
+      err.hidden = true; go.disabled = true; go.textContent = 'Writing…';
+      api({ action: 'add', friend_name: name }).then(function (res) {
+        go.disabled = false; go.textContent = 'Write the note';
+        if (!res.ok) {
+          err.hidden = false;
+          err.textContent = res.error === 'limit_reached' ? 'That is the most you can add for this clean.' : res.error === 'already_added' ? 'You already added them.' : 'That did not work. Please try again.';
+          return;
+        }
+        if (phone) REF_PHONES[res.referral.code] = phone;
+        count++; addCard(res.referral); rf.reset(); sync();
+      }).catch(function () { go.disabled = false; go.textContent = 'Write the note'; err.hidden = false; err.textContent = 'That did not work. Please try again.'; });
+    });
+  }
 
-      err.hidden = true; go.disabled = true; go.textContent = 'Sending…';
-      fetch(FN + '/submit-referral', {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ t: token, friend_name: name, friend_phone: phone, friend_email: email })
-      })
-        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-        .then(function (res) {
-          // Patch in place so the page does not reload and lose their scroll.
-          DATA.referral.made = res.referral;
-          render(DATA);
-          document.querySelector('.gift').scrollIntoView({ behavior: 'smooth', block: 'center' });
-        })
-        .catch(function () {
-          go.disabled = false; go.textContent = 'Send the gift';
-          err.hidden = false; err.textContent = 'That did not send. Please try again.';
+  // ---------------------------------------------------------------- room grading, photos, re-clean (migration 0104)
+  var TEXT_NUMBER = ''; // the business text number, digits with country code, for the "text us to book" button. Leave empty to hide it.
+  var SCORE_WORDS = ['', 'Needs work', 'Okay', 'Good', 'Great', 'Perfect'];
+
+  function post(body) {
+    body.t = token;
+    return fetch(FN + '/customer-feedback', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, error: 'bad_response' }; }); });
+  }
+
+  // ---- "Did everything go well?" (any service). Yes closes it with thanks; No asks what went wrong, with optional photos. ----
+  var ISSUE_OPTIONS = [
+    ['missed_area', 'Something was missed or not clean'],
+    ['damage', 'Something was damaged or broken'],
+    ['timing', 'Arrival time or how long it took'],
+    ['behavior', 'How the team acted'],
+    ['products', 'Products, smells or pets'],
+    ['other', 'Something else']
+  ];
+
+  function issueBlock(d) {
+    var f = d.feedback;
+    if (!f || !f.can_report_issue) return '';
+    var left = Math.max(0, 3 - (f.issues_reported || 0));
+    if (left === 0) return card('<h2>Thank you</h2><p>We have your reports and a person is reviewing them.</p>');
+    var opts = ISSUE_OPTIONS.map(function (o, i) { return '<label class="chk"><input type="radio" name="issuecat" value="' + o[0] + '"' + (i === 0 ? ' checked' : '') + '> ' + esc(o[1]) + '</label>'; }).join('');
+    return card(
+      '<h2>Did everything go well?</h2>' +
+      '<div id="issueask"><button id="issueyes" type="button">Yes, all good</button> <button id="issueno" type="button" style="background:#fff;color:#0a47a8;border:1px solid #0a47a8">Something went wrong</button></div>' +
+      '<div id="issueform" hidden><p>We are sorry. Tell us what happened so we can make it right. A person reads every report.</p>' + opts +
+      '<textarea id="issuetext" maxlength="1000" placeholder="What happened?"></textarea>' +
+      '<button id="issuego" type="button">Send</button><div class="err" id="issueerr" hidden></div></div>' +
+      '<p id="issuedone" class="ok" hidden></p>' +
+      '<p style="font-size:13px;margin-top:10px">You can add photos in the feedback section below.</p>'
+    );
+  }
+
+  function wireIssue(d) {
+    var yes = document.getElementById('issueyes'), no = document.getElementById('issueno');
+    if (!yes) return;
+    var form = document.getElementById('issueform'), ask = document.getElementById('issueask'), done = document.getElementById('issuedone');
+    yes.addEventListener('click', function () { ask.hidden = true; done.hidden = false; done.textContent = 'Wonderful, thank you! We are glad it went well.'; });
+    no.addEventListener('click', function () { ask.hidden = true; form.hidden = false; });
+    document.getElementById('issuego').addEventListener('click', function () {
+      var cat = (document.querySelector('input[name=issuecat]:checked') || {}).value;
+      var text = document.getElementById('issuetext').value.trim();
+      var err = document.getElementById('issueerr'), btn = document.getElementById('issuego');
+      if (text.length < 3) { err.hidden = false; err.textContent = 'Please tell us what happened.'; return; }
+      btn.disabled = true; btn.textContent = 'Sending…'; err.hidden = true;
+      post({ action: 'issue', category: cat, description: text }).then(function (r) {
+        if (r.ok) { form.hidden = true; done.hidden = false; done.textContent = 'Thank you for telling us. A person will review this and contact you.'; return; }
+        btn.disabled = false; btn.textContent = 'Send'; err.hidden = false;
+        err.textContent = r.error === 'too_many' ? 'We already have your reports for this clean.' : 'That did not send. Please try again.';
+      });
+    });
+  }
+
+  function feedbackBlock(d) {
+    var f = d.feedback;
+    if (!f || !f.rooms || !f.rooms.length) return '';
+    var existing = {};
+    (f.ratings || []).forEach(function (r) { existing[r.room] = r; });
+    var rows = f.rooms.map(function (room, i) {
+      var cur = existing[room];
+      var v = cur ? cur.score : 3;
+      return '<div class="rate"><div class="rate-top"><b>' + esc(room) + '</b><span id="rw' + i + '">' + (cur ? SCORE_WORDS[v] : 'Slide to grade') + '</span></div>' +
+        '<input type="range" class="rs" min="1" max="5" step="1" value="' + v + '" data-room="' + esc(room) + '" data-i="' + i + '"' + (cur ? '' : ' data-untouched="1"') + '>' +
+        '<div class="rate-scale"><span>Needs work</span><span>Perfect</span></div>' +
+        '<input type="text" class="rc" maxlength="500" data-room="' + esc(room) + '" placeholder="Anything about this room? (optional)" value="' + esc((cur && cur.comment) || '') + '"></div>';
+    }).join('');
+    var policy = f.policy_text ? '<p class="policy">' + esc(f.policy_text) + '</p>' : '';
+    return card(
+      '<h2>How did each room turn out?</h2><p>Slide each room from <b>Needs work</b> to <b>Perfect</b>. It tells our team exactly where to improve.</p>' + rows +
+      '<h3>Show us what you wanted cleaned</h3><p>Add up to ' + Math.max(0, 6 - (f.photos || 0)) + ' photos of anything you wanted cleaned or that was missed.</p>' +
+      '<input type="file" id="fph" accept="image/*" multiple>' +
+      '<button id="fgo">Send my feedback</button><div class="err" id="ferr" hidden></div><p id="fok" class="ok" hidden></p>' + policy + '<div id="rcbox"></div><div id="adbox">' + additionBlock(d) + '</div>'
+    );
+  }
+
+  function recleanBlock(d, lowRooms) {
+    var f = d.feedback;
+    if (!f) return '';
+    if (f.reclean && (f.reclean.status === 'open' || f.reclean.status === 'scheduled')) {
+      return '<h3>Your re-clean request</h3><p>Status: <b>' + esc(f.reclean.status) + '</b>. A member of our team will be in touch.</p>';
+    }
+    if (!f.can_reclean || !lowRooms.length) return '';
+    var boxes = lowRooms.map(function (r, i) { return '<label class="chk"><input type="checkbox" class="rcroom" value="' + esc(r) + '" checked> ' + esc(r) + '</label>'; }).join('');
+    return '<h3>Ask us to make it right</h3><p>Tell us what to revisit. We review every request; it is not automatic.</p>' + feeNote(f) + boxes +
+      '<textarea id="rcnote" maxlength="1000" placeholder="What should we look at?"></textarea>' +
+      (f.can_ask_refund ? '<label class="chk"><input type="checkbox" id="rcrefund"> I would like to be considered for a refund of the part that was missed</label>' : '') +
+      '<button id="rcgo">Request a re-clean</button><div class="err" id="rcerr" hidden></div>';
+  }
+
+  // The first request on a clean is free; each one after is $50. Said before they send it.
+  function feeNote(f) {
+    if (f.next_request_free) return '<p class="policy"><b>Your first request for this clean is free.</b> Each additional request is ' + money(f.next_request_fee_cents || 5000) + '.</p>';
+    return '<p class="policy"><b>This request is ' + money(f.next_request_fee_cents || 5000) + '</b> (the first one was free). We will confirm with you before anything is billed.</p>';
+  }
+
+  // Ask for something to be added to the checklist (Checklist Clean only; the same free-then-$50 rule).
+  function additionBlock(d) {
+    var f = d.feedback;
+    if (!f || !f.can_reclean) return '';
+    if (f.addition && (f.addition.status === 'open' || f.addition.status === 'scheduled')) {
+      return '<h3>Your add-on request</h3><p>Status: <b>' + esc(f.addition.status) + '</b>. A member of our team will be in touch.</p>';
+    }
+    return '<h3>Want something added to your checklist?</h3><p>Tell us what to add or do differently next time. Add photos in the section above if it helps.</p>' + feeNote(f) +
+      '<textarea id="adnote" maxlength="1000" placeholder="What should we add?"></textarea>' +
+      '<button id="adgo">Send my request</button><div class="err" id="aderr" hidden></div>';
+  }
+
+  function wireAddition(d) {
+    var b = document.getElementById('adgo');
+    if (!b) return;
+    b.addEventListener('click', function () {
+      var note = document.getElementById('adnote').value.trim();
+      var err = document.getElementById('aderr');
+      if (note.length < 3) { err.hidden = false; err.textContent = 'Tell us what to add.'; return; }
+      b.disabled = true; b.textContent = 'Sending…'; err.hidden = true;
+      post({ action: 'reclean', kind: 'addition', rooms: [], note: note }).then(function (r) {
+        if (r.ok) { document.getElementById('adbox').innerHTML = '<h3>Request received</h3><p>Thank you. ' + (r.free ? 'This one is free. ' : 'It is ' + money(r.fee_cents) + '. ') + 'A member of our team will review it and contact you.</p>'; return; }
+        b.disabled = false; b.textContent = 'Send my request'; err.hidden = false;
+        err.textContent = r.error === 'already_requested' ? 'You already have an open request for this clean.' : r.error === 'window_closed' ? 'The window to send requests for this clean has passed.' : 'That did not send. Please try again.';
+      });
+    });
+  }
+
+  function wireFeedback(d) {
+    var f = d.feedback;
+    if (!f || !f.rooms || !f.rooms.length) return;
+    var go = document.getElementById('fgo');
+    if (!go) return;
+    var sliders = [].slice.call(document.querySelectorAll('.rs'));
+    sliders.forEach(function (sl) {
+      sl.addEventListener('input', function () {
+        sl.removeAttribute('data-untouched');
+        document.getElementById('rw' + sl.getAttribute('data-i')).textContent = SCORE_WORDS[Number(sl.value)];
+      });
+    });
+    // Low rooms already graded on an earlier visit still offer the re-clean form.
+    var already = (f.ratings || []).filter(function (r) { return r.score <= 2; }).map(function (r) { return r.room; });
+    if (already.length) { document.getElementById('rcbox').innerHTML = recleanBlock(d, already); wireReclean(d); }
+    wireAddition(d);
+
+    go.addEventListener('click', function () {
+      var err = document.getElementById('ferr'), ok = document.getElementById('fok');
+      err.hidden = true; ok.hidden = true;
+      var rows = sliders.filter(function (sl) { return !sl.hasAttribute('data-untouched'); }).map(function (sl) {
+        var c = document.querySelector('.rc[data-room="' + sl.getAttribute('data-room').replace(/"/g, '\\"') + '"]');
+        return { room: sl.getAttribute('data-room'), score: Number(sl.value), comment: c ? c.value : '' };
+      });
+      var files = [].slice.call(document.getElementById('fph').files || []).slice(0, Math.max(0, 6 - (f.photos || 0)));
+      if (!rows.length && !files.length) { err.hidden = false; err.textContent = 'Slide at least one room, or add a photo.'; return; }
+      go.disabled = true; go.textContent = 'Sending…';
+      var chain = Promise.resolve({ ok: true, low_rooms: [] });
+      if (rows.length) chain = post({ action: 'ratings', rooms: rows });
+      chain.then(function (res) {
+        if (!res.ok) throw new Error('ratings');
+        var low = res.low_rooms || [];
+        return files.reduce(function (p, file) {
+          return p.then(function () {
+            return post({ action: 'upload_url', content_type: file.type || 'image/jpeg' }).then(function (u) {
+              if (!u.ok) throw new Error('upload');
+              var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', file);
+              return fetch(u.signed_url, { method: 'PUT', body: fd }).then(function (r) {
+                if (!r.ok) throw new Error('upload');
+                return post({ action: 'photo', path: u.path, caption: '' });
+              });
+            });
+          });
+        }, Promise.resolve()).then(function () { return low; });
+      }).then(function (low) {
+        go.textContent = 'Send my feedback'; go.disabled = false;
+        ok.hidden = false; ok.textContent = 'Thank you. Your feedback went straight to our team.';
+        document.getElementById('rcbox').innerHTML = recleanBlock(d, low.length ? low : already);
+        wireReclean(d);
+      }).catch(function () {
+        go.disabled = false; go.textContent = 'Send my feedback';
+        err.hidden = false; err.textContent = 'That did not all send. Please try again.';
+      });
+    });
+  }
+
+  function wireReclean(d) {
+    var b = document.getElementById('rcgo');
+    if (!b) return;
+    b.addEventListener('click', function () {
+      var rooms = [].slice.call(document.querySelectorAll('.rcroom')).filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
+      var err = document.getElementById('rcerr');
+      if (!rooms.length) { err.hidden = false; err.textContent = 'Pick at least one room.'; return; }
+      b.disabled = true; b.textContent = 'Sending…'; err.hidden = true;
+      post({ action: 'reclean', kind: 'reclean', rooms: rooms, note: document.getElementById('rcnote').value, wants_refund: !!(document.getElementById('rcrefund') && document.getElementById('rcrefund').checked) })
+        .then(function (r) {
+          if (r.ok) { document.getElementById('rcbox').innerHTML = '<h3>Request received</h3><p>Thank you. ' + (r.free ? 'This one is free. ' : 'It is ' + money(r.fee_cents) + '. ') + 'A member of our team will review it and contact you.</p>'; return; }
+          b.disabled = false; b.textContent = 'Request a re-clean'; err.hidden = false;
+          err.textContent = r.error === 'already_requested' ? 'You already sent a request for this clean.' : r.error === 'window_closed' ? 'The window to request a re-clean for this clean has passed.' : r.policy_text || 'That did not send. Please try again.';
         });
     });
+  }
+
+  function ideasBlock(d) {
+    if (!d.ideas || !d.ideas.length) return '';
+    var total = d.ideas.reduce(function (s, i) { return s + (i.minutes || 0); }, 0);
+    var list = d.ideas.map(function (i) {
+      return '<li><span class="tick">&#9733;</span><span>' + esc(i.label) + (i.minutes ? ' <span class="na-text">(about ' + i.minutes + ' min)</span>' : '') +
+        (i.photos && i.photos.length ? '<div class="grid">' + i.photos.map(function (u) { return '<figure><img src="' + esc(u) + '" alt=""></figure>'; }).join('') + '</div>' : '') + '</span></li>';
+    }).join('');
+    var cta = TEXT_NUMBER
+      ? '<a class="btn" href="sms:' + esc(TEXT_NUMBER) + '?&body=' + encodeURIComponent('Hi! I would like to book a Four Hour Detailing.') + '">Text us to book a Four Hour Detailing</a>'
+      : '';
+    return card(
+      '<h2>Ideas from your cleaners</h2><p>While cleaning, your team noticed a few things a Four Hour Detailing could take care of' + (total ? ' (about ' + total + ' minutes in all)' : '') + '. The Four Hour Detailing runs 9:00 AM to 1:30 PM: a standard clean, a free half hour, then a detailing session.</p><ul>' + list + '</ul>' + cta
+    );
+  }
+
+  // "Special request #1: Wipe the mailboxes — done 2:41 PM" (migration 0308; same as reportLine() in src/lib/commercialModules.ts).
+  // English only. Never a price: the function sends none.
+  function requestTime(iso) {
+    try { return new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; }
+  }
+  function requestLine(r) {
+    var name = (r.number ? 'Special request #' + r.number + ': ' : '') + String(r.text || '');
+    return r.status === 'done' ? name + (r.done_at ? ' — done ' + requestTime(r.done_at) : ' — done') : name;
   }
 
   function render(d) {
@@ -254,6 +522,7 @@
     var head = card(
       '<h1>' + esc(d.job.service_label || 'Your cleaning') + '</h1>' +
       '<p class="meta">' + esc(prettyDate(d.job.scheduled_date)) + '</p>' +
+      (d.job.checklist_tier ? '<p class="meta">' + esc(({ basic: 'Basic', extra: 'Extra', deluxe: 'Deluxe' })[d.job.checklist_tier] || '') + ' Checklist Clean' + (d.job.rotational ? ' · Rotational plan' : '') + '</p>' : '') +
       (d.rating ? '<p class="rated">' + '★'.repeat(d.rating) + '</p>' : '') +
       (d.crew.length
         ? '<div class="crew">' + d.crew.map(function (n) { return '<span class="who">' + esc(n) + '</span>'; }).join('') + '</div>'
@@ -266,6 +535,20 @@
       '<span>of ' + d.tasks.total + ' tasks completed</span></div>' +
       '<div class="bar"><i style="width:' + pct + '%"></i></div>'
     );
+
+    var extrasCard = (d.extras && d.extras.length)
+      ? card('<h2>Extras we did for you</h2><ul>' + d.extras.map(function (x) { return '<li>We also ' + esc(x) + '</li>'; }).join('') + '</ul>')
+      : '';
+
+    var requestsCard = (d.requests && d.requests.length)
+      ? card('<h2>Your special requests</h2><ul>' + d.requests.map(function (r) {
+          return r.status === 'done'
+            ? '<li><span class="tick">&#10003;</span><span>' + esc(requestLine(r)) + '</span></li>'
+            : r.status === 'could_not'
+              ? '<li><span class="na">&mdash;</span><span class="na-text">' + esc(requestLine(r)) + '<span class="reason">We ran out of time for this one. We will make it right.</span></span></li>'
+              : '<li><span class="na">&mdash;</span><span class="na-text">' + esc(requestLine(r)) + '<span class="reason">Not marked complete.</span></span></li>';
+        }).join('') + '</ul>')
+      : '';
 
     var list = d.tasks.rooms.length
       ? d.tasks.rooms.map(function (r) {
@@ -283,17 +566,29 @@
       ? card('<h2>Photos</h2>' + photoBlock('Before', d.photos.before) + photoBlock('After', d.photos.after))
       : '';
 
+    // Walkthrough videos (2026-10-13): the team's before and after video of the home, newest of each.
+    var vids = (d.videos || []).filter(function (v) { return v.url; });
+    var videos = vids.length
+      ? card('<h2>Walkthrough</h2><p>Your team filmed the home before and after.</p>' + vids.map(function (v) {
+          return '<h3>' + (v.kind === 'before' ? 'Before' : 'After') + '</h3>' +
+                 '<video controls playsinline preload="metadata" src="' + esc(v.url) + '" style="width:100%;border-radius:12px;background:#000"></video>';
+        }).join(''))
+      : '';
+
     var pdf = card(
       '<h2>Keep a copy</h2>' +
       '<p>A one-page PDF with everything above, including your gift code.</p>' +
       '<button class="ghost" id="pdf">Download PDF</button>'
     );
 
-    root.innerHTML = head + summary + card(list) + photos + referralBlock(d) + pdf +
+    // A property manager's report has no referral gift and no star rating.
+    var pm = !!(d.job && d.job.pm_report);
+    root.innerHTML = head + summary + requestsCard + extrasCard + card(list) + (pm ? '' : issueBlock(d)) + (pm ? '' : feedbackBlock(d)) + (pm ? '' : ideasBlock(d)) + photos + videos + (pm ? '' : referralBlock(d)) + pdf +
+      (d.portal_token ? card('<h2>Your account</h2><p>Your records, photos, invoices and a direct line to us, all in one place that stays yours.</p><a class="btn" href="account.html?t=' + esc(d.portal_token) + '">Open your account</a>') : '') +
       '<p class="foot">' + esc(d.org.name) + '</p>';
 
     document.title = d.org.name + ' — your clean report';
-    wireReferral(d);
+    if (!pm) { wireReferral(d); wireIssue(d); wireFeedback(d); }
     document.getElementById('pdf').addEventListener('click', function () { buildPdf(d, this); });
   }
 
@@ -365,6 +660,25 @@
       doc.setTextColor(21, 18, 31).setFont('helvetica', 'bold').setFontSize(13);
       doc.text(d.tasks.completed + ' of ' + d.tasks.total + ' tasks completed', M, y);
       y += 22;
+
+      // Special requests, numbered, with the time each was done
+      if (d.requests && d.requests.length) {
+        room(40);
+        doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(124, 58, 237);
+        doc.text('SPECIAL REQUESTS', M, y);
+        y += 14;
+        doc.setFont('helvetica', 'normal').setFontSize(10);
+        d.requests.forEach(function (r) {
+          room(16);
+          // jsPDF's built-in fonts have no em dash; a plain dash reads the same.
+          var line = requestLine(r).replace(/—/g, '-');
+          if (r.status === 'done') { doc.setTextColor(22, 163, 74); doc.text('v', M, y); doc.setTextColor(21, 18, 31); }
+          else { doc.setTextColor(156, 153, 171); doc.text('-', M, y); line += r.status === 'could_not' ? '  (we ran out of time; we will make it right)' : '  (not marked complete)'; }
+          doc.text(doc.splitTextToSize(line, W - M * 2 - 14), M + 14, y);
+          y += 14 * Math.max(1, doc.splitTextToSize(line, W - M * 2 - 14).length);
+        });
+        y += 8;
+      }
 
       // Checklist, room by room
       d.tasks.rooms.forEach(function (r) {
@@ -441,7 +755,32 @@
   }
 
   // ---------------------------------------------------------------- bootstrap
+  // ?live=1 -- the progress bar a customer can watch while the team works. Counts only, no photos, no gate.
+  var LIVE = new URLSearchParams(location.search).get('live') === '1';
+  function renderLive(d) {
+    var pct = d.progress.total ? Math.round((d.progress.done / d.progress.total) * 100) : 0;
+    var status = d.job.status === 'completed' ? 'All done!' : d.job.status === 'in_progress' ? 'Your team is working' : d.job.status === 'on_the_way' ? 'Your team is on the way' : 'Scheduled';
+    root.innerHTML = card(
+      '<h1>' + esc(d.job.service_label || 'Your cleaning') + '</h1>' +
+      '<p class="meta">' + esc(status) + '</p>' +
+      '<div class="summary"><span class="big">' + pct + '%</span><span>' + d.progress.done + ' of ' + d.progress.total + ' tasks</span></div>' +
+      '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+      (d.activity && d.activity.length ? '<h2>Happening now</h2><ul class="feed">' + d.activity.map(function (a) { return '<li>' + esc(a.text) + ' <span class="meta">' + esc(new Date(a.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })) + '</span></li>'; }).join('') + '</ul>' : '') +
+      (d.requests.total ? '<p class="meta">Your special requests: ' + d.requests.done + ' of ' + d.requests.total + ' done</p>' : '') +
+      (d.job.status === 'completed' ? '<p>Your full report is on its way by text.</p>' : '<p class="meta">This page updates by itself.</p>')
+    );
+    document.title = d.org.name + ' — live progress';
+    if (d.job.status !== 'completed') setTimeout(loadLive, 20000);
+  }
+  function loadLive() {
+    return fetch(FN + '/job-report?live=1&t=' + encodeURIComponent(token))
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(renderLive)
+      .catch(expired);
+  }
+
   function load() {
+    if (LIVE) return loadLive();
     return fetch(FN + '/job-report?t=' + encodeURIComponent(token))
       .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function (d) { (d.gated ? renderGate : render)(d); })

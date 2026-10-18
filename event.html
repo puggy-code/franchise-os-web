@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Two Hour Maids</title>
+<!--
+  The booth sign-up at a live event (2026-10-13; migration 0265, EVENTS.md). event.html?e=<event code>, on the booth tablet or from the event QR.
+  Posts to the public-signup function. Texts only if the person ticks the box (TCPA: the wording below is what is saved as their consent).
+  "Book now" goes to the booking page carrying the event code, so a booking counts for the event. English only (customer-facing page).
+-->
+<style>
+  :root { --brand: #0A47A8; --ink: #10151E; --muted: #5E6776; --bg: #F4F5F7; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif; }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 24px 16px 48px; }
+  .card { background: #fff; border-radius: 20px; padding: 22px; margin-bottom: 14px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.4px; }
+  p { color: var(--muted); line-height: 1.45; margin: 0 0 12px; }
+  label { display: block; font-weight: 700; font-size: 13px; margin: 12px 0 4px; }
+  input, select { width: 100%; font-size: 17px; padding: 12px; border-radius: 12px; border: 1px solid #DDE1E7; background: #F8F9FB; }
+  .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .check input { width: 22px; height: 22px; flex: none; margin-top: 2px; }
+  button, .btn { display: block; width: 100%; text-align: center; text-decoration: none; background: var(--brand); color: #fff; border: 0; border-radius: 999px; padding: 15px; font-size: 17px; font-weight: 800; margin-top: 16px; cursor: pointer; }
+  .btn.alt { background: #fff; color: var(--brand); border: 2px solid var(--brand); }
+  .hp { position: absolute; left: -5000px; }
+  .ok { color: #157347; font-weight: 700; } .err { color: #B42318; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="form">
+    <h1>Glad you stopped by!</h1>
+    <p>Leave your details and we will make your first clean easy. Prefer to pick a time now? Book below.</p>
+    <a class="btn alt" id="book" href="#">Book a cleaning now</a>
+    <label for="n">Name</label><input id="n" autocomplete="name">
+    <label for="p">Mobile phone</label><input id="p" type="tel" autocomplete="tel" inputmode="tel">
+    <label for="m">Email (optional)</label><input id="m" type="email" autocomplete="email">
+    <label for="z">ZIP code</label><input id="z" inputmode="numeric" maxlength="10" autocomplete="postal-code">
+    <label for="i">What would help most?</label>
+    <select id="i"><option value="">Choose one (optional)</option><option>A one-time clean</option><option>Every 2 weeks</option><option>Every week</option><option>Every 4 weeks</option><option>Moving out or in</option><option>Just looking</option></select>
+    <input class="hp" id="w" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <div class="check"><input type="checkbox" id="ok"><label for="ok" id="consent" style="font-weight:400;margin:0">Yes, Two Hour Maids may text me about cleanings and offers at this number, up to 4 times a month. Consent is not required to buy. Message and data rates may apply. Reply STOP to opt out.</label></div>
+    <button id="go">Send</button>
+    <p id="note" style="margin-top:10px"></p>
+  </div>
+</div>
+<script>
+(function () {
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  var BOOKING = 'https://twohourmaids.com';
+  var code = (new URLSearchParams(location.search).get('e') || '').toLowerCase();
+  var form = document.getElementById('form');
+  if (!/^[a-z2-9]{5,8}$/.test(code)) { form.innerHTML = '<h1>Two Hour Maids</h1><p class="err">This sign-up link is not valid.</p><a class="btn" href="' + BOOKING + '">Book a cleaning</a>'; return; }
+  document.getElementById('book').href = BOOKING + (BOOKING.indexOf('?') >= 0 ? '&' : '?') + 'b=' + code;
+  var v = function (id) { return document.getElementById(id).value.trim(); };
+  document.getElementById('go').onclick = function () {
+    var note = document.getElementById('note'), b = this;
+    if (!v('p') && !v('m')) { note.className = 'err'; note.textContent = 'Please add a phone number or an email.'; return; }
+    b.disabled = true; note.className = ''; note.textContent = 'Sending...';
+    var agreed = document.getElementById('ok').checked;
+    fetch(SUPABASE_URL + '/functions/v1/public-signup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
+      kind: 'event_lead', code: code, name: v('n'), phone: v('p'), email: v('m'), zip: v('z'), interest: v('i'), website: v('w'),
+      agreed: agreed, consent_text: agreed ? document.getElementById('consent').textContent : null }) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) {
+        if (!x.ok) throw new Error(x.j && x.j.error);
+        form.innerHTML = '<h1>Thank you!</h1><p class="ok">We have your details' + (agreed ? ' and will text you soon.' : '.') + '</p><a class="btn" href="' + document.getElementById('book').href + '">Book a cleaning now</a>' +
+          '<button class="btn alt" onclick="location.reload()">Next person</button>';
+      })
+      .catch(function (e) { b.disabled = false; note.className = 'err'; note.textContent = e && e.message === 'bad_phone' ? 'That phone number does not look right.' : e && e.message === 'bad_email' ? 'That email does not look right.' : 'That did not send. Please try again.'; });
+  };
+})();
+</script>
+</body>
+</html>

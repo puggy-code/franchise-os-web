@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<title>Your cleaning proposal</title>
+<!-- Commercial proposal. Link as quote.html?t=<share token> (Admin > Leads > Build a quote > Share link). The token is the only credential. Data: quote-view function. -->
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #f6f5fb; color: #15121f; margin: 0; padding: 20px 14px 56px; line-height: 1.5; }
+  .wrap { max-width: 600px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 18px; padding: 22px; margin: 0 0 14px; }
+  h1 { font-size: 24px; margin: 0 0 4px; } h2 { font-size: 13px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .6px; color: #6b6880; }
+  p { color: #6b6880; margin: 0 0 10px; }
+  .big { font-size: 40px; font-weight: 800; letter-spacing: -1px; color: #15121f; } .per { color: #6b6880; font-size: 16px; font-weight: 600; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1eff7; } .row:last-child { border-bottom: 0; }
+  input { width: 100%; font: inherit; border: 1px solid #ddd9ea; border-radius: 12px; padding: 12px; margin: 6px 0 12px; }
+  button { background: #004aad; color: #fff; border: 0; border-radius: 12px; padding: 14px 20px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; }
+  button[disabled] { opacity: .5; }
+  .ok { color: #166534; font-weight: 700; } .err { color: #b91c1c; }
+</style>
+</head>
+<body>
+<div class="wrap" id="root"><div class="card"><p>Loading...</p></div></div>
+<script>
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  var FN = SUPABASE_URL + '/functions/v1';
+  var token = new URLSearchParams(location.search).get('t') || '';
+  var root = document.getElementById('root');
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function money(c) { return '$' + Math.round(c / 100).toLocaleString('en-US'); }
+  function render(d) {
+    var h = '<div class="card"><h1>' + esc(d.business ? 'Proposal for ' + d.business : 'Your proposal') + '</h1><p>From ' + esc(d.company) + '</p><div class="big">' + esc(money(d.monthly_cents)) + '<span class="per"> a month</span></div><p>Supplies and equipment included.</p></div>';
+    if (d.scope && d.scope.length) h += '<div class="card"><h2>Your facility and what is included</h2><p><b>' + esc(d.scope[0]) + '</b><br>' + esc(d.scope[1] || '') + '</p><ul>' + d.scope.slice(2).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul><p style="margin-top:10px">The price is confirmed at a free walkthrough of your space.</p></div>';
+    else h += '<div class="card"><h2>What we will clean</h2>' + d.areas.map(function (a) { return '<div class="row"><span>' + esc(a.area) + '</span><b>' + esc(a.frequency) + '</b></div>'; }).join('') + '</div>';
+    if (d.accepted_at) {
+      h += '<div class="card"><p class="ok">Accepted by ' + esc(d.accepted_name) + ' on ' + esc(new Date(d.accepted_at).toLocaleDateString()) + '. Thank you! We will be in touch to set your start date.</p></div>';
+    } else if (d.status === 'lost') {
+      h += '<div class="card"><p>This proposal is closed. Reply to us if you would like a fresh one.</p></div>';
+    } else {
+      h += '<div class="card"><h2>Ready to go?</h2><p>Type your name to accept this proposal. We will then confirm a start date with you. You can also reply to us with questions first.</p><input id="nm" placeholder="Your full name" autocomplete="name"><button id="go">Accept this proposal</button><p id="note"></p></div>';
+    }
+    root.innerHTML = h;
+    var go = document.getElementById('go');
+    if (go) go.onclick = function () {
+      var name = document.getElementById('nm').value.trim(), note = document.getElementById('note');
+      if (name.length < 2) { note.className = 'err'; note.textContent = 'Please type your name.'; return; }
+      go.disabled = true;
+      fetch(FN + '/quote-view', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'accept', name: name }) })
+        .then(function (r) { return r.ok ? r.json().then(function (j) { return load().then(function () { if (j.account_url) root.innerHTML += '<div class="card"><p class="ok">Your service agreement is ready to read and accept on your own account page.</p><a href="' + esc(j.account_url) + '" style="display:block;text-align:center;background:#004aad;color:#fff;border-radius:12px;padding:14px;font-weight:700;text-decoration:none">Open my account page</a></div>'; }); }) : Promise.reject(); })
+        .catch(function () { go.disabled = false; note.className = 'err'; note.textContent = 'That did not go through. Please try again or reply to us.'; });
+    };
+    document.title = d.company + ' proposal';
+  }
+  function load() {
+    return fetch(FN + '/quote-view?t=' + encodeURIComponent(token)).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); }).then(render)
+      .catch(function () { root.innerHTML = '<div class="card"><p class="err">This link is not valid. Please contact us.</p></div>'; });
+  }
+  if (!/^[0-9a-f]{32}$/.test(token)) root.innerHTML = '<div class="card"><p class="err">This link is not valid. Please contact us.</p></div>'; else load();
+</script>
+</body>
+</html>

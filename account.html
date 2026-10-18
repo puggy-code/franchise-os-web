@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<title>Your account</title>
+<!--
+  Customer portal: one permanent private page per customer. Link it as  account.html?t=<portal token>  (Admin > customer > Share portal link).
+  The token in the URL is the only credential and never expires. Data comes from the customer-portal function (JSON); Supabase will not serve html
+  from a function. Host this next to report.html. Nothing here needs a Supabase key.
+-->
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #f6f5fb; color: #15121f; margin: 0; padding: 18px 14px 56px; line-height: 1.5; }
+  .wrap { max-width: 660px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 18px; padding: 20px; margin: 0 0 14px; }
+  h1 { font-size: 25px; margin: 0 0 2px; letter-spacing: -.2px; }
+  h2 { font-size: 13px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .6px; color: #6b6880; }
+  p { color: #6b6880; margin: 0 0 10px; }
+  nav { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; }
+  nav a { background: #fff; border-radius: 999px; padding: 7px 14px; font-weight: 700; font-size: 14px; color: #004aad; text-decoration: none; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f1eff7; }
+  .row:last-child { border-bottom: 0; }
+  .sub { color: #6b6880; font-size: 13px; }
+  .tag { align-self: flex-start; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; background: #f1f0f6; color: #6b6880; }
+  .good { background: #dcfce7; color: #166534; } .warn { background: #fef3c7; color: #92400e; } .blue { background: #dbeafe; color: #1e40af; }
+  .big { font-size: 34px; font-weight: 800; letter-spacing: -1px; }
+  .bar { height: 8px; border-radius: 999px; background: #e6e3f0; overflow: hidden; margin-top: 8px; }
+  .bar > i { display: block; height: 8px; background: #004aad; }
+  .btn, button { display: inline-block; background: #004aad; color: #fff; text-decoration: none; border: 0; border-radius: 12px; padding: 12px 18px; font-size: 15px; font-weight: 700; cursor: pointer; }
+  .btn.alt { background: #eef2fb; color: #004aad; }
+  button[disabled] { opacity: .5; }
+  .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .photos img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 10px; display: block; }
+  @media (max-width: 460px) { .photos { grid-template-columns: repeat(2, 1fr); } }
+  textarea, select { width: 100%; font: inherit; border: 1px solid #ddd9ea; border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; background: #fff; }
+  textarea { min-height: 90px; }
+  .msg { padding: 10px 12px; border-radius: 14px; margin: 0 0 8px; max-width: 88%; font-size: 15px; }
+  .msg.customer { background: #eef2fb; margin-left: auto; } .msg.staff { background: #f6f5fb; }
+  .msg .sub { display: block; margin-top: 2px; }
+  .tipbox { margin: 6px 0 10px; } .tipbox .btn { padding: 9px 14px; font-size: 14px; margin: 0 6px 6px 0; }
+  .co-btns { display: flex; gap: 8px; margin: 4px 0 8px; } .co-btns .btn { padding: 8px 14px; font-size: 14px; }
+  .err { color: #b91c1c; } .ok { color: #166534; font-weight: 700; }
+  ul { margin: 0; padding-left: 18px; color: #6b6880; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 0 12px; }
+  .tile { background: #eef2fb; border-radius: 14px; padding: 14px 12px; text-align: left; color: #15121f; font-weight: 700; font-size: 15px; border: 2px solid transparent; cursor: pointer; display: block; text-decoration: none; }
+  .tile .ic { font-size: 24px; display: block; margin-bottom: 6px; }
+  .tile .sub { font-weight: 400; display: block; }
+  .tile.on { border-color: #004aad; background: #fff; }
+  .panel { display: none; border-top: 1px solid #f1eff7; padding-top: 12px; margin-top: 4px; } .panel.on { display: block; }
+  .room { margin: 0 0 10px; } .room b { display: block; font-size: 14px; }
+  @media (max-width: 380px) { .tiles { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="root"><div class="card"><p>Loading your account...</p></div></div>
+<script>
+  // Same project as report.html (the project URL is not a secret).
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  var SAVED = null; // the saved card for one-tap tips (brand, last4), set on each render
+  var FN = SUPABASE_URL + '/functions/v1';
+  var token = new URLSearchParams(location.search).get('t') || '';
+  var root = document.getElementById('root');
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function money(c) { var d = c / 100; return '$' + d.toLocaleString('en-US', { minimumFractionDigits: c % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 }); }
+  function day(d) { return d ? new Date(d.length > 10 ? d : d + 'T12:00:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : ''; }
+  function time(t) { if (!t) return ''; var p = t.split(':'); var h = +p[0]; return (h % 12 || 12) + ':' + p[1] + (h >= 12 ? ' PM' : ' AM'); }
+  var STATUS = { scheduled: ['Scheduled', 'blue'], on_the_way: ['On the way', 'warn'], in_progress: ['Cleaning now', 'good'], completed: ['Done', 'good'] };
+  var REQ = { book_again: 'Book again', reschedule: 'Change a date', add_service: 'Add a service', question: 'A question', problem: 'Something is not right', other: 'Something else' };
+  var KIND = { agreement: 'Agreement', quote: 'Quote', receipt: 'Receipt', care_notes: 'Your cleaning plan', other: 'Document', from_customer: 'You sent' };
+  var STATE = { planned: ['Coming up', ''], invoiced: ['Invoiced', 'warn'], paid: ['Paid', 'good'] };
+
+  function jobRow(j, live) {
+    var st = STATUS[j.status] || [j.status, ''];
+    var link = '';
+    if (j.status === 'completed' && j.report_token) link = '<a href="report.html?t=' + esc(j.report_token) + '">See the report</a>';
+    var tip = '';
+    if (j.tip_options_cents && j.tip_options_cents.length && j.report_token) tip = '<div class="tipbox"><div class="sub">Leave a tip for your team. 100% goes to the people who cleaned your home.' +
+      (SAVED ? ' One tap charges your ' + esc(SAVED.brand.charAt(0).toUpperCase() + SAVED.brand.slice(1)) + ' ending ' + esc(SAVED.last4) + '.' : '') + '</div>' + j.tip_options_cents.map(function (c) { return '<button class="btn alt" data-tip="' + c + '" data-rt="' + esc(j.report_token) + '">' + esc(money(c)) + '</button>'; }).join('') + '</div>';
+    else if (live && j.report_token && (j.status === 'in_progress' || j.status === 'on_the_way')) link = '<a href="report.html?t=' + esc(j.report_token) + '&live=1">Watch live</a>';
+    return '<div class="row"><div><b>' + esc(day(j.date)) + (j.time ? ' · ' + esc(time(j.time)) : '') + '</b><div class="sub">' + esc(j.service || 'Cleaning') +
+      (j.crew && j.crew.length ? ' · ' + esc(j.crew.join(', ')) : '') + '</div>' +
+      (j.progress && j.status === 'in_progress' ? '<div class="bar"><i style="width:' + Math.round(100 * j.progress.done / j.progress.total) + '%"></i></div>' : '') +
+      (link ? '<div class="sub">' + link + '</div>' : '') + tip +
+      (live && j.can_move ? '<div class="sub"><a href="#" data-move="' + esc(j.id) + '">Change date</a></div><div id="mv-' + esc(j.id) + '"></div>' : '') +
+      '</div><span class="tag ' + st[1] + '">' + esc(st[0]) + '</span></div>';
+  }
+
+  function render(d) {
+    SAVED = d.saved_card || null;
+    var h = '<div class="card"><h1>Hi ' + esc(d.customer.first_name) + '</h1><p>Your records and a direct line to ' + esc(d.org.name) + '. This page is yours to keep: bookmark it any time.</p></div>';
+    h += '<nav><a href="#home">Your home</a><a href="#ready">Getting ready</a><a href="#status">Status</a><a href="#photos">Photos</a><a href="#needs">Your needs</a><a href="#agreements">Agreements</a><a href="#documents">Documents</a><a href="#billing">Billing</a><a href="#messages">Messages</a><a href="#request">Request</a></nav>';
+
+    var rd = d.ready || {};
+    var crewNames = d.current.length && d.current[0].crew ? d.current[0].crew : [];
+    h += '<div class="card" id="ready"><h2>Getting ready for your clean</h2>' +
+      '<p>' + (rd.next_clean ? 'Your next clean is ' + esc(day(rd.next_clean.date)) + '. ' : '') + 'A few things that help us do it right.</p>' +
+      '<div class="tiles">' +
+      '<button class="tile" data-panel="p-plan"><span class="ic">\u2705</span>Review our cleaning plan<span class="sub">What we will do, room by room</span></button>' +
+      '<a class="tile" href="#home"><span class="ic">\ud83d\udcdd</span>Add to your house notes<span class="sub">Pets, preferences, what matters</span></a>' +
+      (rd.video_url ? '<a class="tile" href="' + esc(rd.video_url) + '" target="_blank" rel="noopener"><span class="ic">\u25b6\ufe0f</span>Watch how we clean<span class="sub">Our process, in a few minutes</span></a>' : '') +
+      (crewNames.length ? '<button class="tile" data-panel="p-team"><span class="ic">\ud83d\udc4b</span>Meet your team<span class="sub">Who is coming</span></button>' : '') +
+      '</div>' +
+      '<div class="panel" id="p-plan">' + (rd.plan && rd.plan.length ? rd.plan.map(function (r) { return '<div class="room"><b>' + esc(r.room) + '</b><ul>' + r.items.map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('') + '</ul></div>'; }).join('') : '<p>Your cleaning plan will appear here once your clean is scheduled.</p>') + '</div>' +
+      '<div class="panel" id="p-team"><p>' + (crewNames.length ? 'Your team on this clean: <b>' + esc(crewNames.join(', ')) + '</b>.' : '') + '</p></div>' +
+      '</div>';
+
+    // About your home: its own card, linked from the top, so it is easy to find (2026-10-16). Staff read it before every clean.
+    h += '<div class="card" id="home"><h2>About your home</h2><p>Anything we should know: a pet, a fragile item, a spot you want extra care, what to skip. Our team reads this before every clean.</p>' +
+      (rd.notes && rd.notes.length ? '<div class="sub" style="margin-bottom:8px">You have shared:</div>' + rd.notes.map(function (n) { return '<div class="msg customer">' + esc(n.body) + '<span class="sub">' + esc(day(n.at)) + '</span></div>'; }).join('') : '') +
+      '<textarea id="ntext" maxlength="1000" placeholder="For example: we have a friendly dog, please skip the baby\'s room."></textarea><button id="nsend">Add to my house notes</button> <span id="nnote"></span></div>';
+
+    h += '<div class="card" id="needs"><h2>Tell us what you need</h2><div id="needs-slot"><p>Loading...</p></div></div>';
+    h += '<div class="card" id="status"><h2>Your cleanings</h2>' +
+      (d.current.length ? d.current.map(function (j) { return jobRow(j, true); }).join('') : '<p>Nothing scheduled right now.</p>') +
+      (d.past.length ? '<h2 style="margin-top:16px">Past cleanings</h2>' + d.past.map(function (j) { return jobRow(j, false); }).join('') : '') + '</div>';
+
+    h += '<div class="card" id="photos"><h2>Photos</h2>' + (d.photos.length ? '<div class="photos">' + d.photos.map(function (p) { return '<a href="' + esc(p.url) + '" target="_blank" rel="noopener"><img loading="lazy" src="' + esc(p.url) + '" alt="' + esc(p.kind) + ' photo ' + esc(day(p.date)) + '"></a>'; }).join('') + '</div>' : '<p>Photos from your cleanings will appear here.</p>') + '</div>';
+
+    h += '<div class="card" id="agreements"><h2>Agreements</h2><div id="agreements-slot"><p>Loading...</p></div></div>';
+    h += '<div class="card" id="documents"><h2>Documents</h2>' + (d.documents.length ? d.documents.map(function (x) { return '<div class="row"><div><b>' + esc(x.title) + '</b><div class="sub">' + esc(KIND[x.kind] || 'Document') + ' · ' + esc(day(x.date)) + '</div></div><a class="btn alt" href="' + esc(x.url) + '" target="_blank" rel="noopener">Open</a></div>'; }).join('') + '<p class="sub" style="margin-top:8px">Links open for an hour; reload the page for fresh ones.</p>' : '<p>Agreements, quotes and receipts will appear here.</p>') + '</div>';
+
+    var owed = d.balance.owed_cents, due = d.balance.due_now_cents;
+    h += '<div class="card" id="billing"><h2>Billing</h2><div class="big">' + esc(money(owed)) + '</div><p>' + (owed > 0 ? 'Total balance owed' + (due > 0 ? ', ' + esc(money(due)) + ' of it is invoiced and due now.' : '. Nothing is due right now.') : 'You are all paid up. Thank you!') + '</p>';
+    d.plans.forEach(function (p) {
+      h += '<h2 style="margin-top:16px">' + esc(p.title) + '</h2><div class="row"><span>Agreed price</span><b>' + esc(money(p.contract_cents)) + '</b></div>';
+      p.change_orders.forEach(function (c) { h += '<div class="row"><span>Change: ' + esc(c.description) + (c.status === 'proposed' ? ' (waiting for your OK)' : '') + '</span><b>' + (c.amount_cents < 0 ? '-' : '+') + esc(money(Math.abs(c.amount_cents))) + '</b></div>'; if (c.status === 'proposed') h += '<div class="co-btns"><button class="btn" data-co="' + esc(c.id) + '" data-d="approved">Approve this change</button><button class="btn alt" data-co="' + esc(c.id) + '" data-d="declined">No thanks</button></div>'; });
+      h += '<div class="row"><span>Total</span><b>' + esc(money(p.total_cents)) + '</b></div><div class="row"><span>Paid so far</span><b>' + esc(money(p.paid_cents)) + '</b></div><div class="row"><span><b>Still to pay</b></span><b>' + esc(money(p.balance_cents)) + '</b></div>';
+      h += '<p class="sub" style="margin-top:8px">Payment schedule</p>' + p.milestones.map(function (m) { var s = STATE[m.state]; return '<div class="row"><span>' + esc(m.label) + '</span><span><b>' + esc(money(m.amount_cents)) + '</b> <span class="tag ' + s[1] + '">' + s[0] + '</span></span></div>'; }).join('');
+    });
+    var open = d.invoices.filter(function (i) { return i.status === 'open'; });
+    if (open.length) h += '<h2 style="margin-top:16px">Invoices to pay</h2>' + open.map(function (i) { return '<div class="row"><div><b>' + esc(i.description) + '</b><div class="sub">' + esc(money(i.amount_cents)) + (i.due_date ? ' · due ' + esc(day(i.due_date)) : '') + '</div></div>' + (i.pay_url ? '<a class="btn" href="' + esc(i.pay_url) + '" target="_blank" rel="noopener">Pay</a>' : '') + '</div>'; }).join('');
+    var paid = d.invoices.filter(function (i) { return i.status === 'paid'; });
+    if (paid.length) h += '<h2 style="margin-top:16px">Payment history</h2>' + paid.map(function (i) { return '<div class="row"><div><b>' + esc(i.description) + '</b><div class="sub">Paid ' + esc(day((i.paid_at || '').slice(0, 10))) + '</div></div><b>' + esc(money(i.amount_cents)) + '</b></div>'; }).join('');
+    h += '</div>';
+
+    h += '<div class="card" id="messages"><h2>Messages</h2><div id="thread">' + (d.messages.length ? d.messages.map(function (m) { return '<div class="msg ' + (m.from === 'customer' ? 'customer' : 'staff') + '">' + (m.kind === 'request' ? '<b>' + esc(REQ[m.request_type] || 'Request') + '</b><br>' : '') + esc(m.body) + '<span class="sub">' + (m.from === 'customer' ? 'You' : esc(d.org.name)) + ' · ' + esc(day(m.at)) + '</span></div>'; }).join('') : '<p>No messages yet. Ask us anything.</p>') + '</div>' +
+      '<textarea id="mtext" placeholder="Write a message"></textarea><button id="msend">Send message</button> <span id="mnote"></span></div>';
+
+    h += '<div class="card" id="request"><h2>Request future work</h2><p>Want us back, a different date, or something added? Tell us and we will reply here.</p>' +
+      '<select id="rtype">' + Object.keys(REQ).map(function (k) { return '<option value="' + k + '">' + esc(REQ[k]) + '</option>'; }).join('') + '</select>' +
+      '<textarea id="rtext" placeholder="What would you like? Dates that work are helpful."></textarea><button id="rsend">Send request</button> <span id="rnote"></span></div>';
+    h += '<div class="card" id="texts"><h2>Texts from us</h2><p>' + (d.customer.texts_on ? 'You get texts about your cleans and occasional offers. Up to 4 a month.' : 'Want texts about your cleans and occasional offers? Up to 4 a month; message and data rates may apply. Reply STOP any time to opt out.') + '</p><button id="tsend">' + (d.customer.texts_on ? 'Turn texts off' : 'Yes, text me') + '</button> <span id="tnote"></span></div>';
+    if (new URLSearchParams(location.search).get('tip') === 'thanks') h = '<div class="card"><p class="ok">Thank you! Your tip goes to your team.</p></div>' + h;
+    h = h.replace('<div class="card" id="billing">', '<div class="card" id="upload"><h2>Send us a file</h2><p>A floor plan, a lease, a photo of a spot that needs care. PDF or photo, up to 8 MB. It is kept with your documents.</p><input type="file" id="ufile" accept="application/pdf,image/jpeg,image/png,image/heic,image/webp"> <button id="usend">Send</button> <span id="unote"></span></div><div class="card" id="billing">');
+    root.innerHTML = h;
+    if (window.loadDocs) window.loadDocs();
+
+    function send(action, body, type, btn, note, box) {
+      if (!body.trim()) return;
+      btn.disabled = true; note.className = ''; note.textContent = '';
+      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: action, body: body, request_type: type }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          btn.disabled = false;
+          if (!res.ok) { note.className = 'err'; note.textContent = res.j.error === 'slow_down' ? 'Please wait a little before sending more.' : 'That did not send. Please try again.'; return; }
+          box.value = ''; note.className = 'ok'; note.textContent = 'Sent. We will reply here.'; setTimeout(load, 600);
+        }).catch(function () { btn.disabled = false; note.className = 'err'; note.textContent = 'That did not send. Please try again.'; });
+    }
+    var tiles = document.querySelectorAll('[data-panel]');
+    for (var pi = 0; pi < tiles.length; pi++) tiles[pi].onclick = function () {
+      var id = this.getAttribute('data-panel'), open = document.getElementById(id).className.indexOf('on') >= 0;
+      var all = document.querySelectorAll('.panel'); for (var a = 0; a < all.length; a++) all[a].className = 'panel';
+      var ts = document.querySelectorAll('.tile'); for (var b = 0; b < ts.length; b++) ts[b].className = 'tile';
+      if (!open) { document.getElementById(id).className = 'panel on'; this.className = 'tile on'; }
+    };
+    if (location.hash === '#ready') { var firstTile = document.querySelector('[data-panel]'); if (firstTile) firstTile.click(); }
+    // Change date (self-reschedule): options from the server, one tap to move. Inside 48 hours the page says to contact us.
+    var mvl = document.querySelectorAll('[data-move]');
+    for (var mi = 0; mi < mvl.length; mi++) mvl[mi].onclick = function (ev) {
+      ev.preventDefault();
+      var id = this.getAttribute('data-move'), box = document.getElementById('mv-' + id);
+      box.innerHTML = '<div class="sub">Finding open times…</div>';
+      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'reschedule_options', job_id: id }) })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          if (!res.ok) { box.innerHTML = '<div class="sub err">' + (res.j.error === 'too_close' ? 'This clean is less than 48 hours away. Please message us below to change it.' : 'That clean cannot be moved online. Please message us below.') + '</div>'; return; }
+          if (!res.j.options.length) { box.innerHTML = '<div class="sub">No open times in the next three weeks. Please message us below.</div>'; return; }
+          box.innerHTML = '<div class="sub">Pick a new time (only this visit moves):</div>' + res.j.options.map(function (o) { return '<button class="btn alt" data-pick="' + o.date + '|' + o.slot + '">' + esc(day(o.date)) + ' · ' + esc(o.label) + '</button>'; }).join(' ');
+          var picks = box.querySelectorAll('[data-pick]');
+          for (var pi2 = 0; pi2 < picks.length; pi2++) picks[pi2].onclick = function () {
+            var p = this.getAttribute('data-pick').split('|'); this.disabled = true;
+            fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'reschedule', job_id: id, date: p[0], slot: p[1] }) })
+              .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+              .then(function (r2) { if (!r2.ok) { box.innerHTML = '<div class="sub err">' + (r2.j.error === 'slot_taken' ? 'That time was just taken. Please pick another.' : 'That did not save. Please try again.') + '</div>'; return; } box.innerHTML = '<div class="sub ok">Moved to ' + esc(day(r2.j.date)) + ' at ' + esc(r2.j.label) + '. See you then!</div>'; setTimeout(load, 1500); });
+          };
+        }).catch(function () { box.innerHTML = '<div class="sub err">That did not load. Please try again.</div>'; });
+    };
+    var tsb = document.getElementById('tsend');
+    if (tsb) tsb.onclick = function () {
+      tsb.disabled = true;
+      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'texts', on: !d.customer.texts_on }) })
+        .then(function (r) { if (!r.ok) throw 0; return load(); })
+        .catch(function () { tsb.disabled = false; var n = document.getElementById('tnote'); n.className = 'err'; n.textContent = 'That did not save. Please try again.'; });
+    };
+    var nb = document.getElementById('nsend');
+    if (nb) nb.onclick = function () {
+      var box = document.getElementById('ntext'), note = document.getElementById('nnote');
+      if (!box.value.trim()) return;
+      nb.disabled = true; note.className = ''; note.textContent = '';
+      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'house_note', body: box.value }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          nb.disabled = false;
+          if (!res.ok) { note.className = 'err'; note.textContent = res.j.error === 'slow_down' ? 'Please wait a little before adding more.' : 'That did not save. Please try again.'; return; }
+          box.value = ''; note.className = 'ok'; note.textContent = 'Added. Thank you!'; setTimeout(function () { load().then(function () { var h0 = document.getElementById('home'); if (h0) h0.scrollIntoView(); }); }, 700);
+        }).catch(function () { nb.disabled = false; note.className = 'err'; note.textContent = 'That did not save. Please try again.'; });
+    };
+    var tb = document.querySelectorAll('[data-tip]');
+    for (var ti = 0; ti < tb.length; ti++) tb[ti].onclick = function () {
+      var b = this; b.disabled = true;
+      var amt = +b.getAttribute('data-tip');
+      var base = { t: token, action: 'tip', report_token: b.getAttribute('data-rt'), amount_cents: amt, return_url: location.origin + location.pathname + '?t=' + token };
+      var post = function (extra) { return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({}, base, extra)) }).then(function (r) { return r.json(); }); };
+      var checkout = function () { return post({}).then(function (j) { if (j && j.url) location.href = j.url; else { b.disabled = false; } }); };
+      // Saved card first (asked once), then Stripe's own page if the bank wants a check.
+      if (SAVED && confirm('Tip ' + money(amt) + ' on your card ending ' + SAVED.last4 + '?')) {
+        post({ saved: true }).then(function (j) {
+          if (j && j.charged) location.href = base.return_url + '&tip=thanks';
+          else if (j && j.fallback) checkout();
+          else { b.disabled = false; alert('That tip did not go through. Nothing was charged.'); }
+        }).catch(function () { b.disabled = false; });
+      } else if (SAVED) { b.disabled = false; }
+      else checkout().catch(function () { b.disabled = false; });
+    };
+    var cob = document.querySelectorAll('[data-co]');
+    for (var ci = 0; ci < cob.length; ci++) cob[ci].onclick = function () {
+      var b = this; b.disabled = true;
+      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'change_order', change_order_id: b.getAttribute('data-co'), decision: b.getAttribute('data-d') }) })
+        .then(function () { load(); }).catch(function () { b.disabled = false; });
+    };
+    document.getElementById('msend').onclick = function () { send('message', document.getElementById('mtext').value, null, this, document.getElementById('mnote'), document.getElementById('mtext')); };
+    document.getElementById('rsend').onclick = function () { send('request', document.getElementById('rtext').value, document.getElementById('rtype').value, this, document.getElementById('rnote'), document.getElementById('rtext')); };
+    document.title = d.org.name + ' · your account';
+  }
+
+  function load() {
+    return fetch(FN + '/customer-portal?t=' + encodeURIComponent(token))
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(render)
+      .catch(function () { root.innerHTML = '<div class="card"><p class="err">This link is not valid or has been replaced. Please contact us for a new one.</p></div>'; });
+  }
+  if (!/^[0-9a-f]{32}$/.test(token)) root.innerHTML = '<div class="card"><p class="err">This link is not valid. Please contact us for a new one.</p></div>';
+  else load();
+</script>
+<script>
+  // Agreements, the customer's needs (written record + checklist), and files they send us: the customer-docs function (2026-10-12).
+  (function () {
+    var D = FN + '/customer-docs';
+    function post(body) {
+      body.t = token;
+      return fetch(D, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); });
+    }
+    var ERR = { too_short: 'Tell us a little more (a sentence or two).', slow_down: 'That is a lot for one day. Please try again tomorrow or message us.', could_not_understand: 'We could not turn that into a plan. Try describing it room by room.', ai_unavailable: 'Our assistant is not available right now. Please message us instead.', not_configured: 'This is not switched on yet. Please message us instead.', name_required: 'Type your full name and tick the box.', too_big: 'That file is over 8 MB.', bad_type: 'Please send a PDF or a photo.', bad_file: 'That file could not be read.' };
+    function errText(j) { return ERR[j && j.error] || 'Something went wrong. Please try again.'; }
+    function list(items) { return '<ul>' + items.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>'; }
+    function planHtml(p, draft) {
+      var rooms = {};
+      (p.items || []).forEach(function (i) { (rooms[i.room] = rooms[i.room] || []).push(i.label); });
+      return '<p><b>' + esc(p.summary) + '</b></p>' +
+        (p.record || []).map(function (r) { return '<div class="room"><b>' + esc(r.heading) + '</b>' + list(r.points) + '</div>'; }).join('') +
+        (Object.keys(rooms).length ? '<h2 style="margin-top:14px">Done at every clean</h2>' + Object.keys(rooms).map(function (k) { return '<div class="room"><b>' + esc(k) + '</b>' + list(rooms[k]) + '</div>'; }).join('') : '') +
+        ((p.questions || []).length ? '<h2 style="margin-top:14px">' + (draft ? 'We will follow up on' : 'Questions for our team') + '</h2>' + list(p.questions) : '');
+    }
+    var BOX = 'background:#f6f5fb;border-radius:14px;padding:12px 14px;margin:0 0 12px';
+    function renderNeeds(care) {
+      var el = document.getElementById('needs-slot');
+      if (!el) return;
+      var h = '';
+      if (care.draft) {
+        h += '<p>Here is how we wrote it down. Is this right?</p><div style="' + BOX + '">' + planHtml(care.draft, true) + '</div>' +
+          '<button id="nyes">Yes, this is right</button> <button class="btn alt" id="nno">Start over</button> <span id="nnote2"></span>';
+      } else {
+        if (care.active) h += '<p>Your plan, confirmed ' + esc(day((care.active.confirmed_at || '').slice(0, 10))) + '. Our team follows it at every clean.</p><div style="' + BOX + '">' + planHtml(care.active, false) + '</div><p>Want to change it? Describe everything you want again below; the new plan replaces this one once you confirm it.</p>';
+        else h += '<p>In your own words: what matters to you, room by room, products to use or avoid, pets, things to skip. We turn it into a written plan and a checklist our team does at every clean. You check it before it is used.</p>';
+        h += '<textarea id="ntxt" placeholder="For example: we have a cat, so close the laundry room door. Unscented products in the nursery. Always wipe the fridge handles and make the beds. Skip the office."></textarea><button id="ngo">Write up my plan</button> <span id="nnote2"></span>';
+      }
+      el.innerHTML = h;
+      var go = document.getElementById('ngo');
+      if (go) go.onclick = function () {
+        var t = document.getElementById('ntxt').value.trim(), n = document.getElementById('nnote2');
+        if (t.length < 15) { n.className = 'err'; n.textContent = ERR.too_short; return; }
+        go.disabled = true; n.className = 'sub'; n.textContent = 'Writing it up (about 20 seconds)...';
+        post({ action: 'needs_draft', text: t }).then(function (r) { go.disabled = false; if (!r.ok) { n.className = 'err'; n.textContent = errText(r.j); return; } renderNeeds({ draft: r.j.plan, active: care.active }); });
+      };
+      var yes = document.getElementById('nyes'), no = document.getElementById('nno');
+      if (yes) yes.onclick = function () { yes.disabled = true; post({ action: 'needs_confirm', plan_id: care.draft.id }).then(function (r) { if (!r.ok) { yes.disabled = false; document.getElementById('nnote2').textContent = errText(r.j); return; } load(); }); };
+      if (no) no.onclick = function () { post({ action: 'needs_discard', plan_id: care.draft.id }).then(function () { renderNeeds({ active: care.active }); }); };
+    }
+    function renderAgreements(items) {
+      var el = document.getElementById('agreements-slot');
+      if (!el) return;
+      if (!items.length) { el.innerHTML = '<p>Your service agreement will appear here when we send it.</p>'; return; }
+      el.innerHTML = items.map(function (a) {
+        var done = a.status === 'accepted';
+        return '<div class="row"><div><b>' + esc(a.title) + '</b><div class="sub">' + (done ? 'Accepted by ' + esc(a.accepted_name) + ' on ' + esc(day((a.accepted_at || '').slice(0, 10))) : 'Sent ' + esc(day(a.date)) + ', waiting for you') + '</div></div>' +
+          (a.pdf_url ? '<a class="btn alt" href="' + esc(a.pdf_url) + '" target="_blank" rel="noopener">PDF</a>' : '') + '</div>' +
+          (done ? '' : '<details style="margin:6px 0 12px"><summary style="cursor:pointer;font-weight:700;color:#004aad">Read and accept</summary>' +
+            (a.sections || []).map(function (s) { return '<div class="room" style="margin-top:10px"><b>' + esc(s.heading) + '</b>' + s.paragraphs.map(function (p) { return '<p style="color:#15121f">' + esc(p) + '</p>'; }).join('') + '</div>'; }).join('') +
+            '<label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0"><input type="checkbox" id="ag-ok-' + esc(a.id) + '"> <span>I have read this agreement and I agree to it.</span></label>' +
+            '<input id="ag-name-' + esc(a.id) + '" placeholder="Type your full name" autocomplete="name" style="width:100%;font:inherit;border:1px solid #ddd9ea;border-radius:12px;padding:10px 12px;margin:0 0 10px">' +
+            '<button data-accept="' + esc(a.id) + '">Accept</button> <span id="ag-note-' + esc(a.id) + '"></span></details>');
+      }).join('');
+      var bs = el.querySelectorAll('[data-accept]');
+      for (var i = 0; i < bs.length; i++) bs[i].onclick = function () {
+        var id = this.getAttribute('data-accept'), b = this, n = document.getElementById('ag-note-' + id);
+        var name = document.getElementById('ag-name-' + id).value.trim(), ok = document.getElementById('ag-ok-' + id).checked;
+        if (!ok || name.length < 3) { n.className = 'err'; n.textContent = ERR.name_required; return; }
+        b.disabled = true; n.className = 'sub'; n.textContent = 'Saving your signed copy...';
+        post({ action: 'accept', agreement_id: id, name: name, agree: true }).then(function (r) { if (!r.ok) { b.disabled = false; n.className = 'err'; n.textContent = errText(r.j); return; } load(); });
+      };
+    }
+    window.loadDocs = function () {
+      var u = document.getElementById('usend');
+      if (u) u.onclick = function () {
+        var f = document.getElementById('ufile').files[0], n = document.getElementById('unote');
+        if (!f) return;
+        if (f.size > 8 * 1024 * 1024) { n.className = 'err'; n.textContent = ERR.too_big; return; }
+        u.disabled = true; n.className = 'sub'; n.textContent = 'Sending...';
+        var rd = new FileReader();
+        rd.onload = function () {
+          var b64 = String(rd.result).split(',')[1] || '';
+          post({ action: 'upload', file_name: f.name, mime_type: f.type, data_base64: b64 }).then(function (r) { u.disabled = false; if (!r.ok) { n.className = 'err'; n.textContent = errText(r.j); return; } n.className = 'ok'; n.textContent = 'Sent. Thank you!'; setTimeout(load, 1200); });
+        };
+        rd.readAsDataURL(f);
+      };
+      fetch(D + '?t=' + encodeURIComponent(token)).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); }).then(function (d) {
+        renderAgreements(d.agreements || []);
+        renderNeeds(d.care || {});
+      }).catch(function () {
+        var a = document.getElementById('agreements-slot'), n = document.getElementById('needs-slot');
+        if (a) a.innerHTML = '<p>Agreements could not load. Reload the page to try again.</p>';
+        if (n) n.innerHTML = '<p>This could not load. Reload the page to try again.</p>';
+      });
+    };
+    // The page may already have rendered (a fast response) before this script ran.
+    if (document.getElementById('needs-slot')) window.loadDocs();
+  })();
+</script>
+</body>
+</html>

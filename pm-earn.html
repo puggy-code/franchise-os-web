@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Property Manager Rewards</title>
+<meta name="description" content="See what your properties could earn in loyalty points with Two Hour Maids: turnovers, common areas and more.">
+<!--
+  Property-manager rewards calculator (2026-10-14; PM-LOYALTY.md). Public, for prospects. Link as pm-earn.html?org=two-hour-maids.
+  Rates come from the pm-program function (JSON; Supabase will not serve html from a function, gotcha 1). While the program is off, that
+  function returns { active: false } and this page shows "launching soon" with EXAMPLE numbers, labelled as examples everywhere.
+  The math between FORMULA-START and FORMULA-END is the same as src/lib/pmLoyalty.ts; src/lib/__tests__/pmLoyalty.test.ts fails if they drift.
+  No form here collects a phone number: the call to action opens the visitor's own texting app to our number with WALKTHROUGH typed in.
+  Goes to the separate public web repo with the other pages; not published from here.
+-->
+<style>
+  :root { --bg: #f6f5fb; --card: #fff; --ink: #15121f; --muted: #6b6880; --line: #ebe8f3; --brand: #004aad; --brand-soft: #e7efff; --gold: #9a6b00; --gold-soft: #fff4d6; --ok: #166534; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f0d16; --card: #1a1724; --ink: #f2f0f8; --muted: #a29fb5; --line: #2b2738; --brand: #6ea3ff; --brand-soft: #1b2740; --gold: #f1c35a; --gold-soft: #3a2f12; --ok: #6ee7a0; }
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--ink); margin: 0; padding: 20px 16px 48px; line-height: 1.5; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  .card { background: var(--card); border-radius: 18px; padding: 20px; margin: 0 0 14px; }
+  h1 { font-size: 28px; margin: 0 0 6px; letter-spacing: -0.5px; }
+  h2 { font-size: 13px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+  p { color: var(--muted); margin: 0 0 8px; }
+  label { display: block; font-weight: 700; font-size: 14px; margin: 12px 0 4px; }
+  .hint { font-weight: 400; color: var(--muted); font-size: 13px; }
+  input, select { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  .stat { background: var(--bg); border-radius: 12px; padding: 12px; }
+  .stat b { display: block; font-size: 24px; letter-spacing: -0.5px; }
+  .stat span { font-size: 13px; color: var(--muted); }
+  .badge { display: inline-block; border-radius: 999px; padding: 4px 12px; font-weight: 800; font-size: 13px; background: var(--gold-soft); color: var(--gold); }
+  .banner { background: var(--gold-soft); color: var(--gold); border-radius: 12px; padding: 12px 14px; font-weight: 700; margin: 0 0 14px; }
+  .example { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: var(--gold); }
+  .row { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .cta { display: inline-block; background: var(--brand); color: #fff; text-decoration: none; font-weight: 800; border-radius: 12px; padding: 12px 18px; margin: 6px 8px 0 0; }
+  .cta.secondary { background: var(--brand-soft); color: var(--brand); }
+  ul { margin: 0; padding-left: 18px; color: var(--muted); }
+  .tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+  .tier { border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+  .tier.on { border-color: var(--gold); background: var(--gold-soft); }
+  .small { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>What could your properties earn?</h1>
+    <p>Property managers who book their turnovers and common-area cleans with <span id="org">us</span> earn loyalty points on every paid clean, and trade them for technology gifts or money off future cleans.</p>
+  </div>
+  <div id="banner"></div>
+
+  <div class="card">
+    <h2>Your portfolio</h2>
+    <label for="t">Unit turnovers per month <span class="hint">move-outs we clean</span></label>
+    <input id="t" type="number" min="0" max="500" value="8" inputmode="numeric">
+    <label for="o">Other cleans per month <span class="hint">common areas, offices, model units</span></label>
+    <input id="o" type="number" min="0" max="500" value="4" inputmode="numeric">
+    <label for="s">Typical unit size</label>
+    <select id="s"></select>
+  </div>
+
+  <div class="card">
+    <h2>Your estimate <span id="ex1" class="example"></span></h2>
+    <div class="grid">
+      <div class="stat"><b id="spend">-</b><span>cleaning per year</span></div>
+      <div class="stat"><b id="pts1">-</b><span>points in year 1</span></div>
+      <div class="stat"><b id="pts3">-</b><span>points a year from year 3</span></div>
+    </div>
+    <p style="margin-top:12px">Your tier: <span id="tier" class="badge">-</span> <span id="tierNote" class="small"></span></p>
+    <div id="years"></div>
+  </div>
+
+  <div class="card">
+    <h2>Rewards your first year would cover <span id="ex2" class="example"></span></h2>
+    <div id="rewards"></div>
+    <p class="small" style="margin-top:10px">Rewards are obtained only by redeeming points. Points have no cash value and cannot be bought.</p>
+  </div>
+
+  <div class="card">
+    <h2>Tiers <span id="ex3" class="example"></span></h2>
+    <div id="tiers" class="tiers"></div>
+    <p class="small" style="margin-top:10px" id="bonusNote"></p>
+  </div>
+
+  <div class="card">
+    <h2>See it for your buildings</h2>
+    <p>We walk your property, price your unit sizes, and set you up with your own portal: every turnover, rating and point in one place.</p>
+    <a class="cta" href="sms:+17632306795?&amp;body=WALKTHROUGH">Text us to book a walkthrough</a>
+    <a class="cta secondary" href="tel:+17632306795">Call (763) 230-6795</a>
+    <p class="small" style="margin-top:10px">Texting opens your own messages app; we reply about your walkthrough only. Reply STOP any time.</p>
+  </div>
+
+  <p class="small">Estimates assume the same volume every month, every invoice paid on time, and our standard rate per labor hour. Your real price and points depend on your agreement. The program, its rates and its rewards may change with notice. Please make sure your employer allows you to accept rewards.</p>
+</div>
+
+<script>
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  var FN = SUPABASE_URL + '/functions/v1/pm-program';
+  var ORG = new URLSearchParams(location.search).get('org') || 'two-hour-maids';
+
+  // EXAMPLE-START (the same draft numbers as DRAFT_PROGRAM / DRAFT_REWARDS in src/lib/pmLoyalty.ts; shown only while the program is not live)
+  var EXAMPLE_PROGRAM = {
+    year_bp: [150, 200, 300],
+    tiers: [
+      { name: 'Silver', min_spend_cents: 0, earn_bonus_pct: 0, perks: ['Points on every paid clean', 'Your own portal: every turnover, rating and invoice'] },
+      { name: 'Gold', min_spend_cents: 1200000, earn_bonus_pct: 10, perks: ['10% more points', 'Priority same-week turnovers'] },
+      { name: 'Platinum', min_spend_cents: 3600000, earn_bonus_pct: 25, perks: ['25% more points', 'Priority same-week turnovers', 'Next-day turnovers when a crew is open', 'A quarterly walkthrough of your buildings'] }
+    ],
+    unit_bonus_points: 100,
+    ontime_bonus_points: 50,
+    referral_bonus_points: 5000,
+    commitment_bonus_points: 10000,
+    max_cost_pct: 5
+  };
+  var EXAMPLE_REWARDS = [
+    { title: 'Smart speaker', points_cost: 10000, kind: 'item' },
+    { title: 'Wireless earbuds', points_cost: 20000, kind: 'item' },
+    { title: 'Smartwatch', points_cost: 35000, kind: 'item' },
+    { title: 'Tablet', points_cost: 45000, kind: 'item' },
+    { title: '$25 off a future clean', points_cost: 2500, kind: 'credit', credit_cents: 2500 },
+    { title: '$100 off a future clean', points_cost: 10000, kind: 'credit', credit_cents: 10000 },
+    { title: 'Free carpet cleaning, one room, added to a turnover', points_cost: 6000, kind: 'addon' },
+    { title: 'Free interior windows, one unit, added to a turnover', points_cost: 7500, kind: 'addon' },
+    { title: 'Priority same-week turnovers for 30 days', points_cost: 3000, kind: 'perk' }
+  ];
+  var HOURS = { '0/1': 2, '1/1': 2.5, '2/1': 3, '2/2': 3.5, '3/1': 4, '3/2': 4.5, '3/3': 5, '4/2': 5.5, '4/3': 6 };
+  var RATE = 5000;
+  // EXAMPLE-END
+
+  // FORMULA-START (same as src/lib/pmLoyalty.ts)
+  function sortedTiers(tiers) {
+    return tiers.slice().sort(function (a, b) { return a.min_spend_cents - b.min_spend_cents; });
+  }
+  function tierFor(spend12Cents, tiers) {
+    var t = sortedTiers(tiers), cur = t[0];
+    for (var i = 0; i < t.length; i++) if (spend12Cents >= t[i].min_spend_cents) cur = t[i];
+    return cur;
+  }
+  function nextTier(spend12Cents, tiers) {
+    var t = sortedTiers(tiers);
+    for (var i = 0; i < t.length; i++) if (t[i].min_spend_cents > spend12Cents) return { tier: t[i], need_cents: t[i].min_spend_cents - spend12Cents };
+    return null;
+  }
+  function yearBp(year, yearBpList) {
+    return year <= 1 ? yearBpList[0] : year === 2 ? yearBpList[1] : yearBpList[2];
+  }
+  function pointsForClean(netCents, bp, tierBonusPct) {
+    if (!(netCents > 0)) return 0;
+    return Math.round((netCents * bp * (100 + tierBonusPct)) / 1000000);
+  }
+  function priceForSize(sizeKey, rateCents, hoursTable) {
+    var h = hoursTable[sizeKey];
+    return h === undefined ? 0 : Math.round(rateCents * h);
+  }
+  function projectYear(input, p) {
+    var t = Math.max(0, Math.floor(input.turnoversPerMonth || 0));
+    var o = Math.max(0, Math.floor(input.otherCleansPerMonth || 0));
+    var price = Math.max(0, Math.round(input.pricePerCleanCents || 0));
+    var cleans = (t + o) * 12;
+    var spend = cleans * price;
+    var tier = tierFor(spend, p.tiers);
+    var bp = yearBp(input.year, p.year_bp);
+    var base = cleans * pointsForClean(price, bp, tier.earn_bonus_pct);
+    var unitBonus = t * 12 * p.unit_bonus_points;
+    var ontimeBonus = cleans * p.ontime_bonus_points;
+    var points = base + unitBonus + ontimeBonus;
+    return {
+      cleans: cleans, spend_cents: spend, tier: tier.name, base_points: base, unit_bonus_points: unitBonus, ontime_bonus_points: ontimeBonus,
+      points: points, value_cents: points, cost_pct: spend > 0 ? Math.round((points / spend) * 10000) / 100 : 0
+    };
+  }
+  function rewardsUnlocked(points, rewards) {
+    return rewards
+      .filter(function (r) { return r.points_cost > 0 && r.points_cost <= points; })
+      .map(function (r) { return { title: r.title, points_cost: r.points_cost, times: Math.floor(points / r.points_cost) }; })
+      .sort(function (a, b) { return a.points_cost - b.points_cost; });
+  }
+  // FORMULA-END
+
+  var state = { live: false, program: EXAMPLE_PROGRAM, rewards: EXAMPLE_REWARDS, hours: HOURS, rate: RATE };
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function usd(c) { return '$' + Math.round(c / 100).toLocaleString('en-US'); }
+  function num(n) { return Number(n || 0).toLocaleString('en-US'); }
+
+  function fillSizes() {
+    var keys = Object.keys(state.hours), sel = $('s'), prev = sel.value || '2/2';
+    sel.innerHTML = keys.map(function (k) { var p = k.split('/'); return '<option value="' + esc(k) + '">' + esc(p[0] === '0' ? 'Studio' : p[0] + ' bed') + ' / ' + esc(p[1]) + ' bath</option>'; }).join('');
+    sel.value = keys.indexOf(prev) >= 0 ? prev : keys[0];
+  }
+
+  function render() {
+    var p = state.program, ex = state.live ? '' : 'Example';
+    ['ex1', 'ex2', 'ex3'].forEach(function (id) { $(id).textContent = ex; });
+    var input = { turnoversPerMonth: Number($('t').value), otherCleansPerMonth: Number($('o').value), pricePerCleanCents: priceForSize($('s').value, state.rate, state.hours) };
+    var y = [1, 2, 3].map(function (n) { return projectYear(Object.assign({ year: n }, input), p); });
+    $('spend').textContent = usd(y[0].spend_cents);
+    $('pts1').textContent = num(y[0].points);
+    $('pts3').textContent = num(y[2].points);
+    $('tier').textContent = y[0].tier;
+    var nx = nextTier(y[0].spend_cents, p.tiers);
+    $('tierNote').textContent = nx ? usd(nx.need_cents) + ' more a year reaches ' + nx.tier.name + '.' : 'Our top tier.';
+    $('years').innerHTML = '<div style="margin-top:10px">' + y.map(function (r, i) {
+      return '<div class="row"><div>' + (i === 2 ? 'Year 3 and after' : 'Year ' + (i + 1)) + ' <span class="small">(' + (yearBp(i + 1, p.year_bp) / 100) + '% of what you pay' + (r.unit_bonus_points ? ', plus unit and on-time bonuses' : '') + ')</span></div><b>' + num(r.points) + ' pts</b></div>';
+    }).join('') + '</div>';
+    var un = rewardsUnlocked(y[0].points, state.rewards);
+    $('rewards').innerHTML = un.length
+      ? un.map(function (r) { return '<div class="row"><div>' + esc(r.title) + ' <span class="small">' + num(r.points_cost) + ' pts</span></div><b>' + (r.times > 1 ? r.times + ' times' : 'Yes') + '</b></div>'; }).join('')
+      : '<p>Add a few cleans a month to see the rewards your points would cover.</p>';
+    $('tiers').innerHTML = sortedTiers(p.tiers).map(function (t) {
+      return '<div class="tier' + (t.name === y[0].tier ? ' on' : '') + '"><b>' + esc(t.name) + '</b><div class="small">' + (t.min_spend_cents ? usd(t.min_spend_cents) + '+ a year' : 'From your first clean') + '</div><ul>' + (t.perks || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
+    }).join('');
+    $('bonusNote').textContent = 'Also: ' + num(p.referral_bonus_points) + ' points when a property manager you refer books their first clean, and ' + num(p.commitment_bonus_points) + ' points for a year-long agreement.';
+  }
+
+  function start(live) {
+    $('banner').innerHTML = live ? '' : '<div class="banner">Launching soon. The numbers below are an example of how the program works, not final rates.</div>';
+    fillSizes();
+    render();
+  }
+  ['t', 'o', 's'].forEach(function (id) { $(id).addEventListener('input', render); });
+
+  fetch(FN + '?org=' + encodeURIComponent(ORG))
+    .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+    .then(function (d) {
+      if (d.org && d.org.name) $('org').textContent = d.org.name;
+      if (d.active && d.program && Array.isArray(d.program.tiers) && d.program.tiers.length) {
+        state.live = true;
+        state.program = d.program;
+        state.rewards = d.rewards || [];
+        if (d.pricing) { state.hours = d.pricing.hours_by_size || HOURS; state.rate = d.pricing.rate_cents || RATE; }
+      }
+      start(state.live);
+    })
+    .catch(function () { start(false); });
+</script>
+</body>
+</html>

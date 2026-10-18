@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<title>Unsubscribe</title>
+<!--
+  Unsubscribe page for property manager outreach emails (migration 0299, PM-OUTREACH.md).
+
+  Every outreach email links here as:
+      https://<public web host>/unsubscribe.html?t=<token>
+  (organizations.public_web_base_url + /unsubscribe.html). Publish it to the public web repo next to review.html.
+
+  It talks to the outreach-unsubscribe edge function over JSON (the function cannot serve HTML, START-HERE gotcha 1).
+  The token is the only credential. One click on the button unsubscribes; no login, no form to fill (CAN-SPAM: no fee,
+  no information beyond the email address, nothing but visiting one page).
+-->
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #f6f5fb; color: #15121f; margin: 0; padding: 24px 16px 48px; line-height: 1.5;
+  }
+  .card { background: #fff; border-radius: 18px; padding: 24px; max-width: 480px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p { color: #6b6880; margin: 0 0 16px; }
+  button {
+    display: block; width: 100%; background: #004aad; color: #fff; border: 0;
+    border-radius: 12px; padding: 14px; font-size: 17px; font-weight: 700; margin-top: 12px; cursor: pointer;
+  }
+  button[disabled] { opacity: .5; cursor: default; }
+  .err { color: #dc2626; font-weight: 700; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="card" id="root"><p>Loading…</p></div>
+<script>
+  // ---- configure this once, to match your Supabase project ----------------
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  // ------------------------------------------------------------------------
+
+  var FN = SUPABASE_URL + '/functions/v1/outreach-unsubscribe';
+  var root = document.getElementById('root');
+  var token = (new URLSearchParams(location.search).get('t') || '').trim();
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function invalid() {
+    root.innerHTML = '<h1>Link not recognized</h1><p>This unsubscribe link is not valid. Reply to the email with the word "unsubscribe" and we will remove you by hand.</p>';
+  }
+
+  function done(d) {
+    root.innerHTML = '<h1>You are unsubscribed</h1><p>' + (d.email ? esc(d.email) + ' will' : 'You will') + ' not get any more emails from ' +
+      esc(d.company || 'us') + '. Nothing else is needed.</p>';
+  }
+
+  function ask(d) {
+    root.innerHTML = '<h1>Unsubscribe</h1><p>Stop all emails from ' + esc(d.company || 'us') + (d.email ? ' to ' + esc(d.email) : '') + '?</p>' +
+      '<button id="go">Unsubscribe</button><div class="err" id="err" hidden></div>';
+    var go = document.getElementById('go');
+    go.addEventListener('click', function () {
+      go.disabled = true;
+      fetch(FN + '?t=' + encodeURIComponent(token), { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token }) })
+        .then(function (r) { return r.json(); })
+        .then(function (d2) { if (d2 && d2.ok) done(d2); else invalid(); })
+        .catch(function () {
+          go.disabled = false;
+          var err = document.getElementById('err');
+          err.hidden = false;
+          err.textContent = 'Could not reach us. Try again, or reply "unsubscribe" to the email.';
+        });
+    });
+  }
+
+  if (!/^[0-9a-f]{36}$/.test(token)) invalid();
+  else fetch(FN + '?t=' + encodeURIComponent(token))
+    .then(function (r) { return r.json(); })
+    .then(function (d) { if (!d || !d.ok) invalid(); else if (d.unsubscribed) done(d); else ask(d); })
+    .catch(invalid);
+</script>
+</body>
+</html>

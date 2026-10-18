@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Commercial cleaning: instant bid</title>
+<!--
+  Commercial self-serve bid (2026-10-12; COMMERCIAL-BID.md). Link as commercial-bid.html?org=two-hour-maids. A business fills a facility checklist,
+  picks how often, sees three routine-cleaning packages with a monthly price, chooses one and gets a proposal it can accept (quote.html).
+  Data and prices come from the commercial-bid function; the rates never reach this page. Off until switched on in Admin.
+-->
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #f6f5fb; color: #15121f; margin: 0; padding: 20px 14px 56px; line-height: 1.5; }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 18px; padding: 22px; margin: 0 0 14px; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -.3px; } h2 { font-size: 13px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .6px; color: #6b6880; }
+  p { color: #6b6880; margin: 0 0 10px; }
+  label { display: block; font-weight: 600; font-size: 14px; margin: 0 0 4px; }
+  input, select { width: 100%; font: inherit; border: 1px solid #ddd9ea; border-radius: 12px; padding: 11px 12px; margin: 0 0 12px; background: #fff; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+  .count { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid #f1eff7; }
+  .count span { font-size: 15px; }
+  .step { display: flex; align-items: center; gap: 6px; }
+  .step button { width: 36px; height: 36px; border-radius: 10px; border: 0; background: #eef2fb; color: #004aad; font-size: 20px; font-weight: 800; cursor: pointer; }
+  .step b { min-width: 30px; text-align: center; font-size: 17px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { border: 2px solid #e6e3f0; background: #fff; border-radius: 999px; padding: 8px 14px; font-weight: 700; font-size: 14px; cursor: pointer; color: #15121f; }
+  .chip.on { border-color: #004aad; background: #004aad; color: #fff; }
+  .pkgs { display: grid; gap: 12px; }
+  .pkg { border: 2px solid #e6e3f0; border-radius: 16px; padding: 16px; cursor: pointer; }
+  .pkg.on { border-color: #004aad; box-shadow: 0 0 0 3px #dbe6fb; }
+  .pkg .price { font-size: 30px; font-weight: 800; letter-spacing: -1px; } .pkg .per { color: #6b6880; font-weight: 600; font-size: 14px; }
+  .pkg ul { margin: 8px 0 0; padding-left: 18px; color: #3d3a4d; font-size: 14px; }
+  .tag { display: inline-block; background: #dcfce7; color: #166534; border-radius: 999px; padding: 2px 10px; font-size: 12px; font-weight: 700; margin-left: 6px; }
+  .btn { display: block; width: 100%; background: #004aad; color: #fff; border: 0; border-radius: 12px; padding: 15px; font-size: 16px; font-weight: 700; cursor: pointer; text-align: center; }
+  .btn[disabled] { opacity: .5; }
+  .err { color: #b91c1c; } .ok { color: #166534; font-weight: 700; }
+  .hp { position: absolute; left: -9999px; }
+  @media (max-width: 480px) { .grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="root"><div class="card"><p>Loading...</p></div></div>
+<script>
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  var FN = SUPABASE_URL + '/functions/v1/commercial-bid';
+  var ORG = new URLSearchParams(location.search).get('org') || 'two-hour-maids';
+  var root = document.getElementById('root');
+  var meta = null, prices = null, chosen = null;
+  var f = { type: 'office', sqft: '', restrooms: 1, kitchens: 1, offices: 0, conference: 0, entrances: 1, floors: 1, hard_floor_pct: 50 };
+  var freq = 'weekly';
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function money(c) { return '$' + Math.round(c / 100).toLocaleString('en-US'); }
+  function post(body) { body.org = ORG; return fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }); }
+
+  function render() {
+    var h = '<div class="card"><h1>Commercial cleaning, priced in a minute</h1><p>Tell us about your space and how often you want it cleaned. You will see three routine-cleaning packages with a monthly price, choose one, and get a written proposal. ' + esc(meta.company) + ' confirms the price at a free walkthrough.</p></div>';
+    h += '<div class="card"><h2>1. Your facility</h2><label for="ftype">What kind of space?</label><select id="ftype">' + meta.types.map(function (t) { return '<option value="' + esc(t.value) + '"' + (t.value === f.type ? ' selected' : '') + '>' + esc(t.label) + '</option>'; }).join('') + '</select>' +
+      '<div class="grid"><div><label for="fsq">About how many square feet?</label><input id="fsq" inputmode="numeric" placeholder="e.g. 5000" value="' + esc(f.sqft) + '"></div>' +
+      '<div><label for="fhard">How much is hard floor (vs carpet)?</label><select id="fhard">' + [0, 25, 50, 75, 100].map(function (v) { return '<option value="' + v + '"' + (v === f.hard_floor_pct ? ' selected' : '') + '>' + v + '% hard floor</option>'; }).join('') + '</select></div></div>' +
+      meta.counts.map(function (c) { return '<div class="count"><span>' + esc(c.label) + '</span><div class="step"><button data-dec="' + c.key + '" aria-label="Fewer">-</button><b id="c-' + c.key + '">' + f[c.key] + '</b><button data-inc="' + c.key + '" aria-label="More">+</button></div></div>'; }).join('') + '</div>';
+    h += '<div class="card"><h2>2. How often</h2><div class="chips">' + meta.frequencies.map(function (x) { return '<button class="chip' + (x.value === freq ? ' on' : '') + '" data-freq="' + x.value + '">' + esc(x.label) + '</button>'; }).join('') + '</div></div>';
+    h += '<div class="card"><button class="btn" id="see">See my prices</button> <p id="pnote" style="margin-top:8px"></p></div>';
+    h += '<div id="pk"></div>';
+    root.innerHTML = h;
+    document.getElementById('ftype').onchange = function () { f.type = this.value; stale(); };
+    document.getElementById('fsq').oninput = function () { f.sqft = this.value.replace(/[^\d]/g, ''); stale(); };
+    document.getElementById('fhard').onchange = function () { f.hard_floor_pct = +this.value; stale(); };
+    meta.counts.forEach(function (c) {
+      root.querySelector('[data-inc="' + c.key + '"]').onclick = function () { f[c.key] = Math.min(c.max, f[c.key] + 1); document.getElementById('c-' + c.key).textContent = f[c.key]; stale(); };
+      root.querySelector('[data-dec="' + c.key + '"]').onclick = function () { f[c.key] = Math.max(c.key === 'floors' ? 1 : 0, f[c.key] - 1); document.getElementById('c-' + c.key).textContent = f[c.key]; stale(); };
+    });
+    var chips = root.querySelectorAll('[data-freq]');
+    for (var i = 0; i < chips.length; i++) chips[i].onclick = function () { freq = this.getAttribute('data-freq'); for (var k = 0; k < chips.length; k++) chips[k].className = 'chip' + (chips[k] === this ? ' on' : ''); if (prices) price(); };
+    document.getElementById('see').onclick = price;
+  }
+  function stale() { if (prices) { prices = null; chosen = null; document.getElementById('pk').innerHTML = ''; } }
+  function facility() { var x = {}; for (var k in f) x[k] = f[k]; x.sqft = +f.sqft || 0; return x; }
+
+  function price() {
+    var n = document.getElementById('pnote');
+    if ((+f.sqft || 0) < 200) { n.className = 'err'; n.textContent = 'Enter the square footage (a rough number is fine).'; return; }
+    n.className = ''; n.textContent = 'Pricing...';
+    post({ action: 'price', facility: facility(), frequency: freq }).then(function (r) {
+      if (!r.ok) { n.className = 'err'; n.textContent = 'That did not work. Check the numbers and try again.'; return; }
+      n.textContent = ''; prices = r.j.packages; chosen = prices[1] ? prices[1].key : prices[0].key; showPackages();
+    });
+  }
+  function showPackages() {
+    var el = document.getElementById('pk');
+    el.innerHTML = '<div class="card"><h2>3. Choose a package</h2><div class="pkgs">' + prices.map(function (p) {
+      return '<div class="pkg' + (p.key === chosen ? ' on' : '') + '" data-pkg="' + p.key + '"><b style="font-size:18px">' + esc(p.label) + '</b>' + (p.key === 'standard' ? '<span class="tag">Most popular</span>' : '') +
+        '<div><span class="price">' + money(p.monthly_cents) + '</span><span class="per"> a month · about ' + money(p.per_visit_cents) + ' a visit</span></div><p style="margin:2px 0 0">' + esc(p.blurb) + '</p><ul>' + p.tasks.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
+    }).join('') + '</div><p style="margin-top:12px">Supplies and equipment included. Paper products, soap and liners are yours unless we agree otherwise. Floor care, carpet extraction and window washing are quoted separately.</p></div>' +
+      '<div class="card"><h2>4. Get your proposal</h2><div class="grid"><div><label for="cb">Business name</label><input id="cb" autocomplete="organization"></div><div><label for="cn">Your name</label><input id="cn" autocomplete="name"></div>' +
+      '<div><label for="cp">Phone</label><input id="cp" type="tel" autocomplete="tel"></div><div><label for="ce">Email</label><input id="ce" type="email" autocomplete="email"></div></div>' +
+      '<label for="ca">Address of the space</label><input id="ca" autocomplete="street-address"><input class="hp" id="cw" tabindex="-1" autocomplete="off" aria-hidden="true">' +
+      '<button class="btn" id="go">Get my proposal</button><p id="gnote" style="margin-top:8px">We will call or text you about this proposal and to book a free walkthrough. No other marketing.</p></div>';
+    var cards = el.querySelectorAll('[data-pkg]');
+    for (var i = 0; i < cards.length; i++) cards[i].onclick = function () { chosen = this.getAttribute('data-pkg'); for (var k = 0; k < cards.length; k++) cards[k].className = 'pkg' + (cards[k] === this ? ' on' : ''); };
+    document.getElementById('go').onclick = submit;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function submit() {
+    var g = document.getElementById('go'), n = document.getElementById('gnote');
+    var c = { business: val('cb'), name: val('cn'), phone: val('cp'), email: val('ce'), address: val('ca') };
+    if (c.business.length < 2 || c.name.length < 2 || c.phone.replace(/\D/g, '').length < 10 || c.email.indexOf('@') < 1) { n.className = 'err'; n.textContent = 'Please fill in the business, your name, a phone number and an email.'; return; }
+    g.disabled = true; n.className = ''; n.textContent = 'Writing your proposal...';
+    post({ action: 'submit', facility: facility(), frequency: freq, package: chosen, contact: c, website: val('cw') }).then(function (r) {
+      if (!r.ok) { g.disabled = false; n.className = 'err'; n.textContent = r.j.error === 'slow_down' ? 'We already have your request. We will be in touch soon.' : 'That did not go through. Please try again or call us.'; return; }
+      if (r.j.quote_url) { location.href = r.j.quote_url; return; }
+      root.innerHTML = '<div class="card"><h1>Thank you!</h1><p class="ok">Your proposal is on its way. We will call or text you to book a free walkthrough.</p></div>';
+    });
+  }
+  function val(id) { return (document.getElementById(id).value || '').trim(); }
+
+  fetch(FN + '?org=' + encodeURIComponent(ORG)).then(function (r) { return r.ok ? r.json() : Promise.reject(); }).then(function (d) {
+    meta = d; document.title = d.company + ': commercial cleaning bid';
+    if (!d.enabled) { root.innerHTML = '<div class="card"><h1>' + esc(d.company) + ' commercial cleaning</h1><p>Online pricing is not open yet. Please call or text us for a free walkthrough and quote.</p></div>'; return; }
+    render();
+  }).catch(function () { root.innerHTML = '<div class="card"><p class="err">This page could not load. Please call us for a quote.</p></div>'; });
+</script>
+</body>
+</html>

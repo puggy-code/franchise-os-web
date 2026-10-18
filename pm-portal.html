@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<title>Property Portal</title>
+<!--
+  Property manager portal (2026-10-14; PROPERTY-PORTAL.md, PM-LOYALTY.md). Link as pm-portal.html?t=<portal token> (Admin > Property accounts
+  > Share portal link). The token is the only credential; nothing here needs a Supabase key. Data comes from the pm-portal function (JSON), because
+  Supabase rewrites text/html from the functions domain to text/plain (gotcha 1). The old portal.html forwards here.
+  Shows: the schedule, this account's insights, and (when the loyalty program is on) points, tier progress, the reward catalog and requests.
+  Goes to the separate public web repo with the other pages; not published from here.
+-->
+<style>
+  :root { --bg: #f6f5fb; --card: #fff; --ink: #15121f; --muted: #6b6880; --line: #f1eff7; --brand: #004aad; --gold: #9a6b00; --gold-soft: #fff4d6; --ok: #166534; --err: #b91c1c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f0d16; --card: #1a1724; --ink: #f2f0f8; --muted: #a29fb5; --line: #2b2738; --brand: #6ea3ff; --gold: #f1c35a; --gold-soft: #3a2f12; --ok: #6ee7a0; --err: #fca5a5; }
+  }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--ink); margin: 0; padding: 20px 16px 48px; line-height: 1.5; }
+  .wrap { max-width: 680px; margin: 0 auto; }
+  .card { background: var(--card); border-radius: 18px; padding: 20px; margin: 0 0 14px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 13px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+  p { color: var(--muted); margin: 0 0 8px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat { background: var(--bg); border-radius: 12px; padding: 12px; text-align: center; font-size: 13px; color: var(--muted); }
+  .stat b { display: block; font-size: 22px; color: var(--ink); }
+  .row { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .unit { font-weight: 700; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .tag { align-self: flex-start; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; background: var(--bg); color: var(--muted); }
+  .cleaned, .fulfilled, .applied { background: #dcfce7; color: #166534; } .booked, .approved { background: #dbeafe; color: #1e40af; }
+  .waiting, .requested { background: #fef3c7; color: #92400e; }
+  .err { color: var(--err); } .ok { color: var(--ok); font-weight: 700; }
+  .big { font-size: 36px; font-weight: 800; letter-spacing: -1px; }
+  .badge { display: inline-block; border-radius: 999px; padding: 3px 12px; font-weight: 800; font-size: 13px; background: var(--gold-soft); color: var(--gold); }
+  .bar { height: 10px; background: var(--bg); border-radius: 999px; overflow: hidden; margin: 10px 0 6px; }
+  .bar i { display: block; height: 100%; background: var(--gold); border-radius: 999px; }
+  .gifts { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+  .gift { border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .gift .img { aspect-ratio: 4/3; border-radius: 10px; background: var(--bg) center/cover no-repeat; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 28px; }
+  button { background: var(--brand); color: #fff; border: 0; border-radius: 10px; padding: 10px 14px; font-weight: 700; font-size: 14px; cursor: pointer; }
+  button[disabled] { opacity: .45; cursor: default; }
+  input { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; margin: 6px 0; }
+  .small { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap" id="root"><div class="card"><p>Loading...</p></div></div>
+<script>
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  var FN = SUPABASE_URL + '/functions/v1/pm-portal';
+  var TEXT_NUMBER = '(763) 230-6795';
+  var token = new URLSearchParams(location.search).get('t') || '';
+  var root = document.getElementById('root');
+  var LABEL = { cleaned: 'Cleaned', booked: 'Booked', waiting: 'Waiting for your yes', cancelled: 'Cancelled', problem: 'Needs attention' };
+  var RSTATUS = { requested: 'Waiting for approval', approved: 'Approved', applied: 'Credit applied', fulfilled: 'Done', declined: 'Not approved (points returned)', cancelled: 'Cancelled (points returned)', to_order: 'Approved', ordered: 'On its way', delivered: 'Done' };
+  var data = null;
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function money(c) { return c == null ? '' : '$' + Math.round(c / 100).toLocaleString('en-US'); }
+  function pts(n) { return Number(n || 0).toLocaleString('en-US'); }
+  function pretty(d) { return d ? new Date(d + 'T12:00:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date to be set'; }
+  function safeUrl(u) { return /^https:\/\//.test(u || '') ? u : ''; }
+
+  function statsHtml(s) {
+    if (!s) return '';
+    var m = s.month || {}, y = s.year || {};
+    return '<div class="card"><h2>Your numbers</h2><div class="stats">' +
+      '<div class="stat"><b>' + (m.cleans || 0) + '</b>cleans this month</div><div class="stat"><b>' + (m.units || 0) + '</b>units turned this month</div><div class="stat"><b>' + money(m.spend_cents || 0) + '</b>this month</div>' +
+      '<div class="stat"><b>' + (y.cleans || 0) + '</b>cleans this year</div><div class="stat"><b>' + (y.units || 0) + '</b>units this year</div><div class="stat"><b>' + money(y.spend_cents || 0) + '</b>this year</div>' +
+      '</div><div style="margin-top:10px">' +
+      '<div class="row"><span>Average request to cleaned</span><b>' + (s.avg_turnaround_hours != null ? s.avg_turnaround_hours + ' hours' : 'Not enough yet') + '</b></div>' +
+      '<div class="row"><span>Average rating (12 months)</span><b>' + (s.rating_avg != null ? Number(s.rating_avg).toFixed(1) + ' of 5 (' + s.ratings + ')' : 'No ratings yet') + '</b></div>' +
+      '<div class="row"><span>Re-cleans (12 months)</span><b>' + (s.recleans_12m || 0) + '</b></div>' +
+      '<div class="row"><span>Upcoming cleans</span><b>' + (s.upcoming || 0) + (s.next_date ? ', next ' + esc(pretty(s.next_date)) : '') + '</b></div>' +
+      '</div></div>';
+  }
+
+  function loyaltyHtml(l) {
+    if (!l) return '';
+    var tier = l.tier || {}, nx = l.next_tier, spend = Number(l.spend_12m_cents || 0);
+    var pct = 100;
+    if (nx) { var lo = Number(tier.min_spend_cents || 0), hi = Number(nx.min_spend_cents); pct = hi > lo ? Math.max(0, Math.min(100, Math.round((spend - lo) / (hi - lo) * 100))) : 0; }
+    var h = '<div class="card" id="loyalty"><h2>Loyalty points</h2><div class="big">' + pts(l.balance) + '</div>' +
+      '<p>points &middot; <span class="badge">' + esc(tier.name || '') + '</span></p>' +
+      '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+      '<p class="sub">' + (nx ? money(l.next_tier_need_cents) + ' more in cleaning over 12 months reaches <b>' + esc(nx.name) + '</b>' + (nx.perks && nx.perks.length ? ': ' + esc(nx.perks.join(', ')) : '') + '.' : 'You are in our top tier.') + '</p>' +
+      (tier.perks && tier.perks.length ? '<p class="sub">Your ' + esc(tier.name) + ' perks: ' + esc(tier.perks.join(', ')) + '.</p>' : '') +
+      '<p class="sub">You earn ' + l.rates[0] + '% of what you pay in your first year with us, ' + l.rates[1] + '% in your second and ' + l.rates[2] + '% every year after' + (tier.earn_bonus_pct ? ', plus ' + tier.earn_bonus_pct + '% more at ' + esc(tier.name) : '') + '.</p></div>';
+
+    h += '<div class="card"><h2>Rewards</h2><div class="gifts">' + (l.rewards || []).map(function (r) {
+      var can = l.balance >= r.points_cost, img = safeUrl(r.image_url);
+      return '<div class="gift"><div class="img"' + (img ? ' style="background-image:url(\'' + esc(img) + '\')"' : '') + '>' + (img ? '' : (r.kind === 'credit' ? '$' : '&#127873;')) + '</div>' +
+        '<b>' + esc(r.title) + '</b>' + (r.description ? '<div class="sub">' + esc(r.description) + '</div>' : '') +
+        '<div class="sub">' + pts(r.points_cost) + ' points' + (r.min_tier ? ' &middot; ' + esc(r.min_tier) + ' and up' : '') + '</div>' +
+        '<button data-reward="' + esc(r.id) + '" data-title="' + esc(r.title) + '"' + (can ? '' : ' disabled') + '>' + (can ? 'Request' : 'Keep earning') + '</button></div>';
+    }).join('') + '</div>' + ((l.rewards || []).length ? '' : '<p>Rewards are coming soon.</p>') +
+      '<div id="redeem-box"></div>' +
+      '<p class="small" style="margin-top:12px">Rewards are obtained only by redeeming points. Points have no cash value, cannot be bought or transferred. Every request is confirmed by our team; if it is not approved the points come back. The program may change with notice. By requesting a reward you confirm your employer allows you to accept it.</p>' +
+      '<p class="small">From your registered phone you can also text POINTS, CATALOG or REDEEM and a number to ' + TEXT_NUMBER + '.</p></div>';
+
+    if ((l.requests || []).length) h += '<div class="card"><h2>Your requests</h2>' + l.requests.map(function (x) {
+      return '<div class="row"><div><b>' + esc(x.reward_title) + '</b><div class="sub">' + esc(new Date(x.created_at).toLocaleDateString()) + ' &middot; ' + pts(x.points) + ' points' + (x.confirm_code ? ' &middot; code ' + esc(x.confirm_code) : '') + '</div></div><span class="tag ' + esc(x.status) + '">' + esc(RSTATUS[x.status] || x.status) + '</span></div>';
+    }).join('') + '</div>';
+    if ((l.history || []).length) h += '<div class="card"><h2>Points history</h2>' + l.history.map(function (x) {
+      return '<div class="row"><div class="sub">' + esc(new Date(x.created_at).toLocaleDateString()) + ' &middot; ' + esc(x.note || x.kind) + '</div><b>' + (x.points > 0 ? '+' : '') + pts(x.points) + '</b></div>';
+    }).join('') + '</div>';
+    return h;
+  }
+
+  function render(d) {
+    data = d;
+    var byB = {};
+    (d.buildings || []).forEach(function (b) { byB[b.id] = b.label; });
+    var rows = (d.requests || []).map(function (r) {
+      return '<div class="row"><div><div class="unit">Unit ' + esc(r.unit) + (byB[r.building_id] ? ' &middot; ' + esc(byB[r.building_id]) : '') + '</div>' +
+        '<div class="sub">' + esc(pretty(r.date)) + (r.size ? ' &middot; ' + esc(r.size) : '') + (r.est_cents != null ? ' &middot; est. ' + esc(money(r.est_cents)) : '') + '</div></div>' +
+        '<span class="tag ' + esc(r.state) + '">' + esc(LABEL[r.state] || r.state) + '</span></div>';
+    }).join('');
+    root.innerHTML =
+      '<div class="card"><h1>' + esc(d.account.name) + '</h1><p>Your cleaning with ' + esc(d.org.name) + '</p>' +
+      '<div class="stats"><div class="stat"><b>' + d.totals.upcoming + '</b>Upcoming</div><div class="stat"><b>' + d.totals.waiting + '</b>Waiting for a yes</div><div class="stat"><b>' + d.totals.cleaned + '</b>Cleaned</div></div></div>' +
+      loyaltyHtml(d.loyalty) +
+      statsHtml(d.stats) +
+      '<div class="card"><h2>Recent turnover requests</h2>' + (rows || '<p>Nothing in the last 4 months.</p>') + '</div>' +
+      '<div class="card"><h2>Need a turnover?</h2><p>Text us the unit and size, like "Unit 4B 2/2", from your phone on file. We reply with a quote and book when you say YES.</p></div>';
+  }
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-reward]');
+    if (!b || b.disabled) return;
+    var box = document.getElementById('redeem-box');
+    box.innerHTML = '<div class="card" style="background:var(--bg);margin-top:12px"><b>Request: ' + esc(b.getAttribute('data-title')) + '</b>' +
+      '<input id="rd-name" placeholder="Your name" maxlength="120"><input id="rd-note" placeholder="Where should it go? (optional)" maxlength="500">' +
+      '<button id="rd-go">Request with my points</button> <span id="rd-msg"></span></div>';
+    document.getElementById('rd-go').onclick = function () {
+      var go = this, msg = document.getElementById('rd-msg');
+      go.disabled = true; msg.className = ''; msg.textContent = 'Sending...';
+      fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'redeem', reward_id: b.getAttribute('data-reward'), name: document.getElementById('rd-name').value, note: document.getElementById('rd-note').value }) })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          if (!res.ok) {
+            go.disabled = false; msg.className = 'err';
+            msg.textContent = res.j.error === 'not_enough_points' ? 'Not enough points yet.' : res.j.error === 'tier_too_low' ? 'This one needs a higher tier.' : 'That did not go through. Please try again.';
+            return;
+          }
+          box.innerHTML = '<p class="ok" style="margin-top:10px">Requested. Your code is ' + esc(res.j.code || '') + '. A manager will confirm; the points are held until then.</p>';
+          setTimeout(load, 1500);
+        })
+        .catch(function () { go.disabled = false; msg.className = 'err'; msg.textContent = 'That did not go through. Please try again.'; });
+    };
+  });
+
+  function load() {
+    return fetch(FN + '?t=' + encodeURIComponent(token))
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(render)
+      .catch(function () { root.innerHTML = '<div class="card"><p class="err">This link is not valid or has been replaced. Ask us for a new one.</p></div>'; });
+  }
+
+  if (!/^[0-9a-f]{32}$/.test(token)) {
+    root.innerHTML = '<div class="card"><p class="err">This link is not valid. Ask us for a new one.</p></div>';
+  } else {
+    load();
+  }
+</script>
+</body>
+</html>

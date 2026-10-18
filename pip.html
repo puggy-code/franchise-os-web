@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<title>Property Improvement Plan</title>
+<!--
+  The Property Improvement Plan: a 10-page document (migration 0301, PROPERTY-IMPROVEMENT-PLAN.md).
+
+      pip.html                    the GENERIC plan: the blank 10-page template to hand a prospect (no data is fetched)
+      pip.html?t=<token>          one property's plan, from the pip-report function, with before/after photos
+      pip.html?t=<token>&unsubscribe=1   the property manager stops the plan emails (the link in every email footer)
+
+  Pages: 1 cover, 2 how the plan works, 3 executive summary & score, 4-8 findings by area (two areas a page) with before/after pairs,
+  9 schedule / what's next / items for the property's maintenance team, 10 progress, contacts & sign-off.
+  Print it (each page is one letter page) or tap Download PDF (jsPDF 4.2.1, pinned, URL checked with curl on 2026-10-14).
+
+  Static on purpose: Supabase rewrites text/html from the functions domain to text/plain (START-HERE gotcha 1).
+  The token is the only credential. English only (customer-facing pages, START-HERE section 4).
+-->
+<style>
+  :root { color-scheme: light; --blue: #004aad; --ink: #15121f; --muted: #6b6880; --line: #e6e3f0; --soft: #f6f5fb; --green: #16a34a; --amber: #b45309; --red: #dc2626; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #eceaf3; color: var(--ink); margin: 0; padding: 16px 16px 48px; line-height: 1.5; }
+  .bar-top { max-width: 816px; margin: 0 auto 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+  .bar-top .who { font-weight: 700; color: var(--muted); font-size: 14px; }
+  .bar-top .btns { display: flex; gap: 8px; }
+  button, .btn { background: var(--blue); color: #fff; border: 0; border-radius: 10px; padding: 11px 16px; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; text-decoration: none; }
+  button.ghost { background: #fff; color: #003882; border: 1px solid var(--line); }
+  button[disabled] { opacity: .5; cursor: default; }
+  .page { background: #fff; max-width: 816px; min-height: 1056px; margin: 0 auto 18px; padding: 56px 56px 48px; position: relative; border-radius: 6px; box-shadow: 0 6px 24px rgba(0, 20, 60, .08); display: flex; flex-direction: column; }
+  .page > .body { flex: 1; }
+  .pno { position: absolute; bottom: 22px; left: 56px; right: 56px; display: flex; justify-content: space-between; color: #9c99ab; font-size: 11px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .kicker { color: var(--blue); font-size: 12px; font-weight: 800; letter-spacing: .8px; text-transform: uppercase; margin: 0 0 6px; }
+  h1 { font-size: 30px; margin: 0 0 6px; letter-spacing: -.4px; line-height: 1.15; }
+  h2 { font-size: 22px; margin: 0 0 14px; letter-spacing: -.2px; }
+  h3 { font-size: 15px; margin: 22px 0 8px; }
+  p { margin: 0 0 12px; color: #3d3a4b; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+  .cover { background: linear-gradient(160deg, #004aad 0%, #003882 70%); color: #fff; }
+  .cover p, .cover .muted { color: rgba(255,255,255,.85); }
+  .cover .kicker { color: #bcd3ff; }
+  .cover h1 { font-size: 46px; margin-top: 160px; }
+  .cover .prop { font-size: 26px; font-weight: 800; margin: 26px 0 4px; }
+  .cover .meta { margin-top: 90px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .cover .meta div b { display: block; font-size: 11px; letter-spacing: .8px; text-transform: uppercase; color: #bcd3ff; }
+  .cover .pno { color: rgba(255,255,255,.6); border-color: rgba(255,255,255,.2); }
+  .steps { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0; }
+  .step { background: var(--soft); border-radius: 14px; padding: 16px; }
+  .step .n { width: 30px; height: 30px; border-radius: 50%; background: var(--blue); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; }
+  .step b { display: block; font-size: 16px; margin-bottom: 4px; }
+  .step p { margin: 0; font-size: 14px; }
+  .note { border-left: 4px solid var(--blue); background: #f2f6fd; padding: 12px 14px; border-radius: 6px; margin: 14px 0; font-size: 14px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+  .chip { display: inline-block; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px; background: var(--soft); color: var(--muted); max-width: 100%; }
+  .chip.fixed { background: #dcfce7; color: #166534; }
+  .chip.in_progress, .chip.scheduled { background: #dbeafe; color: #1e3a8a; }
+  .chip.found { background: #fef3c7; color: #92400e; }
+  .chip.refer_pm { background: #ede9fe; color: #5b21b6; }
+  .chip.sev-safety { background: #fee2e2; color: #991b1b; }
+  .chip.sev-major { background: #ffedd5; color: #9a3412; }
+  .scores { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 8px 0 18px; }
+  .score { border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .score .big { font-size: 46px; font-weight: 800; letter-spacing: -1.5px; line-height: 1; }
+  .score .lbl { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 700; margin-top: 6px; }
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
+  .tile { background: var(--soft); border-radius: 12px; padding: 12px; }
+  .tile b { display: block; font-size: 24px; }
+  .tile span { font-size: 12px; color: var(--muted); }
+  .bar { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; margin: 8px 0 4px; }
+  .bar > i { display: block; height: 10px; background: var(--blue); border-radius: 999px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; overflow-wrap: anywhere; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); border-bottom: 2px solid var(--line); padding: 6px 6px; }
+  td { border-bottom: 1px solid var(--line); padding: 7px 6px; vertical-align: top; }
+  .area { margin-bottom: 18px; }
+  .area-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 2px solid var(--blue); padding-bottom: 4px; margin-bottom: 8px; }
+  .area-head h3 { margin: 0; font-size: 17px; }
+  .finding { border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 10px; break-inside: avoid; }
+  .finding .top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; flex-wrap: wrap; }
+  .finding .desc { font-weight: 700; }
+  .finding .loc { color: var(--muted); font-size: 13px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .pair figure { margin: 0; }
+  .pair img { width: 100%; height: 150px; object-fit: cover; border-radius: 8px; display: block; background: var(--soft); }
+  .pair .ph { height: 150px; border-radius: 8px; border: 2px dashed var(--line); display: flex; align-items: center; justify-content: center; color: #b9b6c6; font-size: 12px; font-weight: 700; }
+  .pair figcaption { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-top: 3px; }
+  .blank-row td { height: 30px; }
+  .checklist { columns: 2; font-size: 13px; color: #3d3a4b; margin: 0; padding-left: 18px; }
+  .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px; }
+  .sign div { border-top: 1px solid var(--ink); padding-top: 6px; font-size: 12px; color: var(--muted); }
+  .msg { max-width: 560px; margin: 60px auto; background: #fff; border-radius: 16px; padding: 28px; text-align: center; }
+  @media (max-width: 700px) {
+    .page { padding: 28px 18px 48px; min-height: 0; }
+    .pno { left: 18px; right: 18px; }
+    .cover h1 { font-size: 34px; margin-top: 40px; }
+    .cover .meta { margin-top: 40px; grid-template-columns: 1fr; }
+    .steps, .scores { grid-template-columns: 1fr; }
+    .tiles { grid-template-columns: 1fr 1fr; }
+    .pair img, .pair .ph { height: 110px; }
+    .checklist { columns: 1; }
+  }
+  @media print {
+    @page { size: letter; margin: 0; }
+    body { background: #fff; padding: 0; }
+    .bar-top { display: none; }
+    .page { box-shadow: none; border-radius: 0; margin: 0; min-height: 11in; height: 11in; overflow: hidden; page-break-after: always; break-after: page; }
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .chip, .bar > i, .step .n, .tile, .step { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="bar-top" id="top">
+  <span class="who" id="who">Property Improvement Plan</span>
+  <span class="btns"><button class="ghost" id="print" type="button">Print</button><button id="pdf" type="button">Download PDF</button></span>
+</div>
+<div id="root"><div class="msg"><p>Loading the plan…</p></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/4.2.1/jspdf.umd.min.js"></script>
+<script>
+  // ---- configure this once, to match your Supabase project ----------------
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  // ------------------------------------------------------------------------
+  var FN = SUPABASE_URL + '/functions/v1/pip-report';
+  var root = document.getElementById('root');
+  var qs = new URLSearchParams(location.search);
+  var token = (qs.get('t') || '').trim();
+  var DATA = null;
+
+  // Same table as supabase/functions/_shared/propertyImprovement.ts (PIP_AREAS, FINDINGS_PAGES); keep them in step.
+  var AREAS = {
+    exterior: ['Exterior & entrance', 'Entry doors and glass, mats, cobwebs, lights, cigarette butts, signage at the door'],
+    lobby: ['Lobby & common areas', 'Floors, furniture, mailboxes, elevators, glass, dust on ledges and vents'],
+    hallways: ['Hallways & stairwells', 'Carpet stains, scuffs, baseboards, handrails, paint residue, vents, light fixtures'],
+    laundry: ['Laundry room', 'Lint, detergent spills, machine tops, floor drains, sinks, odors'],
+    amenities: ['Fitness & amenities', 'Equipment wipe-down, mirrors, mats, clubroom, pool deck, kitchen'],
+    trash: ['Trash & recycling rooms', 'Chute doors, floor build-up, odor, overflow, bins, pests'],
+    parking: ['Parking & garage', 'Oil stains, litter, stairwells and elevator lobbies, bike storage, lighting'],
+    units: ['Unit turnover standard', 'The move-out checklist each vacant unit is held to before the next resident'],
+    landscaping: ['Landscaping touch-points', 'Litter in beds, outdoor furniture, mulch, planters, dog stations'],
+    safety: ['Safety & signage', 'Blocked exits, fire-hose and extinguisher access, worn or missing signs, trip hazards']
+  };
+  var FINDINGS_PAGES = [['exterior', 'lobby'], ['hallways', 'laundry'], ['amenities', 'trash'], ['parking', 'units'], ['landscaping', 'safety']];
+  var STANDARD = [
+    'Deep clean and vacuum all staircases and hallways', 'Clean the air vents in the staircases', 'Remove scuffs from walls',
+    'Glass sealant on windows and glass to prevent handprints', 'Remove polish residue from elevator surfaces',
+    'Clean and polish door frames and jambs, light ceramic coating', 'Remove paint residue from staircases', 'Deep clean and polish trash chute doors',
+    'Clear and sanitize the trash room', 'Clean and dust outdoor furniture', 'Dust, mop and polish the bike storage room',
+    'Remove paint splatter from baseboards and fire-hose access points', 'A direct line to us for small issues'
+  ];
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function day(iso) { return iso ? new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : ''; }
+  function short(iso) { return iso ? new Date(iso.length === 10 ? iso + 'T12:00:00' : iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''; }
+  function money(c) { return c == null ? '' : '$' + Math.round(c / 100).toLocaleString('en-US'); }
+  function mins(m) { return m == null ? '' : (m >= 60 ? (Math.round(m / 6) / 10) + ' h' : m + ' min'); }
+  var KIND = { welcome: 'Welcome', plan_delivered: 'Plan delivered', progress: 'Progress report', milestone: 'Milestone', completion: 'Plan complete' };
+
+  // ---------------------------------------------------------------- unsubscribe
+  if (token && qs.get('unsubscribe') === '1') {
+    document.getElementById('top').style.display = 'none';
+    root.innerHTML = '<div class="msg"><h2>Stop the plan emails?</h2><p class="muted">You will no longer get progress reports for this property by email. The plan itself stays available at this link.</p><button id="un" type="button">Stop the emails</button></div>';
+    document.getElementById('un').addEventListener('click', function () {
+      this.disabled = true;
+      fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'unsubscribe' }) })
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function () { root.innerHTML = '<div class="msg"><h2>Done</h2><p class="muted">You will not get any more plan emails. If that was a mistake, just reply to any of our emails.</p></div>'; })
+        .catch(function () { root.innerHTML = '<div class="msg"><h2>That did not work</h2><p class="muted">Please reply "unsubscribe" to any of our emails instead and we will stop them.</p></div>'; });
+    });
+  } else if (!token) {
+    render(generic());
+  } else {
+    fetch(FN + '?t=' + encodeURIComponent(token))
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(render)
+      .catch(function () { document.getElementById('top').style.display = 'none'; root.innerHTML = '<div class="msg"><h2>Link expired</h2><p class="muted">This plan link is not valid. Reply to our last email and we will send a fresh one.</p></div>'; });
+  }
+
+  /** The blank template: no property, no findings. What Jack hands a prospect. */
+  function generic() {
+    var areas = Object.keys(AREAS).map(function (k) { return { area: k, label: AREAS[k][0], items: [] }; });
+    return {
+      generic: true,
+      org: { name: 'Two Hour Maids', reply_to: 'owner@twohourmaids.com', postal_address: null },
+      plan: { property_name: null, property_address: null, manager_name: null, started_at: null, report_every_days: 14 },
+      stats: { total: 0, actionable: 0, fixed: 0, open: 0, referred: 0, declined: 0, outOfScope: 0, pct: 0, safetyOpen: 0 },
+      score: { starting: null, now: null },
+      areas: areas,
+      standard_items: STANDARD.map(function (l) { return { label: l, is_addon: false, done: false }; }),
+      reports: []
+    };
+  }
+
+  // ---------------------------------------------------------------- the ten pages
+  function page(n, inner, cls) {
+    return '<section class="page ' + (cls || '') + '"><div class="body">' + inner + '</div><div class="pno"><span>Property Improvement Plan' +
+      (DATA.plan.property_name ? ' · ' + esc(DATA.plan.property_name) : '') + '</span><span>' + n + ' / 10</span></div></section>';
+  }
+  function chip(cls, label) { return '<span class="chip ' + cls + '">' + esc(label) + '</span>'; }
+  function blank(w) { return '<span style="display:inline-block;width:' + (w || 160) + 'px;max-width:70%;border-bottom:1px solid #b9b6c6">&nbsp;</span>'; }
+
+
+  function render(d) {
+    DATA = d;
+    var p = d.plan, s = d.stats, g = !!d.generic;
+    var prop = p.property_name || (g ? 'Your property' : 'Your property');
+    document.title = 'Property Improvement Plan' + (p.property_name ? ' · ' + p.property_name : '');
+    document.getElementById('who').textContent = g ? 'Property Improvement Plan (sample template)' : prop;
+    var byArea = {}; d.areas.forEach(function (a) { byArea[a.area] = a; });
+    var all = []; d.areas.forEach(function (a) { a.items.forEach(function (i) { i._area = a.area; all.push(i); }); });
+    var out = [];
+
+    // 1 Cover
+    out.push(page(1,
+      '<p class="kicker">' + esc(d.org.name) + '</p><h1>Property Improvement Plan</h1>' +
+      '<div class="prop">' + (g ? 'Prepared for: ' + blank(260) : esc(prop)) + '</div>' +
+      '<p>' + (g ? 'Address: ' + blank(300) : esc(p.property_address || '')) + (p.unit_count ? ' · ' + p.unit_count + ' units' : '') + '</p>' +
+      '<div class="meta"><div><b>Property manager</b>' + (g ? blank(180) : esc(p.manager_name || '')) + '</div>' +
+      '<div><b>Prepared by</b>' + esc(d.org.name) + '</div>' +
+      '<div><b>Date</b>' + (g ? blank(140) : esc(day(p.delivered_at || p.walkthrough_done_at || p.started_at))) + '</div>' +
+      '<div><b>Status</b>' + (g ? 'Template' : (s.actionable ? s.pct + '% complete' : 'Walkthrough in progress')) + '</div></div>', 'cover'));
+
+    // 2 How the plan works
+    out.push(page(2,
+      '<p class="kicker">Page 2</p><h2>How the plan works</h2>' +
+      '<p>We walk the whole building once, area by area, and write down every item that keeps it from looking its best. Then we work through the list, one item at a time, until the property is where it should be. You see every step.</p>' +
+      '<div class="steps">' +
+      '<div class="step"><div class="n">1</div><b>Find</b><p>We walk ten areas, from the entrance to the trash rooms and the garage, with a checklist for each.</p></div>' +
+      '<div class="step"><div class="n">2</div><b>Photograph</b><p>Every item gets a "before" photo, where it is, how serious it is and what fixing it takes.</p></div>' +
+      '<div class="step"><div class="n">3</div><b>Fix</b><p>We take care of the items one by one, worst first, and photograph each one again when it is done.</p></div>' +
+      '<div class="step"><div class="n">4</div><b>Report</b><p>You get a progress report by email every ' + (p.report_every_days || 14) + ' days and at 25, 50, 75 and 100%, with before and after photos.</p></div>' +
+      '</div>' +
+      '<div class="note"><b>What we fix, and what we refer.</b> We clean, polish, restore and maintain. Anything that is a repair (a broken door closer, a leak, an electrical fixture, damaged drywall) we photograph and list on page 9 for your own maintenance team. We do not take on repairs or promise them.</div>' +
+      '<h3>Status of each item</h3><div class="legend">' + chip('found', 'Found') + chip('scheduled', 'Scheduled') + chip('in_progress', 'In progress') + chip('fixed', 'Fixed') + chip('refer_pm', 'Referred to your maintenance') + chip('', 'Declined') + chip('', 'Out of scope') + '</div>' +
+      '<h3>Severity</h3><div class="legend">' + chip('', 'Cosmetic') + chip('', 'Moderate') + chip('sev-major', 'Major') + chip('sev-safety', 'Safety') + '</div>' +
+      '<h3>The standard items included with every plan</h3><ul class="checklist">' + d.standard_items.filter(function (i) { return !i.is_addon; }).map(function (i) { return '<li>' + (i.done ? '&#10003; ' : '') + esc(i.label) + '</li>'; }).join('') + '</ul>'));
+
+    // 3 Executive summary & score
+    var top = all.filter(function (i) { return ['found', 'scheduled', 'in_progress', 'refer_pm'].indexOf(i.status) >= 0 && (i.severity === 'safety' || i.severity === 'major'); }).slice(0, 6);
+    out.push(page(3,
+      '<p class="kicker">Page 3</p><h2>Executive summary & property score</h2>' +
+      '<div class="scores"><div class="score"><div class="big">' + (d.score.starting == null ? '—' : d.score.starting) + '</div><div class="lbl">Score on the day of the walk</div></div>' +
+      '<div class="score"><div class="big" style="color:var(--blue)">' + (d.score.now == null ? '—' : d.score.now) + '</div><div class="lbl">Score today</div></div></div>' +
+      '<p class="small muted">The score starts at 100 and every open item takes points off by severity: cosmetic 1, moderate 3, major 6, safety 10. Fixed items give the points back.</p>' +
+      '<div class="tiles"><div class="tile"><b>' + s.total + '</b><span>Items found</span></div><div class="tile"><b>' + s.actionable + '</b><span>Ours to fix</span></div>' +
+      '<div class="tile"><b>' + s.fixed + '</b><span>Fixed</span></div><div class="tile"><b>' + s.referred + '</b><span>For your maintenance</span></div></div>' +
+      '<b>' + (s.actionable ? s.fixed + ' of ' + s.actionable + ' items fixed (' + s.pct + '%)' : 'Progress') + '</b><div class="bar"><i style="width:' + s.pct + '%"></i></div>' +
+      '<h3>Top priorities</h3>' +
+      (top.length ? '<table><tr><th>Item</th><th>Area</th><th>Severity</th><th>Status</th></tr>' + top.map(function (i) {
+        return '<tr><td>' + esc(i.description) + (i.location ? '<div class="muted small">' + esc(i.location) + '</div>' : '') + '</td><td>' + esc(AREAS[i._area][0]) + '</td><td>' + chip('sev-' + i.severity, i.severity_label) + '</td><td>' + chip(i.status, i.status_label) + '</td></tr>';
+      }).join('') + '</table>' : (g ? '<table><tr><th>Item</th><th>Area</th><th>Severity</th><th>Status</th></tr>' + '<tr class="blank-row"><td></td><td></td><td></td><td></td></tr>'.repeat(5) + '</table>' : '<p class="muted">No safety or major items open.</p>')) +
+      (s.safetyOpen ? '<div class="note" style="border-color:var(--red);background:#fef2f2"><b>' + s.safetyOpen + ' safety item' + (s.safetyOpen === 1 ? '' : 's') + ' open.</b> These come first.</div>' : '')));
+
+    // 4-8 Findings by area
+    FINDINGS_PAGES.forEach(function (keys, idx) {
+      var inner = '<p class="kicker">Page ' + (4 + idx) + ' · Findings</p>';
+      keys.forEach(function (k) {
+        var a = byArea[k] || { items: [] };
+        inner += '<div class="area"><div class="area-head"><h3>' + esc(AREAS[k][0]) + '</h3><span class="small muted">' + (a.items.length ? a.items.filter(function (i) { return i.status === 'fixed'; }).length + ' of ' + a.items.length + ' fixed' : '') + '</span></div>';
+        inner += '<p class="small muted">What we check: ' + esc(AREAS[k][1]) + '.</p>';
+        if (!a.items.length) {
+          inner += g
+            ? '<table><tr><th style="width:40%">Item & location</th><th>Severity</th><th>Before</th><th>After</th><th>Status</th></tr>' + '<tr class="blank-row"><td></td><td></td><td></td><td></td><td></td></tr>'.repeat(3) + '</table>'
+            : '<p class="muted">Nothing to fix here.</p>';
+        }
+        a.items.slice(0, 8).forEach(function (i) {
+          var est = [mins(i.est_minutes), money(i.est_cost_cents)].filter(Boolean).join(' · ');
+          inner += '<div class="finding"><div class="top"><div><div class="desc">' + esc(i.description) + '</div>' +
+            '<div class="loc">' + esc(i.location || '') + (est ? (i.location ? ' · ' : '') + 'Estimate: ' + esc(est) : '') + (i.fixed_at ? ' · Fixed ' + esc(short(i.fixed_at)) : '') + '</div></div>' +
+            '<div>' + chip('sev-' + i.severity, i.severity_label) + ' ' + chip(i.status, i.status_label) + '</div></div>' +
+            '<div class="pair"><figure>' + (i.before[0] ? '<img src="' + esc(i.before[0]) + '" alt="Before">' : '<div class="ph">No photo</div>') + '<figcaption>Before</figcaption></figure>' +
+            '<figure>' + (i.after[0] ? '<img src="' + esc(i.after[0]) + '" alt="After">' : '<div class="ph">' + (i.status === 'refer_pm' ? 'Referred to your maintenance' : i.status === 'fixed' ? 'No photo' : 'Not fixed yet') + '</div>') + '<figcaption>After</figcaption></figure></div></div>';
+        });
+        if (a.items.length > 8) inner += '<p class="small muted">+ ' + (a.items.length - 8) + ' more in this area (in the app and the PDF).</p>';
+        inner += '</div>';
+      });
+      out.push(page(4 + idx, inner));
+    });
+
+    // 9 Schedule, what's next, referred to maintenance
+    var next = all.filter(function (i) { return ['found', 'scheduled', 'in_progress'].indexOf(i.status) >= 0; })
+      .sort(function (a, b) { return String(a.scheduled_for || '9999').localeCompare(String(b.scheduled_for || '9999')); });
+    var refer = all.filter(function (i) { return i.status === 'refer_pm'; });
+    var aside = all.filter(function (i) { return i.status === 'declined' || i.status === 'out_of_scope'; });
+    function rows(list, cols) { return list.slice(0, 14).map(function (i) { return '<tr>' + cols.map(function (c) { return '<td>' + c(i) + '</td>'; }).join('') + '</tr>'; }).join(''); }
+    out.push(page(9,
+      '<p class="kicker">Page 9</p><h2>Schedule & what\'s next</h2>' +
+      '<table><tr><th style="width:44%">Item</th><th>Area</th><th>When</th><th>Estimate</th><th>Status</th></tr>' +
+      (next.length ? rows(next, [function (i) { return esc(i.description); }, function (i) { return esc(AREAS[i._area][0]); }, function (i) { return esc(short(i.scheduled_for) || 'Next visit'); }, function (i) { return esc([mins(i.est_minutes), money(i.est_cost_cents)].filter(Boolean).join(' · ')); }, function (i) { return chip(i.status, i.status_label); }])
+        : (g ? '<tr class="blank-row"><td></td><td></td><td></td><td></td><td></td></tr>'.repeat(5) : '<tr><td colspan="5" class="muted">Everything on the plan is done.</td></tr>')) + '</table>' +
+      '<h3>Items for your maintenance team</h3><p class="small muted">Repairs we found while walking the building. We photograph them and pass them on; we do not take them on.</p>' +
+      '<table><tr><th style="width:50%">Item</th><th>Area</th><th>Location</th><th>Severity</th></tr>' +
+      (refer.length ? rows(refer, [function (i) { return esc(i.description); }, function (i) { return esc(AREAS[i._area][0]); }, function (i) { return esc(i.location || ''); }, function (i) { return chip('sev-' + i.severity, i.severity_label); }])
+        : (g ? '<tr class="blank-row"><td></td><td></td><td></td><td></td></tr>'.repeat(4) : '<tr><td colspan="4" class="muted">None.</td></tr>')) + '</table>' +
+      (aside.length ? '<h3>Set aside</h3><table>' + rows(aside, [function (i) { return esc(i.description); }, function (i) { return chip('', i.status_label); }]) + '</table>' : '')));
+
+    // 10 Progress, contacts, sign-off
+    out.push(page(10,
+      '<p class="kicker">Page 10</p><h2>Progress, contacts & sign-off</h2>' +
+      '<b>' + (s.actionable ? s.pct + '% complete' : 'Not started') + '</b><div class="bar"><i style="width:' + s.pct + '%"></i></div>' +
+      '<h3>Reports sent</h3><table><tr><th>Date</th><th>Report</th><th>Fixed since the last one</th><th>Complete</th></tr>' +
+      (d.reports.length ? d.reports.map(function (r) { return '<tr><td>' + esc(short(r.sent_at)) + '</td><td>' + esc(KIND[r.kind] || r.kind) + (r.milestone ? ' (' + r.milestone + '%)' : '') + '</td><td>' + (r.fixed_since_last || 0) + '</td><td>' + r.pct + '%</td></tr>'; }).join('')
+        : (g ? '<tr class="blank-row"><td></td><td></td><td></td><td></td></tr>'.repeat(4) : '<tr><td colspan="4" class="muted">The first report goes out after the walkthrough.</td></tr>')) + '</table>' +
+      '<h3>Your contacts</h3><p>' + esc(d.org.name) + '<br>Email: ' + esc(d.org.reply_to) + (d.org.postal_address ? '<br>' + esc(d.org.postal_address) : '') +
+      '<br><span class="muted small">Questions, a new issue, or something we missed: reply to any report email.</span></p>' +
+      '<h3>Sign-off</h3><p class="small muted">Signing confirms the findings and the plan, not a price: anything with a cost is agreed separately before we start it.</p>' +
+      '<div class="sign"><div>Property manager' + (p.manager_name && !g ? ': ' + esc(p.manager_name) : '') + '</div><div>Date</div></div>' +
+      '<div class="sign"><div>' + esc(d.org.name) + '</div><div>Date</div></div>'));
+
+    root.innerHTML = out.join('');
+  }
+
+  // ---------------------------------------------------------------- print and PDF
+  document.getElementById('print').addEventListener('click', function () { window.print(); });
+  document.getElementById('pdf').addEventListener('click', function () { if (DATA) buildPdf(DATA, this); });
+
+  function asDataUrl(url) {
+    return fetch(url).then(function (r) { return r.ok ? r.blob() : Promise.reject(r.status); }).then(function (b) {
+      return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(fr.result); }; fr.onerror = rej; fr.readAsDataURL(b); });
+    }).catch(function () { return null; });
+  }
+
+  function buildPdf(d, btn) {
+    if (!window.jspdf) { alert('Could not build the PDF. Please try again.'); return; }
+    var label = btn.textContent; btn.disabled = true; btn.textContent = 'Building…';
+    var all = []; d.areas.forEach(function (a) { a.items.forEach(function (i) { i._area = a.area; all.push(i); }); });
+    var urls = []; all.forEach(function (i) { if (i.before[0]) urls.push(i.before[0]); if (i.after[0]) urls.push(i.after[0]); });
+    Promise.all(urls.map(asDataUrl)).then(function (datas) {
+      var imgs = {}; urls.forEach(function (u, k) { if (datas[k]) imgs[u] = datas[k]; });
+      var doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'letter' });
+      var W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 48, y = M, pageNo = 1;
+      var s = d.stats, p = d.plan, g = !!d.generic, prop = p.property_name || 'Your property';
+      function ink(r, gg, b) { doc.setTextColor(r, gg, b); }
+      function font(w, sz) { doc.setFont('helvetica', w).setFontSize(sz); }
+      function foot() { font('normal', 8); ink(156, 153, 171); doc.text('Property Improvement Plan' + (p.property_name ? ' · ' + p.property_name : ''), M, H - 24); doc.text(pageNo + ' / 10', W - M, H - 24, { align: 'right' }); }
+      function newPage() { foot(); doc.addPage(); pageNo++; y = M; }
+      function title(kick, t) { font('bold', 9); ink(0, 74, 173); doc.text(kick.toUpperCase(), M, y); y += 18; font('bold', 18); ink(21, 18, 31); doc.text(t, M, y); y += 24; }
+      function para(t, sz, color) { font('normal', sz || 10); ink.apply(null, color || [61, 58, 75]); var lines = doc.splitTextToSize(String(t), W - M * 2); lines.forEach(function (l) { if (y > H - 60) { cont(); } doc.text(l, M, y); y += (sz || 10) + 4; }); y += 4; }
+      var contTitle = '';
+      function cont() { newPage(); pageNo--; /* overflow pages keep the page number of their section */ font('bold', 9); ink(0, 74, 173); doc.text(contTitle + ' (continued)', M, y); y += 18; }
+      function bar(pct) { doc.setFillColor(230, 227, 240); doc.roundedRect(M, y, W - M * 2, 8, 4, 4, 'F'); if (pct > 0) { doc.setFillColor(0, 74, 173); doc.roundedRect(M, y, (W - M * 2) * pct / 100, 8, 4, 4, 'F'); } y += 20; }
+
+      // 1 cover
+      doc.setFillColor(0, 74, 173); doc.rect(0, 0, W, H, 'F');
+      font('bold', 10); ink(188, 211, 255); doc.text(d.org.name.toUpperCase(), M, 200);
+      font('bold', 34); ink(255, 255, 255); doc.text('Property Improvement Plan', M, 240);
+      font('bold', 20); doc.text(g ? 'Prepared for: ____________________' : prop, M, 290);
+      font('normal', 12); doc.text(g ? 'Address: ______________________________' : String(p.property_address || ''), M, 312);
+      font('normal', 11);
+      doc.text('Property manager: ' + (g ? '__________________' : (p.manager_name || '')), M, 420);
+      doc.text('Prepared by: ' + d.org.name, M, 440);
+      doc.text('Date: ' + (g ? '______________' : day(p.delivered_at || p.walkthrough_done_at || p.started_at)), M, 460);
+      newPage();
+
+      // 2 how
+      contTitle = 'How the plan works'; title('Page 2', 'How the plan works');
+      para('We walk the whole building once, area by area, and write down every item that keeps it from looking its best. Then we work through the list, one item at a time, until the property is where it should be.', 11);
+      [['1. Find', 'We walk ten areas, from the entrance to the trash rooms and the garage, with a checklist for each.'],
+       ['2. Photograph', 'Every item gets a before photo, where it is, how serious it is and what fixing it takes.'],
+       ['3. Fix', 'We take care of the items one by one, worst first, and photograph each one again when it is done.'],
+       ['4. Report', 'A progress report by email every ' + (p.report_every_days || 14) + ' days and at 25, 50, 75 and 100%, with before and after photos.']].forEach(function (st) {
+        font('bold', 12); ink(21, 18, 31); doc.text(st[0], M, y); y += 15; para(st[1], 10);
+      });
+      font('bold', 11); ink(21, 18, 31); doc.text('What we fix, and what we refer', M, y); y += 15;
+      para('We clean, polish, restore and maintain. Anything that is a repair (a broken door closer, a leak, an electrical fixture, damaged drywall) we photograph and list on page 9 for your own maintenance team. We do not take on repairs or promise them.', 10);
+      font('bold', 11); ink(21, 18, 31); doc.text('The standard items included with every plan', M, y); y += 15;
+      d.standard_items.filter(function (i) { return !i.is_addon; }).forEach(function (i) { para((i.done ? '[x] ' : '[ ] ') + i.label, 9); y -= 3; });
+      newPage();
+
+      // 3 summary
+      contTitle = 'Executive summary'; title('Page 3', 'Executive summary & property score');
+      font('bold', 36); ink(21, 18, 31); doc.text(d.score.starting == null ? '-' : String(d.score.starting), M, y + 24); ink(0, 74, 173); doc.text(d.score.now == null ? '-' : String(d.score.now), M + 240, y + 24);
+      font('normal', 9); ink(107, 104, 128); doc.text('SCORE ON THE DAY OF THE WALK', M, y + 40); doc.text('SCORE TODAY', M + 240, y + 40); y += 64;
+      para('The score starts at 100 and every open item takes points off by severity: cosmetic 1, moderate 3, major 6, safety 10. Fixed items give the points back.', 9, [107, 104, 128]);
+      para(s.total + ' items found · ' + s.actionable + ' ours to fix · ' + s.fixed + ' fixed · ' + s.referred + ' for your maintenance team', 11, [21, 18, 31]);
+      para(s.actionable ? s.fixed + ' of ' + s.actionable + ' items fixed (' + s.pct + '%)' : 'Progress', 11, [21, 18, 31]); bar(s.pct);
+      var top = all.filter(function (i) { return ['found', 'scheduled', 'in_progress', 'refer_pm'].indexOf(i.status) >= 0 && (i.severity === 'safety' || i.severity === 'major'); }).slice(0, 8);
+      font('bold', 11); ink(21, 18, 31); doc.text('Top priorities', M, y); y += 15;
+      if (!top.length) para(g ? '________________________________________________\n________________________________________________\n________________________________________________' : 'No safety or major items open.', 10);
+      top.forEach(function (i) { para('- ' + i.description + ' (' + AREAS[i._area][0] + ', ' + i.severity_label + ', ' + i.status_label + ')', 10); y -= 3; });
+      newPage();
+
+      // 4-8 findings
+      var PW = (W - M * 2 - 12) / 2, PH = PW * 0.62;
+      FINDINGS_PAGES.forEach(function (keys, idx) {
+        contTitle = 'Findings'; font('bold', 9); ink(0, 74, 173); doc.text(('Page ' + (4 + idx) + ' · Findings').toUpperCase(), M, y); y += 20;
+        keys.forEach(function (k) {
+          var a = d.areas.filter(function (x) { return x.area === k; })[0] || { items: [] };
+          if (y > H - 120) cont();
+          font('bold', 14); ink(21, 18, 31); doc.text(AREAS[k][0], M, y); doc.setDrawColor(0, 74, 173); doc.line(M, y + 4, W - M, y + 4); y += 18;
+          para('What we check: ' + AREAS[k][1] + '.', 9, [107, 104, 128]);
+          if (!a.items.length) para(g ? 'Item: ______________________  Location: ____________  Severity: ________  Status: ________' : 'Nothing to fix here.', 10);
+          a.items.forEach(function (i) {
+            var hasPhotos = imgs[i.before[0]] || imgs[i.after[0]];
+            if (y + (hasPhotos ? PH + 50 : 40) > H - 50) cont();
+            font('bold', 11); ink(21, 18, 31);
+            var dl = doc.splitTextToSize(i.description, W - M * 2 - 150); doc.text(dl, M, y);
+            font('normal', 9); ink(107, 104, 128); doc.text(i.severity_label + ' · ' + i.status_label, W - M, y, { align: 'right' });
+            y += dl.length * 13;
+            var est = [mins(i.est_minutes), money(i.est_cost_cents)].filter(Boolean).join(' · ');
+            var sub = [i.location, est ? 'Estimate: ' + est : '', i.fixed_at ? 'Fixed ' + short(i.fixed_at) : ''].filter(Boolean).join(' · ');
+            if (sub) { doc.text(sub, M, y); y += 12; }
+            if (hasPhotos) {
+              [['BEFORE', i.before[0]], ['AFTER', i.after[0]]].forEach(function (pair, j) {
+                var x = M + j * (PW + 12);
+                if (imgs[pair[1]]) { try { doc.addImage(imgs[pair[1]], 'JPEG', x, y + 4, PW, PH); } catch (e) { /* a bad image must not take the document down */ } }
+                else { doc.setDrawColor(230, 227, 240); doc.rect(x, y + 4, PW, PH); }
+                font('bold', 8); ink(107, 104, 128); doc.text(pair[0], x, y + PH + 14);
+              });
+              y += PH + 26;
+            } else y += 6;
+          });
+          y += 8;
+        });
+        newPage();
+      });
+
+      // 9 schedule
+      contTitle = 'Schedule'; title('Page 9', "Schedule & what's next");
+      var next = all.filter(function (i) { return ['found', 'scheduled', 'in_progress'].indexOf(i.status) >= 0; }).sort(function (a, b) { return String(a.scheduled_for || '9999').localeCompare(String(b.scheduled_for || '9999')); });
+      if (!next.length) para(g ? '________________________________________________\n________________________________________________' : 'Everything on the plan is done.', 10);
+      next.forEach(function (i) { para('- ' + i.description + ' (' + AREAS[i._area][0] + ') · ' + (short(i.scheduled_for) || 'next visit') + ' · ' + i.status_label, 10); y -= 3; });
+      y += 8; font('bold', 12); ink(21, 18, 31); doc.text('Items for your maintenance team', M, y); y += 15;
+      para('Repairs we found while walking the building. We photograph them and pass them on; we do not take them on.', 9, [107, 104, 128]);
+      var refer = all.filter(function (i) { return i.status === 'refer_pm'; });
+      if (!refer.length) para(g ? '________________________________________________\n________________________________________________' : 'None.', 10);
+      refer.forEach(function (i) { para('- ' + i.description + (i.location ? ' (' + i.location + ')' : '') + ' · ' + i.severity_label, 10); y -= 3; });
+      newPage();
+
+      // 10 progress
+      contTitle = 'Progress'; title('Page 10', 'Progress, contacts & sign-off');
+      para(s.actionable ? s.pct + '% complete' : 'Not started', 12, [21, 18, 31]); bar(s.pct);
+      font('bold', 12); ink(21, 18, 31); doc.text('Reports sent', M, y); y += 15;
+      if (!d.reports.length) para(g ? '________________________________________________' : 'The first report goes out after the walkthrough.', 10);
+      d.reports.forEach(function (r) { para(short(r.sent_at) + '  ' + (KIND[r.kind] || r.kind) + (r.milestone ? ' (' + r.milestone + '%)' : '') + '  ·  ' + r.pct + '% complete', 10); y -= 3; });
+      y += 8; font('bold', 12); ink(21, 18, 31); doc.text('Your contacts', M, y); y += 15;
+      para(d.org.name + '\nEmail: ' + d.org.reply_to + (d.org.postal_address ? '\n' + d.org.postal_address : ''), 10);
+      y += 10; font('bold', 12); ink(21, 18, 31); doc.text('Sign-off', M, y); y += 15;
+      para('Signing confirms the findings and the plan, not a price: anything with a cost is agreed separately before we start it.', 9, [107, 104, 128]);
+      y += 40; doc.setDrawColor(21, 18, 31);
+      doc.line(M, y, M + 250, y); doc.line(M + 290, y, W - M, y); font('normal', 9); ink(107, 104, 128);
+      doc.text('Property manager' + (p.manager_name && !g ? ': ' + p.manager_name : ''), M, y + 12); doc.text('Date', M + 290, y + 12);
+      y += 60; doc.line(M, y, M + 250, y); doc.line(M + 290, y, W - M, y); doc.text(d.org.name, M, y + 12); doc.text('Date', M + 290, y + 12);
+      foot();
+
+      doc.save('Property-Improvement-Plan' + (p.property_name ? '-' + p.property_name.replace(/[^A-Za-z0-9]+/g, '-') : '') + '.pdf');
+    }).catch(function (e) { if (window.console) console.error(e); alert('Could not build the PDF. Please try again.'); })
+      .then(function () { btn.disabled = false; btn.textContent = label; });
+  }
+</script>
+</body>
+</html>
