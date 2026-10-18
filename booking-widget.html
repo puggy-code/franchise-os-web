@@ -903,6 +903,7 @@
     // A priced catalog service (carpet, windows...): its minimum is the least a visit costs.
     var svc = catalog[key];
     if (svc && svc.quotable && svc.min_charge_cents > 0) return "From " + formatPrice(svc.min_charge_cents);
+    if (svc && !svc.quotable) return "Free quote"; // no prices entered yet: the tile leads to "request a quote" by text
     return "Priced for your home";
   }
   function tileTime(key) {
