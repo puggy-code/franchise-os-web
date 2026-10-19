@@ -4399,6 +4399,25 @@
   #bw-root .bw-2h-card { max-width: 340px; padding: 22px 20px 18px; }
   #bw-root .bw-2h-x { position: absolute; top: 8px; right: 10px; border: 0; background: none; font-size: 22px; line-height: 1; color: var(--t-muted); cursor: pointer; padding: 4px; }
   #bw-root .bw-adv-title { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; color: var(--t-ink); text-align: center; margin: -6px 0 14px; }
+  /* macOS-style pop-ups (Jack, 2026-10-18): frosted white tiles lifted over a soft blue fog, blue and white only, regular weights. */
+  #bw-root .bw-2h-pop { background: radial-gradient(120% 80% at 50% 30%, rgba(214,228,255,.55), rgba(11,26,51,.28)); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  #bw-root .bw-2h-card { background: rgba(255,255,255,.72); -webkit-backdrop-filter: saturate(180%) blur(28px); backdrop-filter: saturate(180%) blur(28px);
+    border: 1px solid rgba(255,255,255,.65); border-radius: 22px; box-shadow: 0 30px 60px rgba(11,26,51,.18), 0 2px 6px rgba(11,26,51,.06), inset 0 1px 0 rgba(255,255,255,.9);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Work Sans", system-ui, sans-serif; }
+  #bw-root .bw-2h-card .bw-2h-head { font-weight: 600; letter-spacing: .4px; color: #8A94A8; }
+  #bw-root .bw-adv-title { font-weight: 600; font-size: 19px; letter-spacing: -0.3px; }
+  #bw-root .bw-2h-card .bw-adv-row { background: rgba(255,255,255,.7) !important; color: var(--t-ink) !important; border: 1px solid rgba(255,255,255,.9);
+    box-shadow: 0 1px 2px rgba(11,26,51,.05), 0 6px 16px rgba(31,94,255,.07); font-size: 14px; }
+  #bw-root .bw-2h-card .bw-adv-row b { font-weight: 500; }
+  #bw-root .bw-2h-card .bw-adv-row.is-yes i { background: var(--t-blue) !important; }
+  #bw-root .bw-2h-card .bw-adv-row.is-no i { background: #E6EBF4 !important; color: #6B7790 !important; font-size: 14px; }
+  #bw-root .bw-2h-card .bw-adv-row.is-no { color: var(--t-ink-2) !important; }
+  #bw-root .bw-2h-card .bw-2h-go { border-radius: 12px; font-weight: 600; box-shadow: 0 6px 16px rgba(31,94,255,.28); }
+  #bw-root .bw-2h-card .bw-2h-alt { font-weight: 500; }
+  #bw-root .bw-2h-card .bw-2h-tiles div { background: rgba(255,255,255,.75); border: 1px solid rgba(255,255,255,.9); box-shadow: 0 1px 2px rgba(11,26,51,.05), 0 6px 16px rgba(31,94,255,.08); }
+  #bw-root .bw-2h-card .bw-2h-tiles b { font-weight: 600; }
+  #bw-root .bw-2h-card .bw-2h-tiles span { font-weight: 500; }
+  #bw-root .bw-2h-card .bw-2h-pick b { font-weight: 600; color: var(--t-blue); }
   #bw-root .bw-adv-not { font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--t-muted); text-align: center; margin: 12px 0 6px; }
   #bw-root .bw-adv-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; margin-bottom: 6px; font-size: 14px; letter-spacing: -0.1px; }
   #bw-root .bw-adv-row i { flex: none; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-weight: 800; font-size: 13px; color: #fff; }
