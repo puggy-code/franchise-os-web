@@ -104,6 +104,11 @@
   }
   .gift p { color: rgba(255,255,255,.85); margin: 6px 0 0; }
   .err { color: #dc2626; font-weight: 700; margin-top: 10px; }
+  /* Something wasn't cleaned? (migration 0330) */
+  .miss-room { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: #004aad; margin: 16px 0 4px; font-weight: 700; }
+  .miss-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #f1eff7; font-size: 16px; }
+  .miss-item input { width: 20px; height: 20px; flex: none; margin-top: 2px; accent-color: #004aad; }
+  .miss-done { color: #15121f; margin: 0; }
 </style>
 </head>
 <body>
@@ -347,6 +352,76 @@
     });
   }
 
+  // ---- "Something wasn't cleaned?" (migration 0330). Tick what was missed, within 48 hours; a person checks the team's photos and texts back.
+  function missedBlock(d) {
+    var m = d.missed;
+    if (!m) return '';
+    if (m.claim) {
+      var msg = m.claim.status === 'open'
+        ? 'We have your note. We are checking the team’s photos and will text you.'
+        : (m.claim.reply || (m.claim.status === 'added_free' ? 'Added to your next clean, free.' : 'Thank you for telling us.'));
+      return card('<h2>Something wasn&rsquo;t cleaned?</h2><p class="miss-done">' + esc(msg) + '</p>');
+    }
+    if (!m.can_claim) return '';
+    var groups = {}, order = [];
+    m.items.forEach(function (it) {
+      var k = it.room || 'Other';
+      if (!groups[k]) { groups[k] = []; order.push(k); }
+      groups[k].push(it);
+    });
+    var list = order.map(function (k) {
+      return '<div class="miss-room">' + esc(k) + '</div>' + groups[k].map(function (it) {
+        return '<label class="miss-item"><input type="checkbox" class="missbox" value="' + esc(it.id) + '"><span>' + esc(it.label) + '</span></label>';
+      }).join('');
+    }).join('');
+    return card(
+      '<h2>Something wasn&rsquo;t cleaned?</h2>' +
+      '<div id="missask"><p>Tell us within 48 hours and we will make it right.</p><button class="ghost" id="missopen" type="button">Pick what was missed</button></div>' +
+      '<div id="missform" hidden><p>Tick what was missed.</p>' + list +
+      '<textarea id="missnote" maxlength="1000" placeholder="Anything to add? (optional)" style="margin-top:14px"></textarea>' +
+      '<input type="file" id="missph" accept="image/*" multiple style="margin-bottom:12px">' +
+      '<button id="missgo" type="button">Send</button><div class="err" id="misserr" hidden></div></div>' +
+      '<p id="missok" class="miss-done" hidden></p>'
+    );
+  }
+
+  function wireMissed(d) {
+    var open = document.getElementById('missopen');
+    if (!open) return;
+    open.addEventListener('click', function () { document.getElementById('missask').hidden = true; document.getElementById('missform').hidden = false; });
+    document.getElementById('missgo').addEventListener('click', function () {
+      var ids = [].slice.call(document.querySelectorAll('.missbox')).filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
+      var err = document.getElementById('misserr'), btn = document.getElementById('missgo');
+      if (!ids.length) { err.hidden = false; err.textContent = 'Tick at least one item.'; return; }
+      var files = [].slice.call(document.getElementById('missph').files || []).slice(0, 3);
+      btn.disabled = true; btn.textContent = 'Sending…'; err.hidden = true;
+      var paths = [];
+      files.reduce(function (p, file) {
+        return p.then(function () {
+          return post({ action: 'upload_url', content_type: file.type || 'image/jpeg' }).then(function (u) {
+            if (!u.ok) return; // a photo that cannot go up never blocks the note
+            var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', file);
+            return fetch(u.signed_url, { method: 'PUT', body: fd }).then(function (r) {
+              if (!r.ok) return;
+              return post({ action: 'photo', path: u.path, caption: 'Missed' }).then(function (ph) { if (ph.ok) paths.push(u.path); });
+            });
+          }).catch(function () {});
+        });
+      }, Promise.resolve()).then(function () {
+        return post({ action: 'missed', items: ids, note: document.getElementById('missnote').value, photo_paths: paths });
+      }).then(function (r) {
+        if (r.ok || r.error === 'already_sent') {
+          document.getElementById('missform').hidden = true;
+          var ok = document.getElementById('missok'); ok.hidden = false;
+          ok.textContent = 'Thank you. We will check the team’s photos and text you.';
+          return;
+        }
+        btn.disabled = false; btn.textContent = 'Send'; err.hidden = false;
+        err.textContent = r.error === 'too_late' ? 'It has been more than 48 hours. Please text us instead.' : 'That did not send. Please try again.';
+      });
+    });
+  }
+
   function feedbackBlock(d) {
     var f = d.feedback;
     if (!f || !f.rooms || !f.rooms.length) return '';
@@ -583,12 +658,12 @@
 
     // A property manager's report has no referral gift and no star rating.
     var pm = !!(d.job && d.job.pm_report);
-    root.innerHTML = head + summary + requestsCard + extrasCard + card(list) + (pm ? '' : issueBlock(d)) + (pm ? '' : feedbackBlock(d)) + (pm ? '' : ideasBlock(d)) + photos + videos + (pm ? '' : referralBlock(d)) + pdf +
+    root.innerHTML = head + summary + requestsCard + extrasCard + card(list) + (pm ? '' : missedBlock(d)) + (pm ? '' : issueBlock(d)) + (pm ? '' : feedbackBlock(d)) + (pm ? '' : ideasBlock(d)) + photos + videos + (pm ? '' : referralBlock(d)) + pdf +
       (d.portal_token ? card('<h2>Your account</h2><p>Your records, photos, invoices and a direct line to us, all in one place that stays yours.</p><a class="btn" href="account.html?t=' + esc(d.portal_token) + '">Open your account</a>') : '') +
       '<p class="foot">' + esc(d.org.name) + '</p>';
 
     document.title = d.org.name + ' — your clean report';
-    if (!pm) { wireReferral(d); wireIssue(d); wireFeedback(d); }
+    if (!pm) { wireReferral(d); wireMissed(d); wireIssue(d); wireFeedback(d); }
     document.getElementById('pdf').addEventListener('click', function () { buildPdf(d, this); });
   }
 

@@ -89,14 +89,77 @@
   .search:focus, .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--t-blue); box-shadow: 0 0 0 3px rgba(31,94,255,.15); }
   .iconbtn { border: 1px solid var(--t-line); background: #fff; color: var(--t-blue); border-radius: 14px; min-width: 50px; min-height: 50px; font-size: 18px; }
   .seg { display: flex; gap: 6px; margin-bottom: 4px; flex-wrap: wrap; }
-  .seg button { border: 1.5px solid var(--t-line); background: #fff; border-radius: 999px; min-height: 40px; padding: 0 14px; font-weight: 600; font-size: 14px; color: var(--t-ink-2); }
+  .seg button { border: 1.5px solid var(--t-line); background: #fff; border-radius: 999px; min-height: 34px; padding: 0 12px; font-weight: 600; font-size: 13px; color: var(--t-ink-2); }
   .seg button.is-on { border-color: var(--t-blue); background: var(--t-blue-soft); color: var(--t-blue-ink); }
 
-  .day { font-size: 13px; font-weight: 700; color: var(--t-muted); text-transform: uppercase; letter-spacing: .05em; margin: 18px 4px 8px; }
+  .day { font-size: 12px; font-weight: 700; color: var(--t-muted); text-transform: uppercase; letter-spacing: .05em; margin: 14px 4px 6px; }
   .job { display: grid; grid-template-columns: 74px 1fr auto; gap: 12px; align-items: center; width: 100%; text-align: left; padding: 14px 16px;
     margin-bottom: 8px; border: 1px solid var(--t-line); border-radius: 18px; background: #fff; box-shadow: var(--t-shadow); min-height: 76px; }
   .job:hover { border-color: #C9D6EE; }
   .job.is-cancelled { opacity: .55; }
+  .rows { padding: 2px 0; overflow: hidden; }
+  .row { display: grid; grid-template-columns: 62px 22px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; text-align: left; background: none; border: 0;
+    border-top: 1px solid var(--t-line); padding: 10px 14px; min-height: 54px; }
+  .row:first-child { border-top: 0; }
+  .crow { grid-template-columns: minmax(0, 1fr) auto; text-decoration: none; color: inherit; }
+  .crow .pill { font-size: 11px; padding: 1px 7px; margin-left: 6px; vertical-align: middle; }
+  .chev { color: var(--t-muted); font-size: 20px; }
+  .chead { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; }
+  .chead b { font-size: 19px; font-weight: 700; letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .chead .pill { flex: none; }
+  .iconbtn.sm { min-width: 36px; min-height: 36px; border-radius: 11px; display: flex; align-items: center; justify-content: center; text-decoration: none; flex: none; }
+  .bookbtn { margin-left: auto; flex: none; background: var(--t-blue); color: #fff; text-decoration: none; font-weight: 700; font-size: 14px; border-radius: 999px; padding: 8px 14px; }
+  .fold { margin-top: 10px; padding: 0; overflow: hidden; }
+  .fold-head { display: flex; align-items: baseline; gap: 10px; width: 100%; background: none; border: 0; padding: 14px; text-align: left; min-height: 52px; }
+  .fold-head b { font-size: 15px; flex: none; }
+  .fold-head span { font-size: 13px; color: var(--t-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+  .fold[data-keep] .fold-head span { color: var(--t-amber); font-weight: 600; }
+  .chev2 { font-style: normal; color: var(--t-muted); font-size: 20px; transform: rotate(90deg); transition: transform .45s ease; flex: none; }
+  .fold.closed .chev2 { transform: rotate(0deg); }
+  .fold-body { display: grid; grid-template-rows: 1fr; transition: grid-template-rows .45s ease; }
+  .fold-body > div { overflow: hidden; min-height: 0; }
+  .fold.closed .fold-body { grid-template-rows: 0fr; }
+  .fold-in { padding: 0 14px 14px; }
+  .fold .field { font-size: 12px; margin-bottom: 8px; color: var(--t-ink-2); }
+  .fold .field input, .fold .field textarea { min-height: 40px; padding: 8px 11px; font-size: 15px; margin-top: 3px; border-radius: 10px; }
+  .fold .field textarea { min-height: 54px; }
+  .fold .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+  .fold .pair.addr { grid-template-columns: 1fr 84px; }
+  .fold .pair.three { grid-template-columns: 1fr 1fr 1.4fr; }
+  .fold .btn { margin-top: 4px; min-height: 44px; line-height: 44px; }
+  .cform { padding: 12px 14px; margin-top: 10px; }
+  .cform > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 10px; min-height: 28px; }
+  .cform > summary::-webkit-details-marker { display: none; }
+  .cform > summary::after { content: "›"; margin-left: auto; color: var(--t-muted); font-size: 20px; transition: transform .15s; }
+  .cform[open] > summary { margin-bottom: 10px; }
+  .cform[open] > summary::after { transform: rotate(90deg); }
+  .cform > summary b { font-size: 15px; }
+  .cform > summary span { font-size: 13px; color: var(--t-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .cform .field { font-size: 12px; margin-bottom: 8px; color: var(--t-ink-2); }
+  .cform .field input, .cform .field textarea { min-height: 40px; padding: 8px 11px; font-size: 15px; margin-top: 3px; border-radius: 10px; }
+  .cform .field textarea { min-height: 54px; }
+  .cform .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 0 8px; }
+  .cform .pair.addr { grid-template-columns: 1fr 84px; }
+  .cform .pair.three { grid-template-columns: 1fr 1fr 1.4fr; }
+  .cform .btn { margin-top: 4px; min-height: 44px; line-height: 44px; }
+  .row:hover { background: var(--t-soft); }
+  .row.is-cancelled { opacity: .5; }
+  .rtime { font-weight: 700; font-size: 15px; color: var(--t-blue-ink); white-space: nowrap; }
+  .rtime small { font-size: 11px; font-weight: 600; margin-left: 2px; }
+  .prow { grid-template-columns: 18px 22px minmax(0, 1fr) auto; cursor: default; }
+  .prow:hover { background: none; }
+  .recur-ico { color: var(--t-blue); font-size: 17px; font-weight: 700; text-align: center; }
+  .prow .rprice small { color: var(--t-muted); }
+  .prow .rprice small.bad { color: var(--t-amber); }
+  .rdate { display: block; font-style: normal; font-size: 11px; font-weight: 600; color: var(--t-muted); }
+  .rmain { display: flex; flex-direction: column; min-width: 0; }
+  .rmain b { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rmain small { font-size: 12.5px; color: var(--t-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rmain em { font-style: normal; font-weight: 600; }
+  .rmain em.ok { color: var(--t-green); } .rmain em.bad { color: var(--t-red); }
+  .rprice { font-weight: 700; font-size: 15px; text-align: right; white-space: nowrap; }
+  .rprice small { display: block; font-size: 11.5px; font-weight: 600; color: var(--t-green); }
+  .rprice small.bad { color: var(--t-red); } .rprice small.ok { color: var(--t-green); }
   .slot { background: var(--t-blue-soft); color: var(--t-blue-ink); border-radius: 12px; padding: 8px 4px; text-align: center; font-weight: 700; font-size: 15px; }
   .slot small { display: block; font-size: 11px; font-weight: 600; opacity: .8; }
   .job .name { font-weight: 700; font-size: 16px; }
@@ -114,7 +177,22 @@
   .h1 { font-size: 24px; font-weight: 700; letter-spacing: -.4px; margin: 6px 0 12px; display: flex; align-items: center; gap: 8px; }
   .h1 .grow { flex: 1; }
 
-  /* calendar */
+  /* calendar dots (Jack, 2026-10-18): a tiny team-color circle per booking, its team number above, left to right */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 10px 14px; margin-bottom: 10px; }
+  .legend > span { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--t-ink-2); }
+  .dots { display: flex; flex-wrap: wrap; gap: 4px 7px; align-items: flex-end; }
+  .tdot { display: inline-flex; flex-direction: column; align-items: center; gap: 1px; border: 0; background: none; padding: 0; text-decoration: none; min-width: 12px; }
+  .tdot small { font-size: 9.5px; font-weight: 700; color: var(--t-muted); line-height: 1; }
+  .tdot i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+  button.tdot:hover i { filter: brightness(.9); }
+  .tdot.cont i { opacity: .35; }
+  .tdot.open-spot i { border: 1px dashed #B9C6DD; box-sizing: border-box; }
+  a.tdot.open-spot:hover i { border-color: var(--t-blue); background: var(--t-blue-soft); }
+  .calrow.is-closed { opacity: .4; }
+  .cols { display: flex; align-items: center; }
+  .col { width: 26px; display: flex; justify-content: center; gap: 3px; }
+  .colhead { padding: 0 0 2px; border-top: 0; }
+  .colhead .col { font-size: 11px; font-weight: 700; color: var(--t-muted); }
   .weekbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
   .weekbar b { flex: 1; text-align: center; font-size: 17px; }
   .calday { padding: 12px 14px; margin-bottom: 10px; }
@@ -209,6 +287,10 @@
   .info-pop { display: none; position: absolute; left: -8px; top: calc(100% + 8px); z-index: 30; width: 250px; background: var(--t-ink); color: #fff;
     font-size: 12.5px; font-weight: 500; line-height: 1.5; border-radius: 12px; padding: 10px 12px; box-shadow: var(--t-shadow); text-transform: none; letter-spacing: 0; }
   .info:hover .info-pop, .info:focus-within .info-pop, .info.is-open .info-pop { display: block; }
+  .info.right .info-pop { left: auto; right: -8px; }
+  .info-pop, .info-pop b { text-align: left; font-size: 12.5px; letter-spacing: 0; }
+  .info-pop b { font-weight: 700; }
+  .pagehelp { display: flex; align-items: center; justify-content: flex-end; }
 </style>
 </head>
 <body>
@@ -327,16 +409,16 @@
   };
   var SERVICES = [
     { key: "two_hour", name: "Two Hour Clean", sub: "2 hours, 2 cleaners" },
-    { key: "works", name: "The Checklist Clean", sub: "Priced by the home" },
+    { key: "works", name: "Checklist Clean", label: "The Checklist Clean", sub: "Priced by the home" },
     { key: "four_hour", name: "4-Hr Home Detailing", sub: "4 hours" }
   ];
   var FREQS = [
     { key: "one_time", name: "One time" }, { key: "weekly", name: "Weekly" }, { key: "every_other_week", name: "Every 2 weeks" },
-    { key: "every_4_weeks", name: "Every 4 weeks" }, { key: "every_6_weeks", name: "Every 6 weeks" }
+    { key: "every_4_weeks", name: "Monthly" }, { key: "every_6_weeks", name: "Every 6 weeks" }
   ];
   var SERIES_FREQ = { weekly: "weekly", every_other_week: "biweekly", every_4_weeks: "every_4_weeks", every_6_weeks: "every_6_weeks" }; // ingest-booking
   var SERIES_DAYS = { weekly: 7, biweekly: 14, every_4_weeks: 28, every_6_weeks: 42 };
-  var SERVICE_NAMES = { two_hour: "Two Hour Clean", works: "The Checklist Clean", checklist: "The Checklist Clean", four_hour: "4-Hr Home Detailing" };
+  var SERVICE_NAMES = { two_hour: "Two Hour Clean", works: "Checklist Clean", checklist: "Checklist Clean", four_hour: "4-Hr Home Detailing" };
   var STATUS = { scheduled: ["Booked", ""], on_the_way: ["On the way", "ok"], in_progress: ["In progress", "ok"], completed: ["Done", "ok"], cancelled: ["Cancelled", "bad"] };
   var JOB_SELECT = "id, org_id, customer_id, scheduled_date, start_time, end_time, service, service_label, status, team_id, address, notes, is_test, " +
     "cancellation_reason, estimated_minutes, customer:customers(full_name, phone, address), team:teams(name, color), " +
@@ -381,8 +463,10 @@
   function normalizePhone(input) { var d = digits(input); if (d.length === 10) return "+1" + d; if (d.length === 11 && d[0] === "1") return "+" + d; return "+" + d; }
   function phoneVariants(p) { var d = digits(p).slice(-10); return ["+1" + d, d, "1" + d]; }
   function prettyPhone(p) { var d = digits(p).slice(-10); return d.length === 10 ? "(" + d.slice(0, 3) + ") " + d.slice(3, 6) + "-" + d.slice(6) : (p || ""); }
-  function serviceName(j) { return j.service_label || SERVICE_NAMES[j.service] || (j.service || "").replace(/_/g, " "); }
+  function serviceName(j) { return String(j.service_label || SERVICE_NAMES[j.service] || (j.service || "").replace(/_/g, " ")).replace(/^The /, ""); } // shown without "The" (Jack, 2026-10-18)
   function show(el, kind, text) { el.innerHTML = text ? '<div class="msg ' + kind + '">' + esc(text) + "</div>" : ""; }
+  // A page note for future managers (Jack, 2026-10-18): what they are looking at. 'right' opens the pop toward the left edge.
+  function pageInfo(html) { return '<span class="info right"><button type="button" class="info-btn" aria-label="About this page">i</button><span class="info-pop">' + html + "</span></span>"; }
   function info(label, html) { return '<span class="info"><button type="button" class="info-btn" aria-label="' + esc(label) + '">i</button><span class="info-pop">' + html + "</span></span>"; }
   function friendly(e) {
     var code = e && (e.code || (e.error && e.error.code));
@@ -506,11 +590,15 @@
       customerByPhone: function (p) {
         return withStatus(function (cols) { return sb.from("customers").select(cols).in("phone", phoneVariants(p)).limit(1); }).then(function (r) { return r[0] || null; });
       },
+      series: function (customerId) {
+        return sb.from("recurring_series").select("id, frequency, start_date, start_time, service, service_label, price_cents, team_id, status, paused_until")
+          .eq("customer_id", customerId).in("status", ["active", "paused"]).order("start_date").then(function (r) { return r.data || []; });
+      },
       customerJobs: function (id) { return sb.from("jobs").select(JOB_SELECT).eq("customer_id", id).order("scheduled_date", { ascending: false }).limit(40).then(ok); },
       insertCustomer: function (row) { return sb.from("customers").insert(row).select("id").single().then(ok).then(function (r) { return r.id; }); },
       updateCustomer: function (id, patch) { return sb.from("customers").update(patch).eq("id", id).then(ok); },
       insertSeries: function (row) { return sb.from("recurring_series").insert(row).select("id").single().then(ok).then(function (r) { return r.id; }); },
-      generateSeries: function (id) { return sb.rpc("generate_series_jobs", { p_series: id, p_horizon: 56 }).then(ok); },
+      generateSeries: function (id) { return sb.rpc("generate_series_jobs", { p_series: id }).then(ok); }, // books 4 months ahead (0325)
       geocode: function (address, zip) { // as ingest-booking does: free OpenStreetMap lookup, best effort, for the clock-in geofence
         var q = [address, zip, "USA"].filter(Boolean).join(", ");
         var ctl = window.AbortController ? new AbortController() : null;
@@ -615,6 +703,14 @@
       },
       customer: function (id) { return delay(clone(customers.filter(function (c) { return c.id === id; })[0] || null)); },
       customerByPhone: function (p) { var v = phoneVariants(p); return delay(clone(customers.filter(function (c) { return v.indexOf(c.phone) >= 0; })[0] || null)); },
+      series: function (customerId) {
+        var plans = [
+          { id: "s1", customer_id: "c2", frequency: "biweekly", start_date: isoAdd(t0, (4 - dow(t0) + 7) % 7 || 7), start_time: "11:40:00", service: "works", service_label: "The Checklist Clean", price_cents: 21900, team_id: "t1", status: "active", paused_until: null },
+          { id: "s2", customer_id: "c3", frequency: "weekly", start_date: isoAdd(t0, 1), start_time: "09:00:00", service: "two_hour", service_label: "Two Hour Clean", price_cents: 18900, team_id: "t2", status: "active", paused_until: null },
+          { id: "s3", customer_id: "c0", frequency: "every_4_weeks", start_date: isoAdd(t0, 10), start_time: "14:40:00", service: "two_hour", service_label: "Two Hour Clean", price_cents: 20000, team_id: null, status: "paused", paused_until: isoAdd(t0, 21) }
+        ];
+        return delay(clone(plans.filter(function (x) { return x.customer_id === customerId; })));
+      },
       customerJobs: function (id) { return delay(clone(sorted(jobs.filter(function (j) { return j.customer_id === id; })).reverse())); },
       insertCustomer: function (row) { var c = Object.assign({ id: "c" + customers.length, created_at: new Date().toISOString() }, row); customers.unshift(c); return delay(c.id); },
       updateCustomer: function (id, patch) { var c = customers.filter(function (x) { return x.id === id; })[0]; Object.assign(c, patch); jobs.forEach(function (j) { if (j.customer_id === id) j.customer = custEmbed(id); }); return delay(); },
@@ -693,26 +789,36 @@
   var jobsById = {};
   function remember(rows) { rows.forEach(function (j) { jobsById[j.id] = j; }); return rows; }
 
-  function jobRow(j) {
+  // One compact, uniform row per booking (Jack, 2026-10-18: "minimize the space ... uniform ... like a grid"): time, the team's numbered
+  // dot (as on the calendar), the customer with the service under it, the price. The address and the rest are one tap away.
+  function jobRow(j, noName) {
     var s = slotFor(j.start_time), m = moneyById[j.id], st = STATUS[j.status] || [j.status, ""];
-    var slotHtml = onSlot(j.start_time) ? esc(s.label) + "<small>" + s.ampm + "</small>" : esc(clock(j.start_time).replace(/ (AM|PM)$/, "")) + "<small>" + clock(j.start_time).slice(-2) + "</small>";
-    return '<button type="button" class="job' + (j.status === "cancelled" ? " is-cancelled" : "") + '" data-job="' + esc(j.id) + '">' +
-      '<div class="slot">' + slotHtml + "</div>" +
-      "<div><div class=\"name\">" + esc(j.customer ? j.customer.full_name : "No customer") + "</div>" +
-      '<div class="sub">' + esc(j.address || (j.customer && j.customer.address) || "") + "</div>" +
-      '<div class="meta"><span class="pill">' + esc(serviceName(j)) + "</span>" +
-      (j.team ? '<span class="pill"><i class="dot" style="background:' + esc(j.team.color || "#6B7790") + '"></i>' + esc(j.team.name) + "</span>" : '<span class="pill warn">No team</span>') +
-      (st[0] !== "Booked" ? '<span class="pill ' + st[1] + '">' + esc(st[0]) + "</span>" : "") +
-      (j.is_test ? '<span class="pill">Test</span>' : "") + "</div></div>" +
-      '<div class="price">' + (m ? esc(money(due(m))) + (m.payment_status === "paid" ? "<small>Paid</small>" : "") : "") + "</div>" +
+    var t = onSlot(j.start_time) ? s.label : clock(j.start_time).replace(/ (AM|PM)$/, "");
+    var ap = (onSlot(j.start_time) ? s.ampm : clock(j.start_time).slice(-2)).toLowerCase();
+    var color = j.team ? j.team.color || "#6B7790" : NO_TEAM, num = j.team ? teamNo(j.team.name) : "?";
+    return '<button type="button" class="row' + (j.status === "cancelled" ? " is-cancelled" : "") + '" data-job="' + esc(j.id) + '">' +
+      // On a customer page (no day headers) the date sits above the time.
+      '<span class="rtime">' + (noName ? '<i class="rdate">' + esc(new Date(j.scheduled_date + "T12:00:00Z").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })) + "</i>" : "") + esc(t) + "<small>" + ap + "</small></span>" +
+      '<span class="tdot" title="' + esc(j.team ? j.team.name : "No team") + '"><small>' + esc(num) + '</small><i style="background:' + esc(color) + '"></i></span>' +
+      (noName
+        ? '<span class="rmain"><b>' + esc(serviceName(j)) + "</b><small>" + esc(j.team ? "Team " + teamNo(j.team.name) + (teamLead(j.team.name) ? " · " + teamLead(j.team.name) : "") : "No team") + "</small></span>"
+        : '<span class="rmain"><b>' + esc(j.customer ? j.customer.full_name : "No customer") + "</b><small>" + esc(serviceName(j)) + "</small></span>") +
+      // Under the price: the status when it is not a plain booking (In progress, Done...), else Paid.
+      '<span class="rprice">' + (m ? esc(money(due(m))) : "") + (st[0] !== "Booked" ? '<small class="' + st[1] + '">' + esc(st[0]) + "</small>" : m && m.payment_status === "paid" ? "<small>Paid</small>" : "") + "</span>" +
       "</button>";
   }
-  function jobList(rows, withDays) {
-    var html = "", lastDay = "";
+  // Rows sit in one white card per day (or one card when there are no day headers), separated by thin lines.
+  function jobList(rows, withDays, noName) {
+    var html = "", lastDay = null, open = false;
     rows.forEach(function (j) {
-      if (withDays && j.scheduled_date !== lastDay) { lastDay = j.scheduled_date; html += '<div class="day">' + esc(dayLabel(j.scheduled_date)) + "</div>"; }
-      html += jobRow(j);
+      if ((withDays && j.scheduled_date !== lastDay) || !open) {
+        if (open) html += "</div>";
+        if (withDays) html += '<div class="day">' + esc(dayLabel(j.scheduled_date)) + "</div>";
+        html += '<div class="card rows">'; open = true; lastDay = j.scheduled_date;
+      }
+      html += jobRow(j, noName);
     });
+    if (open) html += "</div>";
     return html;
   }
   document.addEventListener("click", function (e) {
@@ -725,7 +831,7 @@
   function pageBookings(v) {
     v.innerHTML =
       '<div class="tools"><input id="q" class="search" type="search" placeholder="Search name, phone, address" autocomplete="off">' +
-      '<button class="iconbtn" id="refresh" type="button" aria-label="Refresh">&#8635;</button></div>' +
+      '<button class="iconbtn" id="refresh" type="button" aria-label="Refresh">&#8635;</button><span class="pagehelp">' + pageInfo("<b>Upcoming bookings</b>, by day, for the days you pick. Tap one to move it, change the team, add notes or special requests, or cancel it. Search finds any customer's bookings from 30 days back on.") + "</span></div>" +
       '<div class="seg" id="range">' + [[1, "Today"], [7, "7 days"], [14, "14 days"], [30, "30 days"]].map(function (r) {
         return '<button type="button" data-days="' + r[0] + '"' + (bookingsRange === r[0] ? ' class="is-on"' : "") + ">" + r[1] + "</button>";
       }).join("") + "</div>" +
@@ -757,46 +863,76 @@
     calWeek = r.q.get("week") || calWeek || today;
     var end = isoAdd(calWeek, 6);
     v.innerHTML = '<div class="weekbar"><a class="iconbtn" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="#/calendar?week=' + isoAdd(calWeek, -7) + '" aria-label="Last week">&#8249;</a>' +
-      "<b>" + esc(shortDate(calWeek)) + " – " + esc(shortDate(end)) + "</b>" +
+      "<b>" + esc(shortDate(calWeek)) + " – " + esc(shortDate(end)) + " " + pageInfo("<b>The week ahead.</b> Each card is a day; the rows are the three start times. Each team has a column: its number is at the top, its color in the key. A solid dot is a booking, a faded dot is a long clean carrying over from the time before, a dashed circle is free (tap it to book that time with that team). Dimmed times are closed or past. Tap a dot to open the booking. The number at the top right is the day's bookings.") + "</b>" +
       '<a class="iconbtn" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="#/calendar?week=' + isoAdd(calWeek, 7) + '" aria-label="Next week">&#8250;</a></div>' +
-      (calWeek !== today ? '<div class="seg" style="justify-content:center;margin-bottom:12px"><button type="button" id="thisweek">Today</button></div>' : "") +
+      (calWeek !== today ? '<div class="seg" style="justify-content:center;margin-bottom:10px"><button type="button" id="thisweek">Today</button></div>' : "") +
       '<div id="cal"></div>';
     if ($("thisweek")) $("thisweek").addEventListener("click", function () { location.hash = "#/calendar?week=" + today; });
     loading($("cal"));
     Promise.all([api.jobsBetween(calWeek, end).then(remember).then(loadMoney), api.board(me.org_id, calWeek, end)]).then(function (res) {
-      var rows = res[0], board = res[1], html = "";
+      var rows = res[0], board = res[1];
+      // Jack, 2026-10-18: the day cards and their three time rows stay; each booking is a tiny circle in its team's color with the team's
+      // number above it, laid out left to right so many fit. Dashed circles are the open spots (tap one to book). No words in the rows.
+      // The key reads "Team 1 · Jack": the number and the team lead (Jack, 2026-10-18). teams has no lead column, so the lead is the first name
+      // listed after " - " in the team's name ("Team #1 - Jack/Maria").
+      var html = '<div class="card legend">' + teams.map(function (t) {
+        return '<span>' + dot("", t.color || "#6B7790") + "Team " + esc(teamNo(t.name)) + (teamLead(t.name) ? " · " + esc(teamLead(t.name)) : "") + "</span>";
+      }).join("") + '<span>' + dot("", NO_TEAM) + "No team</span></div>";
       for (var d = calWeek; d <= end; d = isoAdd(d, 1)) {
         var dayJobs = rows.filter(function (j) { return j.scheduled_date === d; });
         var dayBoard = board.filter(function (b) { return b.day === d; });
-        var allClosed = dayBoard.every(function (b) { return b.closed; });
-        var states = slotStates(dayBoard, 1, []);
-        html += '<div class="card calday' + (d === today ? " is-today" : "") + '"><h3>' + esc(dayLabel(d)) + "<span>" + dayJobs.length + (dayJobs.length === 1 ? " booking" : " bookings") + "</span></h3>";
-        if (allClosed && !dayJobs.length) { html += '<div class="tag">Closed</div></div>'; continue; }
-        SLOTS.forEach(function (s, i) {
-          var here = dayJobs.filter(function (j) { return slotFor(j.start_time).key === s.key; });
-          var cont = dayJobs.filter(function (j) { return slotFor(j.start_time).key !== s.key && slotsHeld(j.start_time, j.end_time).indexOf(s.key) >= 0; });
-          var st = states[i];
-          html += '<div class="calrow"><div class="caltime">' + s.label + " " + s.ampm.toLowerCase() + '</div><div class="calbooks">' +
-            here.map(function (j) { return chip(j, false); }).join("") + cont.map(function (j) { return chip(j, true); }).join("") +
-            (!here.length && !cont.length ? '<span class="tag">—</span>' : "") + "</div><div>" +
-            (st.ok ? (canEdit ? '<a class="open" style="display:inline-flex;align-items:center;text-decoration:none" href="#/new?date=' + d + "&slot=" + s.key + '">+ ' + esc(st.note) + "</a>" : '<span class="tag">' + esc(st.note) + "</span>")
-              : '<span class="tag' + (st.note === "Full" ? " full" : "") + '">' + esc(st.note) + "</span>") + "</div></div>";
+        if (!dayJobs.length && dayBoard.every(function (b) { return b.closed; })) continue; // a closed day with nothing on it takes no space
+        // Every team is a column (Jack, 2026-10-18: "keep the team above the dots as though it is their column"): the team numbers once at the
+        // top of the card, then in each time row that team's dot under its number, or an empty circle. Unassigned bookings get a "?" column.
+        var unassigned = dayJobs.some(function (j) { return !j.team_id; });
+        html += '<div class="card calday' + (d === today ? " is-today" : "") + '"><h3>' + esc(dayLabel(d)) + "<span>" + dayJobs.length + "</span></h3>" +
+          '<div class="calrow colhead"><div></div><div class="cols">' + teams.map(function (t) { return '<span class="col">' + esc(teamNo(t.name)) + "</span>"; }).join("") +
+          (unassigned ? '<span class="col">?</span>' : "") + "</div></div>";
+        SLOTS.forEach(function (s) {
+          var inSlot = function (j) { return slotFor(j.start_time).key === s.key; };
+          var carries = function (j) { return slotFor(j.start_time).key !== s.key && slotsHeld(j.start_time, j.end_time).indexOf(s.key) >= 0; };
+          var b = dayBoard.filter(function (x) { return x.slot_key === s.key; })[0];
+          var open = b && !b.closed && b.used < b.capacity;
+          var cells = teams.map(function (t) {
+            var j = dayJobs.filter(function (x) { return x.team_id === t.id && inSlot(x); })[0];
+            var c = j ? null : dayJobs.filter(function (x) { return x.team_id === t.id && carries(x); })[0];
+            if (j || c) return '<span class="col">' + jobDot(j || c, !j) + "</span>";
+            // An empty spot: tap to book this time with this team picked.
+            return '<span class="col">' + (canEdit && open
+              ? '<a class="tdot open-spot" href="#/new?date=' + d + "&slot=" + s.key + "&team=" + encodeURIComponent(t.id) + '" aria-label="Book ' + esc(d) + " " + s.label + " " + esc(t.name) + '"><i></i></a>'
+              : '<span class="tdot open-spot"><i></i></span>') + "</span>";
+          }).join("");
+          if (unassigned) {
+            var none = dayJobs.filter(function (x) { return !x.team_id && (inSlot(x) || carries(x)); });
+            cells += '<span class="col">' + (none.length ? none.map(function (x) { return jobDot(x, !inSlot(x)); }).join("") : '<span class="tdot open-spot"><i></i></span>') + "</span>";
+          }
+          html += '<div class="calrow' + (b && !b.closed ? "" : " is-closed") + '"><div class="caltime">' + s.label + " " + s.ampm.toLowerCase() + '</div><div class="cols">' + cells + "</div></div>";
         });
         html += "</div>";
       }
       $("cal").innerHTML = html;
     }).catch(function (err) { $("cal").innerHTML = '<div class="empty">' + esc(friendly(err)) + "</div>"; });
-    function chip(j, cont) {
-      var first = j.customer ? j.customer.full_name.split(" ")[0] + (j.customer.full_name.split(" ")[1] ? " " + j.customer.full_name.split(" ")[1][0] + "." : "") : "Booking";
-      return '<button type="button" class="bchip' + (cont ? " cont" : "") + '" data-job="' + esc(j.id) + '"><i class="dot" style="background:' + esc(j.team ? j.team.color || "#6B7790" : "#B76E00") + '"></i>' +
-        esc(first) + (cont ? " (cont.)" : "") + "</button>";
+    function jobDot(j, cont) {
+      var who = j.customer ? j.customer.full_name : "Booking";
+      return '<button type="button" class="tdot' + (cont ? " cont" : "") + '" data-job="' + esc(j.id) + '" title="' + esc(who) + '" aria-label="' + esc(who + (j.team ? ", " + j.team.name : ", no team")) + '">' +
+        '<i style="background:' + esc(j.team ? j.team.color || "#6B7790" : NO_TEAM) + '"></i></button>';
     }
+  }
+  var NO_TEAM = "#F2B84B";
+  function dot(num, color) { return '<span class="tdot">' + (num ? "<small>" + esc(num) + "</small>" : "") + '<i style="background:' + esc(color) + '"></i></span>'; }
+  function teamLead(name) { var p = String(name || "").split(" - "); return p.length > 1 ? p[1].split(/[\/,&]/)[0].trim() : ""; }
+  // "Team #2 - Hadhabia/Tatiana" -> "2"; a team named without a number gets its place in the list.
+  function teamNo(name) {
+    var m = /#?\s*(\d+)/.exec(String(name || ""));
+    if (m) return m[1];
+    var i = teams.map(function (t) { return t.name; }).indexOf(name);
+    return i >= 0 ? String(i + 1) : "?";
   }
 
   // Customers
   var custTimer = null;
   function pageCustomers(v) {
-    v.innerHTML = '<div class="tools"><input id="cq" class="search" type="search" placeholder="Search name, phone, address, email" autocomplete="off"></div><div id="clist"></div>';
+    v.innerHTML = '<div class="tools"><input id="cq" class="search" type="search" placeholder="Search name, phone, address, email" autocomplete="off"><span class="pagehelp">' + pageInfo("<b>Everyone who has booked</b>, newest first. Tap a name for their contact, home notes and bookings, edit and save them, or book them again. Archived customers show only when you search. A red Don't book tag means online and text bookings are refused.") + '</span></div><div id="clist"></div>';
     $("cq").addEventListener("input", function () { clearTimeout(custTimer); custTimer = setTimeout(load, 300); });
     function load() {
       var q = $("cq").value.trim();
@@ -804,16 +940,44 @@
       api.customers(q.length >= 2 ? q : "").then(function (rows) {
         if (!$("clist")) return;
         if (q.length < 2) rows = rows.filter(function (c) { return !c.archived_at; }); // archived show only when searched for (0321)
-        $("clist").innerHTML = (q.length < 2 && rows.length ? '<div class="day">Newest</div>' : "") + (rows.length ? rows.map(function (c) {
-          return '<a class="cust" style="text-decoration:none;color:inherit" href="#/customer/' + esc(c.id) + '"><b>' + esc(c.full_name) + "</b>" + statusPills(c) + "<div>" +
-            esc([prettyPhone(c.phone), [c.address, c.zip].filter(Boolean).join(" ")].filter(Boolean).join(" · ")) + "</div></a>";
-        }).join("") : '<div class="empty">No customers found.</div>');
+        // Same compact rows as Bookings: one card, a thin line between people.
+        $("clist").innerHTML = (q.length < 2 && rows.length ? '<div class="day">Newest</div>' : "") + (rows.length ? '<div class="card rows">' + rows.map(function (c) {
+          return '<a class="row crow" href="#/customer/' + esc(c.id) + '"><span class="rmain"><b>' + esc(c.full_name) + statusPills(c) + "</b><small>" +
+            esc([prettyPhone(c.phone), [c.address, c.zip].filter(Boolean).join(" ")].filter(Boolean).join(" · ")) + '</small></span><span class="chev">›</span></a>';
+        }).join("") + "</div>" : '<div class="empty">No customers found.</div>');
       }).catch(function (err) { $("clist").innerHTML = '<div class="empty">' + esc(friendly(err)) + "</div>"; });
     }
     load();
   }
 
   // Customer status (0321), set in the app's customer page: Don't book refuses online and text bookings; staff may still book by hand.
+  // What a booking needs that this customer has not got: phone, address, zip, home size. Empty when all there.
+  // "Every other Thursday · 11:40 am" from a recurring_series row (0113: weekly, biweekly, every_4_weeks, monthly; every_6_weeks from bookings).
+  function planWhen(p) {
+    var d = new Date(p.start_date + "T12:00:00Z"), wd = d.toLocaleDateString("en-US", { weekday: "long", timeZone: "UTC" });
+    // Monthly = every 4 weeks; every 6 weeks is flexible (6 to 7 weeks, migration 0325, Jack 2026-10-18).
+    var when = { weekly: "Every " + wd, biweekly: "Every other " + wd, every_4_weeks: "Monthly, " + wd + "s", every_6_weeks: "Every 6 weeks (flexible)", monthly: "Monthly, " + wd + "s" }[p.frequency] || p.frequency;
+    return when;
+  }
+  function planRow(p) {
+    var team = teams.filter(function (t) { return t.id === p.team_id; })[0];
+    var color = team ? team.color || "#6B7790" : NO_TEAM, num = team ? teamNo(team.name) : "?";
+    // The team is the numbered dot. A paused plan says when it comes back instead of the service.
+    var bits = p.status === "paused" ? (p.paused_until ? "Back " + shortDate(p.paused_until) + " · " : "") + clock(p.start_time).toLowerCase()
+      : clock(p.start_time).toLowerCase() + " · " + serviceName(p);
+    return '<div class="row prow"><span class="recur-ico">↻</span><span class="tdot"><small>' + esc(num) + '</small><i style="background:' + esc(color) + '"></i></span>' +
+      '<span class="rmain"><b>' + esc(planWhen(p)) + "</b><small>" + esc(bits) + "</small></span>" +
+      '<span class="rprice">' + (p.price_cents != null ? esc(money(p.price_cents)) : "") +
+      (p.status === "paused" ? '<small class="bad">Paused</small>' : "<small>a visit</small>") + "</span></div>";
+  }
+  function contactMissing(c) { var m = []; if (!c.phone) m.push("phone"); if (!c.address) m.push("address"); if (!c.zip) m.push("zip"); return m.join(", "); }
+  function homeMissing(c) { return c.bedrooms == null || c.bathrooms == null ? "home size" : ""; }
+  function missingBasics(c) {
+    var m = [];
+    if (!c.phone) m.push("phone"); if (!c.address) m.push("address"); if (!c.zip) m.push("zip");
+    if (c.bedrooms == null || c.bathrooms == null) m.push("home size");
+    return m.join(", ");
+  }
   function statusPills(c) {
     return (c.booking_blocked_at ? ' <span class="pill bad">Don\'t book</span>' : "") + (c.archived_at ? ' <span class="pill">Archived</span>' : "");
   }
@@ -828,8 +992,8 @@
   ];
   function pageCustomer(v, id) {
     loading(v);
-    Promise.all([api.customer(id), api.customerJobs(id).then(remember).then(loadMoney)]).then(function (res) {
-      var c = res[0], rows = res[1];
+    Promise.all([api.customer(id), api.customerJobs(id).then(remember).then(loadMoney), api.series(id).catch(function () { return []; })]).then(function (res) {
+      var c = res[0], rows = res[1], plans = res[2];
       if (!c) { v.innerHTML = '<div class="empty">Customer not found.</div>'; return; }
       var upcoming = rows.filter(function (j) { return j.scheduled_date >= today && j.status !== "cancelled" && j.status !== "completed"; }).reverse();
       var past = rows.filter(function (j) { return upcoming.indexOf(j) < 0; });
@@ -841,31 +1005,47 @@
       }
       var F = {}; CUSTOMER_FIELDS.forEach(function (f) { F[f[0]] = field(f); });
       v.innerHTML =
-        '<div class="h1"><a class="iconbtn" style="display:flex;align-items:center;justify-content:center;text-decoration:none" href="#/customers" aria-label="Back">&#8249;</a><span class="grow">' + esc(c.full_name) + statusPills(c) + "</span></div>" +
-        (blockedNote(c) ? '<div class="msg warn" style="margin:0 0 12px">' + esc(blockedNote(c)) + "</div>" : "") +
-        (canEdit ? '<a class="btn primary big" style="margin:0 0 12px" href="#/new?customer=' + esc(c.id) + '">Book ' + esc(c.full_name.split(" ")[0]) + "</a>" : "") +
-        '<div class="card pad"><h2>Upcoming</h2>' + (upcoming.length ? jobList(upcoming, true) : '<div class="tag">None booked.</div>') + "</div>" +
-        '<div class="card pad"><h2>Contact</h2>' + F.full_name + '<div class="grid2">' + F.phone + F.email + "</div>" +
-        '<div class="grid2">' + F.address + F.zip + "</div></div>" +
-        '<div class="card pad"><h2>Home' + info("About the home", "Shown to the team on the job. Door and alarm codes stay in the app, masked; they are not shown here.") + "</h2>" +
-        '<div class="grid2 keep">' + F.bedrooms + F.bathrooms + "</div>" + F.access_notes + F.parking_notes + F.pets + F.do_notes + F.dont_notes + F.special_instructions + F.notes + "</div>" +
-        (canEdit ? '<button class="btn primary" id="c-save" type="button">Save</button><div id="c-save-msg"></div>' : "") +
-        (past.length ? '<div class="day" style="margin-top:22px">Past and cancelled</div>' + jobList(past, false) : "");
+        // Compact (Jack, 2026-10-18: "compress the amount of dead space on this page"): a one-line header with a small Book button, rows
+        // without her name (it is the title), and one tight form with fields paired side by side.
+        '<div class="chead"><a class="iconbtn sm" href="#/customers" aria-label="Back">&#8249;</a><b>' + esc(c.full_name) + "</b>" + statusPills(c) +
+          pageInfo("<b>One customer.</b> Book them again, see their bookings (tap one to change it), and edit their contact and home details, then Save. The home notes show to the team on the job; door and alarm codes stay in the app.") +
+          (canEdit ? '<a class="bookbtn" href="#/new?customer=' + esc(c.id) + '">+ Book</a>' : "") + "</div>" +
+        (blockedNote(c) ? '<div class="msg warn" style="margin:0 0 10px">' + esc(blockedNote(c)) + "</div>" : "") +
+        // Their standing schedule first, one glanceable line (Jack, 2026-10-18): "Every other Thursday · 11:40 am", then service, team, price.
+        (plans.length ? '<div class="day">Recurring</div><div class="card rows">' + plans.map(planRow).join("") + "</div>" : "") +
+        (upcoming.length ? '<div class="day">Upcoming</div>' + jobList(upcoming, false, true) : '<div class="day">Nothing booked</div>') +
+        // Two boxes, each opens on its own (Jack, 2026-10-18): Contact, and Home details. Both show open when the page loads, then fold shut
+        // after a moment so a new manager sees they open. A box missing something basic stays open and says what.
+        fold("f-contact", "Contact", contactMissing(c), [prettyPhone(c.phone), c.address].filter(Boolean).join(" · "),
+          F.full_name + '<div class="pair">' + F.phone + F.email + "</div>" + '<div class="pair addr">' + F.address + F.zip + "</div>") +
+        fold("f-home", "Home details", homeMissing(c), [c.bedrooms != null ? c.bedrooms + " bed" : "", c.bathrooms != null ? c.bathrooms + " bath" : "", c.pets].filter(Boolean).join(" · "),
+          '<div class="pair three">' + F.bedrooms + F.bathrooms + F.pets + "</div>" + '<div class="pair">' + F.access_notes + F.parking_notes + "</div>" +
+          '<div class="pair">' + F.do_notes + F.dont_notes + "</div>" + '<div class="pair">' + F.special_instructions + F.notes + "</div>") +
+        (past.length ? '<div class="day">Past and cancelled</div>' + jobList(past, false, true) : "");
+      function fold(id, title, missing, summary, body) {
+        return '<div class="card fold" id="' + id + '"' + (missing ? ' data-keep="1"' : "") + '><button type="button" class="fold-head"><b>' + title + "</b><span>" +
+          esc(missing ? "Missing " + missing : summary) + '</span><i class="chev2">›</i></button><div class="fold-body"><div><div class="fold-in">' + body +
+          (canEdit ? '<button class="btn primary c-save" type="button">Save</button><div class="c-save-msg"></div>' : "") + "</div></div></div></div>";
+      }
+      v.querySelectorAll(".fold-head").forEach(function (h) { h.addEventListener("click", function () { h.parentNode.classList.toggle("closed"); }); });
+      setTimeout(function () { v.querySelectorAll(".fold:not([data-keep])").forEach(function (f) { f.classList.add("closed"); }); }, 1100);
       if (!canEdit) return;
-      $("c-save").addEventListener("click", function () {
-        var patch = {};
-        v.querySelectorAll("[data-f]").forEach(function (el) {
-          var k = el.getAttribute("data-f"), val = el.value.trim();
-          if (k === "phone") val = val ? normalizePhone(val) : "";
-          if (k === "bedrooms" || k === "bathrooms") val = val === "" ? null : Number(val);
-          patch[k] = val === "" ? null : val;
+      v.querySelectorAll(".c-save").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var msg = btn.nextElementSibling, patch = {};
+          v.querySelectorAll("[data-f]").forEach(function (el) {
+            var k = el.getAttribute("data-f"), val = el.value.trim();
+            if (k === "phone") val = val ? normalizePhone(val) : "";
+            if (k === "bedrooms" || k === "bathrooms") val = val === "" ? null : Number(val);
+            patch[k] = val === "" ? null : val;
+          });
+          if (!patch.full_name) return show(msg, "err", "Name is required.");
+          if (patch.phone && digits(patch.phone).length < 11) return show(msg, "err", "Check the phone number.");
+          if ((patch.bedrooms != null && isNaN(patch.bedrooms)) || (patch.bathrooms != null && isNaN(patch.bathrooms))) return show(msg, "err", "Bedrooms and bathrooms are numbers.");
+          btn.disabled = true;
+          api.updateCustomer(c.id, patch).then(function () { show(msg, "ok", "Saved."); btn.disabled = false; })
+            .catch(function (err) { show(msg, "err", friendly(err)); btn.disabled = false; });
         });
-        if (!patch.full_name) return show($("c-save-msg"), "err", "Name is required.");
-        if (patch.phone && digits(patch.phone).length < 11) return show($("c-save-msg"), "err", "Check the phone number.");
-        if ((patch.bedrooms != null && isNaN(patch.bedrooms)) || (patch.bathrooms != null && isNaN(patch.bathrooms))) return show($("c-save-msg"), "err", "Bedrooms and bathrooms are numbers.");
-        $("c-save").disabled = true;
-        api.updateCustomer(c.id, patch).then(function () { show($("c-save-msg"), "ok", "Saved."); $("c-save").disabled = false; })
-          .catch(function (err) { show($("c-save-msg"), "err", friendly(err)); $("c-save").disabled = false; });
       });
     }).catch(function (err) { v.innerHTML = '<div class="empty">' + esc(friendly(err)) + "</div>"; });
   }
@@ -873,11 +1053,11 @@
   // New booking
   function pageNew(v, q) {
     var st = { customer: null, service: "two_hour", bed: "2", bath: "1", freq: "one_time", sponge: false, override: null,
-      date: q.get("date") || "", slot: q.get("slot") || null, team: "auto", board: null, dayJobs: null };
+      date: q.get("date") || "", slot: q.get("slot") || null, team: q.get("team") || "auto", board: null, dayJobs: null };
     var bedOpts = [["0", "Studio"], ["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"], ["5", "5"]];
     var bathOpts = Object.keys(PRICE.bath).sort(function (a, b) { return Number(a) - Number(b); });
     v.innerHTML =
-      '<div class="h1">New booking</div>' +
+      '<div class="h1">New booking ' + info("About new bookings", "<b>Book a customer by hand.</b> Typing a phone number fills in a returning customer. The price is the same as the website's (change it only for a deal); tax is added from the zip. Only open times are offered; a long clean needs the next time free too. First free picks a team that is free then. The customer pays after the clean.") + "</div>" +
       '<div class="card pad"><h2>Customer</h2>' +
         '<label class="field">Phone<input id="b-phone" type="tel" inputmode="tel" autocomplete="off" placeholder="(612) 555-0100"></label>' +
         '<div id="b-found" class="found" hidden></div>' +
@@ -1023,7 +1203,7 @@
       }).then(function (g) {
         return api.insertJob({
           org_id: me.org_id, booking_id: "mgr-" + (window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now()), customer_id: customerId,
-          scheduled_date: day, start_time: start, end_time: end, service: st.service, service_label: svc.name, price_cents: price,
+          scheduled_date: day, start_time: start, end_time: end, service: st.service, service_label: svc.label || svc.name, price_cents: price,
           status: "scheduled", address: addr, lat: g ? g.lat : null, lng: g ? g.lng : null, notes: notes, source: "manager",
           team_id: teamId, estimated_minutes: mins, is_recurring: false, payment_status: "unpaid",
           checklist_tier: "basic"
@@ -1036,11 +1216,11 @@
         // booking.confirmed for GoHighLevel, the same row ingest-booking queues (no access details in it).
         after.push(api.outbox({ org_id: me.org_id, type: "ghl_event", payload: { event: "booking.confirmed", occurred_at: new Date().toISOString(),
           contact: { full_name: name, email: email, phone: normalizePhone(phone) },
-          data: { job_id: id, booking_id: null, service: st.service, service_label: svc.name, date: day, time: st.slot, price_cents: price, frequency: st.freq, address: addr, zip: zip } } }));
+          data: { job_id: id, booking_id: null, service: st.service, service_label: svc.label || svc.name, date: day, time: st.slot, price_cents: price, frequency: st.freq, address: addr, zip: zip } } }));
         var sf = SERIES_FREQ[st.freq];
         if (sf && org.recurring_from_bookings) {
           after.push(api.insertSeries({ org_id: me.org_id, customer_id: customerId, frequency: sf, start_date: isoAdd(day, SERIES_DAYS[sf]), start_time: start, end_time: end,
-            price_cents: price, service: st.service, service_label: svc.name, source: "booking" }).then(api.generateSeries));
+            price_cents: price, service: st.service, service_label: svc.label || svc.name, source: "booking" }).then(api.generateSeries));
         }
         return Promise.all(after.map(function (p) { return p.catch(function (e) { return e; }); }));
       }).then(function (results) {
