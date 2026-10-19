@@ -1029,7 +1029,8 @@
         revealQueue.push(opt);
       }
       var pick = function () { if (visitStatus === "unknown" && !isFirstVisitService(key)) askPhoneOnTile(opt, key, go); else go(); };
-      opt.querySelector(".bw-opt-go").addEventListener("click", pick);
+      // Booking the Two Hour Clean shows the "Before you book" advisory first (Jack, 2026-10-18: keep it, show it when they click Two Hour).
+      opt.querySelector(".bw-opt-go").addEventListener("click", key === "two_hour" ? function () { openTwoHourAdvisory(pick); } : pick);
       list.appendChild(opt);
     });
     clearTimeout(recurRevealTimer);
@@ -1042,6 +1043,33 @@
   function twoHourFits() {
     var beds = Number(gateBedroomSelect.value), baths = Number(gateBathroomSelect.value);
     return baths <= 2.5 && beds <= 4;
+  }
+  function openTwoHourAdvisory(onBook) {
+    var el = document.getElementById("bw-2h-adv");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "bw-2h-adv"; el.className = "bw-2h-pop"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Before you book");
+      el.innerHTML = "<div class='bw-2h-card'><button type='button' class='bw-2h-x' aria-label='Close'>&times;</button>" +
+        "<div class='bw-2h-head'>Before you book</div>" +
+        "<p class='bw-2h-adv-lead'>The Two Hour Clean is for well-kept homes. Not for:</p>" +
+        "<ul class='bw-2h-adv-list'><li>Highly cluttered spaces</li><li>Rooms with strong odors</li><li>Lots of dishes, laundry, or items on floors and surfaces</li></ul>" +
+        "<button type='button' class='bw-2h-go' data-adv='book'>Book the Two Hour Clean</button>" +
+        "<button type='button' class='bw-2h-alt' data-adv='checklist'>Sounds like my home: Checklist Clean</button></div>";
+      document.getElementById("bw-root").appendChild(el);
+      el.addEventListener("click", function (e) {
+        var b = e.target.closest && e.target.closest("[data-adv]");
+        if (e.target === el || (e.target.closest && e.target.closest(".bw-2h-x"))) { el.hidden = true; return; }
+        if (!b) return;
+        el.hidden = true;
+        if (b.getAttribute("data-adv") === "book") { if (el._onBook) el._onBook(); return; }
+        var c = Array.prototype.filter.call(document.querySelectorAll(".bw-opt"), function (o) { return /Checklist Clean/.test(o.querySelector(".bw-opt-name").textContent); })[0];
+        if (c) c.querySelector(".bw-opt-go").click();
+      });
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape") el.hidden = true; });
+    }
+    el._onBook = onBook;
+    el.hidden = false;
+    var go = el.querySelector(".bw-2h-go"); if (go && go.focus) go.focus();
   }
   function openTwoHourInfo() {
     var el = document.getElementById("bw-2h-pop");
@@ -4287,6 +4315,10 @@
   #bw-root .bw-2h-card { position: relative; background: #fff; border-radius: 18px; padding: 20px; max-width: 380px; width: 100%; box-shadow: 0 18px 50px rgba(11,26,51,.25); }
   #bw-root .bw-2h-card { max-width: 340px; padding: 22px 20px 18px; }
   #bw-root .bw-2h-x { position: absolute; top: 8px; right: 10px; border: 0; background: none; font-size: 22px; line-height: 1; color: var(--t-muted); cursor: pointer; padding: 4px; }
+  #bw-root .bw-2h-adv-lead { margin: 0 0 6px; font-size: 13.5px; color: var(--t-ink); text-align: center; }
+  #bw-root .bw-2h-adv-list { margin: 0 auto 16px; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 13px; color: var(--t-ink-2); text-align: center; }
+  #bw-root .bw-2h-go { width: 100%; border: 0; border-radius: 12px; background: var(--t-blue); color: #fff; font: inherit; font-size: 15px; font-weight: 700; padding: 12px; cursor: pointer; }
+  #bw-root .bw-2h-alt { width: 100%; border: 0; background: none; color: var(--t-blue); font: inherit; font-size: 13px; font-weight: 600; padding: 10px 0 0; cursor: pointer; }
   #bw-root .bw-2h-head { font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--t-muted); text-align: center; margin-bottom: 14px; }
   #bw-root .bw-2h-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
   #bw-root .bw-2h-tiles div { display: grid; justify-items: center; gap: 4px; padding: 12px 4px; border-radius: 14px; background: var(--t-blue-soft); }
