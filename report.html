@@ -414,7 +414,7 @@
         if (r.ok || r.error === 'already_sent') {
           document.getElementById('missform').hidden = true;
           var ok = document.getElementById('missok'); ok.hidden = false;
-          ok.textContent = 'Thank you. We will check the team’s photos and text you.';
+          ok.textContent = r.reply || 'Thank you. We have your note and will text you.';
           return;
         }
         btn.disabled = false; btn.textContent = 'Send'; err.hidden = false;
