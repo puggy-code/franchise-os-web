@@ -201,8 +201,8 @@
     <!-- Two Hour Clean priorities (Jack, 2026-10-18): what matters most this visit, 240 characters. Read by booking-intake: anything that is
          an extra (baseboards, inside cabinets, the oven) is not part of the Two Hour Clean, and the page says so and offers the Checklist Clean. -->
     <div id="bw-2h-prio" class="bw-2h-prio" hidden>
-      <label for="bw-2h-prio-text">Priority areas <span class="bw-optional">optional</span></label>
-      <textarea id="bw-2h-prio-text" rows="2" maxlength="240" placeholder="e.g. Kitchen and main bathroom first"></textarea>
+      <label for="bw-2h-prio-text">Your priorities</label>
+      <textarea id="bw-2h-prio-text" rows="2" maxlength="240" placeholder="Kitchen and main bath first"></textarea>
       <div class="bw-2h-prio-meta"><span id="bw-2h-prio-status" aria-live="polite"></span><span id="bw-2h-prio-count">0/240</span></div>
       <div id="bw-2h-prio-found" class="bw-2h-prio-found" hidden></div>
     </div>
@@ -1624,6 +1624,10 @@
 
   // ---------- Two Hour Clean priorities ----------
   var prioTimer = null, prioLast = "", prioExtras = [];
+  function shortLabel(l) {
+    return String(l).replace(/^Inside kitchen cabinets and drawers$/i, "Inside cabinets").replace(/^Interior windows in one room$/i, "Windows")
+      .replace(/^Dishwasher interior and filter$/i, "Dishwasher").replace(/^Fridge (emptied)$/i, "Fridge").replace(/^Baseboards in one room$/i, "Baseboards");
+  }
   document.addEventListener("input", function (e) {
     if (!e.target || e.target.id !== "bw-2h-prio-text") return;
     var t = e.target.value;
@@ -1647,8 +1651,11 @@
         var labels = prioExtras.map(function (e) { return e.label; }).concat((plan.on_request || []).map(function (o) { return o.label; }));
         var box = document.getElementById("bw-2h-prio-found");
         if (!labels.length) { box.hidden = true; box.innerHTML = ""; return; }
-        box.innerHTML = "<div><b>Not in the Two Hour Clean:</b> " + esc(labels.join(", ")) + "</div>" +
-          "<button type='button' id='bw-2h-prio-switch'>Get them with the Checklist Clean</button>";
+        // Plain and professional (Jack, 2026-10-18): what we can't fit, why, and the clean that covers it.
+        box.innerHTML = "<div class='bw-pf-title'>Beyond a two-hour visit</div>" +
+          "<div class='bw-pf-chips'>" + labels.map(function (l) { return "<span>" + esc(shortLabel(l)) + "</span>"; }).join("") + "</div>" +
+          "<div class='bw-pf-sub'>Detail work, included in the Checklist Clean.</div>" +
+          "<button type='button' id='bw-2h-prio-switch'>Switch to the Checklist Clean</button>";
         box.hidden = false;
       })
       .catch(function () { st.textContent = ""; });
@@ -2155,7 +2162,7 @@
       renderCatalogFields();
     }
 
-    twoHourWarning.hidden = selectedService !== "two_hour";
+    twoHourWarning.hidden = true; // said by the Before you book advisory on the Two Hour card
     document.getElementById("bw-2h-prio").hidden = selectedService !== "two_hour";
     customFieldsWrap.hidden = selectedService !== "works";
     promoWrap.hidden = selectedService !== "two_hour";
@@ -4364,15 +4371,21 @@
   #bw-root .bw-wx-toggle, #bw-root .bw-wx-qty button { border-color: var(--t-blue); color: var(--t-blue); }
   #bw-root .bw-wx-row.is-on .bw-wx-toggle { background: var(--t-blue); color: #fff; }
   #bw-root .bw-works-extras [hidden] { display: none !important; }
-  #bw-root .bw-2h-prio { margin: 4px 0 14px; display: grid; gap: 6px; }
+  #bw-root .bw-2h-prio { margin: 4px 0 16px; display: grid; gap: 10px; }
   #bw-root .bw-2h-prio[hidden] { display: none; }
-  #bw-root .bw-2h-prio label { font-size: 14px; font-weight: 700; color: var(--t-ink); }
-  #bw-root .bw-2h-prio textarea { border: 1px solid var(--t-line); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14px; resize: none; }
-  #bw-root .bw-2h-prio-meta { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--t-muted); }
-  #bw-root .bw-2h-prio-found { background: var(--t-blue-soft); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--t-ink-2); display: grid; gap: 8px; }
+  #bw-root .bw-2h-prio label { font-size: 14px; font-weight: 700; color: var(--t-ink); text-align: center; }
+  #bw-root .bw-2h-prio textarea { border: 0; border-radius: 16px; padding: 14px 16px; font: inherit; font-size: 14px; resize: none; text-align: center; background: #fff;
+    box-shadow: 0 1px 2px rgba(11,26,51,.06), 0 8px 22px rgba(31,94,255,.10); }
+  #bw-root .bw-2h-prio textarea:focus { outline: none; box-shadow: 0 0 0 2px var(--t-blue), 0 8px 22px rgba(31,94,255,.14); }
+  #bw-root .bw-2h-prio-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--t-muted); padding: 0 6px; margin-top: -4px; }
+  #bw-root .bw-2h-prio-found { background: #fff; border-radius: 16px; padding: 16px; display: grid; justify-items: center; gap: 10px; text-align: center;
+    box-shadow: 0 1px 2px rgba(11,26,51,.06), 0 8px 22px rgba(31,94,255,.10); }
   #bw-root .bw-2h-prio-found[hidden] { display: none; }
-  #bw-root .bw-2h-prio-found b { color: var(--t-ink); }
-  #bw-root .bw-2h-prio-found button { justify-self: start; border: 0; background: var(--t-blue); color: #fff; font: inherit; font-size: 13px; font-weight: 600; border-radius: 999px; padding: 7px 14px; cursor: pointer; }
+  #bw-root .bw-pf-title { font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--t-muted); }
+  #bw-root .bw-pf-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+  #bw-root .bw-pf-chips span { background: var(--t-blue-soft); color: var(--t-blue-ink); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; }
+  #bw-root .bw-pf-sub { font-size: 13px; color: var(--t-ink-2); }
+  #bw-root .bw-2h-prio-found button { border: 0; background: var(--t-blue); color: #fff; font: inherit; font-size: 14px; font-weight: 700; border-radius: 12px; padding: 11px 18px; cursor: pointer; width: 100%; }
   #bw-root .bw-opt-fit { color: var(--t-blue) !important; font-weight: 600; }
   #bw-root .bw-opt-info { border: 0; background: none; padding: 6px 0 0; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--t-blue); text-decoration: underline; cursor: pointer; }
   #bw-root .bw-2h-pop { position: fixed; inset: 0; background: rgba(11,26,51,.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
