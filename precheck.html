@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Before Photo Check</title>
+<meta name="description" content="Send photos or a video of your home before your clean. We'll tell you if we can get it all done.">
+<style>
+  /* Before-photo pre-check (Jack, 2026-10-19; migration 0337, supabase/functions/home-precheck). Frosted blue and white, like the booking page. */
+  :root {
+    --ink: #13213A; --muted: #5B6880; --blue: #0B4AA8; --line: rgba(19, 33, 58, .12);
+    --card: rgba(255, 255, 255, .78); --good: #11733F; --warn: #A4600A;
+    --bg: linear-gradient(180deg, #DCEBFF 0%, #EEF5FF 45%, #FFFFFF 100%);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --ink: #EAF1FF; --muted: #A9B6CC; --blue: #7FB0FF; --line: rgba(255,255,255,.14); --card: rgba(22, 33, 54, .78); --good: #6FD39C; --warn: #F2B35B; --bg: linear-gradient(180deg, #0B1A33 0%, #0E1F3D 60%, #101828 100%); }
+  }
+  :root[data-theme="dark"] { --ink: #EAF1FF; --muted: #A9B6CC; --blue: #7FB0FF; --line: rgba(255,255,255,.14); --card: rgba(22, 33, 54, .78); --good: #6FD39C; --warn: #F2B35B; --bg: linear-gradient(180deg, #0B1A33 0%, #0E1F3D 60%, #101828 100%); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--bg); background-attachment: fixed; color: var(--ink); min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Helvetica, Arial, sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 28px 16px 60px; }
+  h1 { font-size: 28px; letter-spacing: -0.4px; margin: 0 0 6px; }
+  .lead { color: var(--muted); margin: 0 0 20px; font-size: 16px; line-height: 1.45; }
+  .card { background: var(--card); border: 1px solid rgba(255,255,255,.9); border-radius: 18px; padding: 18px; margin-bottom: 14px;
+    backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); box-shadow: 0 8px 30px rgba(11, 74, 168, .08); }
+  label { display: block; font-weight: 600; font-size: 14px; margin: 12px 0 6px; }
+  input[type=text], input[type=tel], input[type=email], input[type=number], textarea {
+    width: 100%; font: inherit; font-size: 16px; color: var(--ink); background: rgba(255,255,255,.9); border: 1px solid var(--line);
+    border-radius: 12px; padding: 11px 12px; }
+  textarea { min-height: 80px; resize: vertical; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .svc { display: grid; gap: 8px; }
+  .svc label { margin: 0; display: flex; gap: 10px; align-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 12px;
+    background: rgba(255,255,255,.6); font-weight: 600; cursor: pointer; }
+  .svc input { accent-color: var(--blue); width: 18px; height: 18px; }
+  .svc small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+  .drop { border: 2px dashed rgba(11, 74, 168, .35); border-radius: 14px; padding: 18px; text-align: center; color: var(--muted); cursor: pointer; }
+  .drop b { color: var(--blue); }
+  .files { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .files span { font-size: 12px; padding: 4px 8px; border-radius: 999px; background: rgba(11, 74, 168, .1); color: var(--blue); }
+  .tips { font-size: 14px; color: var(--muted); margin: 8px 0 0; padding-left: 18px; line-height: 1.5; }
+  button { width: 100%; margin-top: 16px; font: inherit; font-size: 17px; font-weight: 700; color: #fff; background: var(--blue); border: 0;
+    border-radius: 14px; padding: 15px; cursor: pointer; }
+  button:disabled { opacity: .55; cursor: default; }
+  .err { color: #B42318; font-size: 14px; margin-top: 10px; }
+  .result h2 { margin: 0 0 8px; font-size: 21px; }
+  .result p { margin: 0; font-size: 16px; line-height: 1.5; }
+  .ok h2 { color: var(--good); }
+  .more h2 { color: var(--warn); }
+  .not { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Can we get it all done?</h1>
+  <p class="lead">Send a few photos or a short video of your home. We'll tell you which clean gets it all done, and put your clean under our full quality guarantee.</p>
+
+  <form id="f" class="card" novalidate>
+    <label>Which clean?</label>
+    <div class="svc">
+      <label><input type="radio" name="svc" value="two_hour"><span>Two Hour Clean<small>Well-kept homes</small></span></label>
+      <label><input type="radio" name="svc" value="checklist_clean" checked><span>Checklist Clean<small>Our full room-by-room list</small></span></label>
+      <label><input type="radio" name="svc" value="four_hour"><span>4-Hr Home Detailing<small>Lots of buildup</small></span></label>
+    </div>
+
+    <div class="two">
+      <div><label for="beds">Bedrooms</label><input id="beds" type="number" min="0" max="20" inputmode="numeric"></div>
+      <div><label for="baths">Bathrooms</label><input id="baths" type="number" min="0" max="20" step="0.5" inputmode="decimal"></div>
+    </div>
+
+    <label>Photos or video</label>
+    <div class="drop" id="drop"><b>Choose photos or a video</b><br>Kitchen, each bathroom, and any room you're unsure about</div>
+    <input id="files" type="file" accept="image/*,video/*" multiple hidden>
+    <div class="files" id="list"></div>
+    <ul class="tips"><li>Daylight or lights on, from the doorway</li><li>Up to 30 files, videos up to 100 MB</li></ul>
+
+    <label for="note">Anything we should know? <span style="font-weight:400;color:var(--muted)">(optional)</span></label>
+    <textarea id="note" maxlength="1000" placeholder="e.g. the oven hasn't been cleaned in a while"></textarea>
+
+    <div class="two">
+      <div><label for="name">Name</label><input id="name" type="text" autocomplete="name" maxlength="120"></div>
+      <div><label for="phone">Mobile</label><input id="phone" type="tel" autocomplete="tel" inputmode="tel"></div>
+    </div>
+
+    <button id="go" type="submit">Check my home</button>
+    <div class="err" id="err" hidden></div>
+    <p class="not">We never wash dishes or do laundry (we bag loose clothes). Your photos are private and only used to plan your clean.</p>
+  </form>
+
+  <div class="card result" id="res" hidden>
+    <h2 id="rt"></h2>
+    <p id="rb"></p>
+  </div>
+</main>
+<script>
+  // ---- configure this once, to match your Supabase project ----------------
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  var ORG_SLUG = 'two-hour-maids';
+  // ------------------------------------------------------------------------
+  var FN = SUPABASE_URL + '/functions/v1/home-precheck';
+  var picked = [];
+  var $ = function (id) { return document.getElementById(id); };
+  try { var q = new URLSearchParams(location.search); var s = q.get('service'); if (s) { var r = document.querySelector('input[name=svc][value="' + s + '"]'); if (r) r.checked = true; } } catch (e) {}
+
+  $('drop').onclick = function () { $('files').click(); };
+  $('files').onchange = function () {
+    picked = [].slice.call($('files').files || []).slice(0, 30);
+    $('list').innerHTML = '';
+    picked.forEach(function (f) { var t = document.createElement('span'); t.textContent = (f.type.indexOf('video') === 0 ? '▶ ' : '') + f.name.slice(0, 24); $('list').appendChild(t); });
+  };
+  function post(body) {
+    return fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json(); });
+  }
+  function fail(msg) { $('err').hidden = false; $('err').textContent = msg; $('go').disabled = false; $('go').textContent = 'Check my home'; }
+  var ERRORS = { phone: 'Please add your mobile number.', no_files: 'Add at least one photo or video.', file_type: 'Photos (JPG, PNG) or videos (MP4, MOV) only.',
+    too_big: 'One file is too big: photos up to 25 MB, videos up to 100 MB.', too_many: 'You sent a few already today. We will text you.' };
+
+  $('f').onsubmit = function (e) {
+    e.preventDefault();
+    $('err').hidden = true;
+    if (!picked.length) return fail(ERRORS.no_files);
+    var phone = $('phone').value.replace(/\D/g, '');
+    if (phone.length < 10) return fail(ERRORS.phone);
+    $('go').disabled = true; $('go').textContent = 'Uploading…';
+    var svc = (document.querySelector('input[name=svc]:checked') || {}).value || 'checklist_clean';
+    post({ action: 'start', org: ORG_SLUG, full_name: $('name').value, phone: phone, service: svc, bedrooms: $('beds').value, bathrooms: $('baths').value,
+      note: $('note').value, files: picked.map(function (f) { return { type: f.type || 'image/jpeg', size: f.size }; }) })
+    .then(function (s) {
+      if (!s.ok) throw new Error(ERRORS[s.error] || 'Something went wrong. Please try again.');
+      var done = 0;
+      return s.uploads.reduce(function (p, u, i) {
+        return p.then(function () {
+          var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', picked[i]);
+          return fetch(u.url, { method: 'PUT', body: fd }).then(function () { done += 1; $('go').textContent = 'Uploading ' + done + ' of ' + s.uploads.length + '…'; });
+        });
+      }, Promise.resolve()).then(function () { $('go').textContent = 'Looking at your photos…'; return post({ action: 'finish', id: s.id }); });
+    })
+    .then(function (r) {
+      if (!r || !r.ok) throw new Error('Something went wrong. Please try again.');
+      $('f').hidden = true; $('res').hidden = false;
+      $('res').className = 'card result ' + (r.verdict === 'can_complete' ? 'ok' : r.verdict === 'needs_more_time' ? 'more' : '');
+      $('rt').textContent = r.verdict === 'can_complete' ? 'Yes, we can get it all done' : r.verdict === 'needs_more_time' ? 'A bit more time needed' : 'Thank you';
+      $('rb').textContent = r.reply;
+    })
+    .catch(function (x) { fail(x && x.message ? x.message : 'Something went wrong. Please try again.'); });
+  };
+</script>
+</body>
+</html>

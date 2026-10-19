@@ -349,7 +349,7 @@
     <div id="bw-hold" class="bw-hold" aria-live="polite" hidden></div>
     <div id="bw-selected-summary" class="bw-summary"></div>
     <!-- Every first clean is a triage clean (Jack, 2026-10-19: "the first is the worst"), said up front. Shown once we know it is a first visit. -->
-    <div id="bw-triage" class="bw-triage" hidden><b>Your first clean is a triage clean.</b> The first is the worst: we're learning your home, so we get as much done as we can. Every clean after gets better.</div>
+    <div id="bw-triage" class="bw-triage" hidden><b>Your first clean is a triage clean.</b> The first is the worst: we're learning your home, so we get as much done as we can. Anything on the list we can't reach is saved and done free on your next visit, and our team earns a bonus for finishing the whole list. <a href="precheck.html" target="_blank" rel="noopener">Not sure we can get it all? Send photos first.</a></div>
 
     <form id="bw-form" class="bw-form" novalidate>
       <label class="bw-field">
@@ -4383,6 +4383,7 @@
     box-shadow: 0 1px 2px rgba(11,26,51,.05), 0 8px 20px rgba(31,94,255,.08); font-size: 13px; line-height: 1.45; color: var(--t-ink-2); }
   #bw-root .bw-triage[hidden] { display: none; }
   #bw-root .bw-triage b { color: var(--t-ink); }
+  #bw-root .bw-triage a { display: block; margin-top: 6px; color: #0B4AA8; font-weight: 600; text-decoration: none; }
   #bw-root .bw-2h-prio { margin: 4px 0 16px; display: grid; gap: 10px; }
   #bw-root .bw-2h-prio[hidden] { display: none; }
   #bw-root .bw-2h-prio label { font-size: 14px; font-weight: 700; color: var(--t-ink); text-align: center; }
