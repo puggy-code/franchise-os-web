@@ -1061,8 +1061,9 @@
       el.innerHTML = "<div class='bw-2h-card'><button type='button' class='bw-2h-x' aria-label='Close'>&times;</button>" +
         // Scannable at a glance (Jack, 2026-10-18): green for what it is for, red for what it is not, bold and short.
         "<div class='bw-2h-head'>Before you book</div>" +
-        "<div class='bw-adv-title'>Two Hour Clean</div>" +
+        "<div class='bw-adv-title'>Our Two Hour Clean is for</div>" +
         "<div class='bw-adv-row is-yes'><i aria-hidden='true'>&#10003;</i><b>Well-kept homes</b></div>" +
+        "<div class='bw-adv-not'>Not for</div>" +
         "<div class='bw-adv-row is-no'><i aria-hidden='true'>&times;</i><b>Heavy clutter</b></div>" +
         "<div class='bw-adv-row is-no'><i aria-hidden='true'>&times;</i><b>Strong odors</b></div>" +
         "<div class='bw-adv-row is-no'><i aria-hidden='true'>&times;</i><b>Piles of dishes, laundry or items</b></div>" +
@@ -4398,6 +4399,7 @@
   #bw-root .bw-2h-card { max-width: 340px; padding: 22px 20px 18px; }
   #bw-root .bw-2h-x { position: absolute; top: 8px; right: 10px; border: 0; background: none; font-size: 22px; line-height: 1; color: var(--t-muted); cursor: pointer; padding: 4px; }
   #bw-root .bw-adv-title { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; color: var(--t-ink); text-align: center; margin: -6px 0 14px; }
+  #bw-root .bw-adv-not { font-size: 12px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--t-muted); text-align: center; margin: 12px 0 6px; }
   #bw-root .bw-adv-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; margin-bottom: 6px; font-size: 14px; letter-spacing: -0.1px; }
   #bw-root .bw-adv-row i { flex: none; width: 22px; height: 22px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-weight: 800; font-size: 13px; color: #fff; }
   #bw-root .bw-adv-row.is-yes { background: var(--t-green-soft); color: #0B5E41; }
