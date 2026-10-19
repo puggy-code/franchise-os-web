@@ -348,6 +348,8 @@
 
     <div id="bw-hold" class="bw-hold" aria-live="polite" hidden></div>
     <div id="bw-selected-summary" class="bw-summary"></div>
+    <!-- Every first clean is a triage clean (Jack, 2026-10-19: "the first is the worst"), said up front. Shown once we know it is a first visit. -->
+    <div id="bw-triage" class="bw-triage" hidden><b>Your first clean is a triage clean.</b> The first is the worst: we're learning your home, so we get as much done as we can. Every clean after gets better.</div>
 
     <form id="bw-form" class="bw-form" novalidate>
       <label class="bw-field">
@@ -2557,6 +2559,7 @@
   }
   function setReturning(yes) {
     visitStatus = yes ? "returning" : "first";
+    var tri = document.getElementById("bw-triage"); if (tri) tri.hidden = yes;
     if (yes) { var sw = document.getElementById("bw-fv-switched"); if (sw) sw.hidden = true; }
     applyFirstVisitMode();
   }
@@ -4376,6 +4379,10 @@
   #bw-root .bw-wx-toggle, #bw-root .bw-wx-qty button { border-color: var(--t-blue); color: var(--t-blue); }
   #bw-root .bw-wx-row.is-on .bw-wx-toggle { background: var(--t-blue); color: #fff; }
   #bw-root .bw-works-extras [hidden] { display: none !important; }
+  #bw-root .bw-triage { margin: -6px 0 14px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.74); border: 1px solid rgba(255,255,255,.9);
+    box-shadow: 0 1px 2px rgba(11,26,51,.05), 0 8px 20px rgba(31,94,255,.08); font-size: 13px; line-height: 1.45; color: var(--t-ink-2); }
+  #bw-root .bw-triage[hidden] { display: none; }
+  #bw-root .bw-triage b { color: var(--t-ink); }
   #bw-root .bw-2h-prio { margin: 4px 0 16px; display: grid; gap: 10px; }
   #bw-root .bw-2h-prio[hidden] { display: none; }
   #bw-root .bw-2h-prio label { font-size: 14px; font-weight: 700; color: var(--t-ink); text-align: center; }
