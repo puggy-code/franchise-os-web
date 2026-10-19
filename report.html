@@ -359,7 +359,7 @@
     if (m.claim) {
       var msg = m.claim.status === 'open'
         ? 'We have your note. We are checking the team’s photos and will text you.'
-        : (m.claim.reply || (m.claim.status === 'added_free' ? 'Added to your next clean, free.' : 'Thank you for telling us.'));
+        : (m.claim.reply || (m.claim.status === 'added_free' ? 'Added to your next clean, free.' : m.claim.status === 'priority_noted' ? 'Thank you. It is a priority on your next clean.' : 'Thank you for telling us.'));
       return card('<h2>Something wasn&rsquo;t cleaned?</h2><p class="miss-done">' + esc(msg) + '</p>');
     }
     if (!m.can_claim) return '';
@@ -376,6 +376,7 @@
     }).join('');
     return card(
       '<h2>Something wasn&rsquo;t cleaned?</h2>' +
+      (m.triage ? '<p class="miss-done">This was your first clean, a triage clean: we were learning your home. Tell us what we missed and we will make it a priority next time.</p>' : '') +
       '<div id="missask"><p>Tell us within 48 hours and we will make it right.</p><button class="ghost" id="missopen" type="button">Pick what was missed</button></div>' +
       '<div id="missform" hidden><p>Tick what was missed.</p>' + list +
       '<textarea id="missnote" maxlength="1000" placeholder="Anything to add? (optional)" style="margin-top:14px"></textarea>' +
