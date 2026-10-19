@@ -1055,7 +1055,7 @@
           "<div><b>1</b><span>Kitchen</span></div><div><b>2&frac12;</b><span>Baths</span></div>" +
           "<div><b>2&ndash;4</b><span>Beds</span></div><div><b>All</b><span>Floors</span></div>" +
         "</div>" +
-        "<p class='bw-2h-note'>For well-kept homes. Cluttered? Choose the Checklist Clean.</p></div>";
+        "<div class='bw-2h-pick'><div><span>Cluttered or needs a lot of attention?</span><b>Checklist Clean</b></div><div><span>Lots of buildup?</span><b>4-Hr Home Detailing</b></div></div></div>";
       document.getElementById("bw-root").appendChild(el);
       el.addEventListener("click", function (e) { if (e.target === el || (e.target.closest && e.target.closest(".bw-2h-x"))) el.hidden = true; });
       document.addEventListener("keydown", function (e) { if (e.key === "Escape") el.hidden = true; });
@@ -4292,6 +4292,10 @@
   #bw-root .bw-2h-tiles div { display: grid; justify-items: center; gap: 4px; padding: 12px 4px; border-radius: 14px; background: var(--t-blue-soft); }
   #bw-root .bw-2h-tiles b { font-size: 22px; font-weight: 800; color: var(--t-blue); line-height: 1; letter-spacing: -0.5px; }
   #bw-root .bw-2h-tiles span { font-size: 11.5px; font-weight: 600; color: var(--t-ink-2); }
+  #bw-root .bw-2h-pick { margin-top: 14px; display: grid; gap: 6px; }
+  #bw-root .bw-2h-pick div { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 12.5px; padding: 8px 2px; border-top: 1px solid var(--t-line); }
+  #bw-root .bw-2h-pick span { color: var(--t-muted); }
+  #bw-root .bw-2h-pick b { color: var(--t-ink); font-weight: 700; white-space: nowrap; }
   #bw-root .bw-2h-note { margin: 14px 0 0; font-size: 12.5px; color: var(--t-muted); text-align: center; }
   #bw-root .bw-notes-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -6px 0 10px; }
   #bw-root .bw-notes-photo { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--t-blue); cursor: pointer; }
