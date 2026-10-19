@@ -224,7 +224,7 @@
         <!-- Home Care Plan (Jack, 2026-10-18): one flat price every 4 weeks, the whole home detailed on rotation, extras pre-selected. -->
         <label class="bw-hc-card" id="bw-hc-card">
           <input type="checkbox" id="bw-hc-on">
-          <span class="bw-hc-text"><b>Home Care Plan</b><small>Monthly. Your clean, plus a new area detailed each visit.</small></span>
+          <span class="bw-hc-text"><b>Home Care Plan</b><small>Every 4 weeks. Your clean, plus a new area detailed each visit.</small></span>
           <span class="bw-hc-price"><b id="bw-hc-price"></b><small>a visit</small></span>
         </label>
         <div id="bw-hc-body" class="bw-hc-body" hidden></div>
@@ -255,7 +255,7 @@
     </div>
 
     <div class="bw-mini-field bw-freq-field" id="bw-freq-wrap">
-      <span>How often?</span>
+      <span class="bw-freq-title">Frequency</span>
       <div id="bw-freq-chips" class="bw-freq-chips" role="radiogroup" aria-label="How often"></div>
       <select id="bw-frequency" class="bw-freq-select" aria-hidden="true" tabindex="-1">
         <option value="one_time">One-Time</option>
@@ -959,7 +959,7 @@
   // features on the left; a savings pill, the big price, "per visit", details and the button on the right. Every line is true for the
   // service (no refund or tax claims we do not make).
   var SERVICE_FEATURES = {
-    two_hour: { highlight: "Best value", sub: "2 hours, flat rate", feats: ["Standard checklist", "For well-kept homes"] },
+    two_hour: { highlight: "Best value", sub: "2 hours, flat rate", feats: ["Standard checklist", "For well-kept homes"], info: true },
     works: { highlight: "Every room", sub: "Priced by home size", feats: ["Full checklist, every room", "Add extras"] },
     checklist_clean: { highlight: "Every room, untimed", sub: "Priced by level", feats: ["Our full checklist in every room", "Choose your level and extras", "Free to reschedule"] },
     four_hour: { highlight: "Your list, ranked", sub: "9:00 to 1:30", feats: ["Full clean first", "Then your detailing list"] }
@@ -1006,6 +1006,15 @@
       if (f.sub) opt.querySelector(".bw-opt-sub").textContent = f.sub; else opt.querySelector(".bw-opt-sub").remove();
       var ul = opt.querySelector(".bw-opt-feats");
       f.feats.forEach(function (t) { var li = document.createElement("li"); li.textContent = t; ul.appendChild(li); });
+      // The Two Hour Clean: say when it fits this home (Jack, 2026-10-18: "don't need a whole house clean? get the Two Hour"), and a
+      // "What fits" pop-up with what two hours covers and the usual advisory.
+      if (f.info) {
+        if (twoHourFits()) { var nl = document.createElement("li"); nl.className = "bw-opt-fit"; nl.textContent = "Fits your home"; ul.appendChild(nl); }
+        var wf = document.createElement("button");
+        wf.type = "button"; wf.className = "bw-opt-info"; wf.textContent = "What fits in 2 hours";
+        wf.addEventListener("click", openTwoHourInfo);
+        opt.querySelector(".bw-opt-left").appendChild(wf);
+      }
       if (recurring) opt.querySelector(".bw-opt-pill").textContent = "Save " + wholeDollars(formatPrice(frequencyDiscountCents("every_other_week", key, gateBathroomSelect.value))) + " a visit";
       var price = wholeDollars(tilePrice(key));
       opt.querySelector(".bw-opt-price").textContent = price;
@@ -1028,6 +1037,31 @@
       revealQueue.forEach(function (o) { o.classList.add("is-crossed"); o.querySelector(".bw-opt-recur").hidden = false; });
       recurRevealSeen = true;
     }, recurRevealSeen ? 700 : RECUR_REVEAL_MS);
+  }
+  // What the Two Hour Clean is sized for (_shared/intake.ts): a kitchen, floors, up to 2.5 baths and 2 to 4 bedrooms, kept up.
+  function twoHourFits() {
+    var beds = Number(gateBedroomSelect.value), baths = Number(gateBathroomSelect.value);
+    return baths <= 2.5 && beds <= 4;
+  }
+  function openTwoHourInfo() {
+    var el = document.getElementById("bw-2h-pop");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "bw-2h-pop"; el.className = "bw-2h-pop"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "What fits in 2 hours");
+      el.innerHTML = "<div class='bw-2h-card'><button type='button' class='bw-2h-x' aria-label='Close'>&times;</button>" +
+        "<h4>What fits in 2 hours</h4>" +
+        "<ul class='bw-2h-fit'><li>Kitchen</li><li>Up to 2&frac12; bathrooms</li><li>2 to 4 bedrooms</li><li>Floors throughout</li></ul>" +
+        "<p class='bw-2h-sub'>Two of us for two hours, on our standard checklist. Need every room done? Choose The Checklist Clean.</p>" +
+        "<div class='bw-2h-warn'><b>Before you book</b>" +
+        "<p>Built for well-kept homes. Not for:</p>" +
+        "<ul><li>Highly cluttered spaces</li><li>Rooms with strong odors</li><li>Lots of dishes, laundry, or items on floors and surfaces</li></ul>" +
+        "<p>Sound like your home? The Checklist Clean is the better fit.</p></div></div>";
+      document.getElementById("bw-root").appendChild(el);
+      el.addEventListener("click", function (e) { if (e.target === el || (e.target.closest && e.target.closest(".bw-2h-x"))) el.hidden = true; });
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape") el.hidden = true; });
+    }
+    el.hidden = false;
+    var x = el.querySelector(".bw-2h-x"); if (x && x.focus) x.focus();
   }
   // Before the times for a service a first visit cannot book: the phone number, so the page knows now (Jack, 2026-10-17: recognize the
   // phone number, no blurb). A first-timer goes to The Checklist Clean before picking a time; if the check fails the page carries on
@@ -1902,10 +1936,12 @@
 
   // How often: one tap. Recurring first (most customers pick every other week); each chip shows its price.
   var FREQ_CHIP_ORDER = ["every_other_week", "weekly", "every_4_weeks", "every_6_weeks", "one_time"];
-  var FREQ_SHORT = { one_time: "One-time", weekly: "Weekly", every_other_week: "Every 2 weeks", every_4_weeks: "Monthly", every_6_weeks: "Every 6 weeks" };
+  var FREQ_SHORT = { one_time: "One-time", weekly: "Weekly", every_other_week: "Every 2 weeks", every_4_weeks: "Every 4 weeks", every_6_weeks: "Every 6 weeks" };
   // How often, as a dial (Jack, 2026-10-18: "like turning up the volume on a car"). Turn it (drag, tap a label, or arrow keys) from one-time
   // to weekly; the price sits in the middle and the recurring saving beside it. The hidden <select id="bw-frequency"> still holds the value.
-  var DIAL_STOPS = ["one_time", "every_6_weeks", "every_4_weeks", "every_other_week", "weekly"];
+  // Cheapest first (Jack, 2026-10-18): turn it right to see the price go up, left to see how low it gets.
+  var DIAL_STOPS = ["weekly", "every_other_week", "every_4_weeks", "every_6_weeks", "one_time"];
+  var DIAL_LABEL = { weekly: "Weekly", every_other_week: "2 weeks", every_4_weeks: "4 weeks", every_6_weeks: "6 weeks", one_time: "Once" };
   var DIAL_SWEEP = 135;   // degrees either side of straight up
   function dialAngle(i) { return -DIAL_SWEEP + i * (2 * DIAL_SWEEP / (DIAL_STOPS.length - 1)); }
   function dialPoint(deg, rad) { var a = deg * Math.PI / 180; return [110 + Math.sin(a) * rad, 110 - Math.cos(a) * rad]; }
@@ -1929,10 +1965,10 @@
           DIAL_STOPS.map(function (k, i) {
             var p = dialPoint(dialAngle(i), 98);
             return "<button type='button' class='bw-dial-label' data-freq='" + k + "' tabindex='-1' style='left:" + (p[0] / 220 * 100).toFixed(1) + "%;top:" + (p[1] / 220 * 100).toFixed(1) + "%'>" +
-              FREQ_SHORT[k].replace("Every ", "") + (k === "every_other_week" ? "<i>Popular</i>" : "") + "</button>";
+              DIAL_LABEL[k] + "</button>";
           }).join("") +
         "</div>" +
-        "<div class='bw-dial-side' id='bw-dial-side'></div>" +
+        "<div class='bw-dial-side' id='bw-dial-side' aria-live='polite'></div>" +
       "</div>";
     var dial = box.querySelector("#bw-dial");
     function pick(i) {
@@ -1980,7 +2016,7 @@
     if (!dialBuilt) buildDial(box);
     var i = Math.max(0, DIAL_STOPS.indexOf(selectedFrequency));
     var deg = dialAngle(i);
-    var dot = dialPoint(deg, 40);
+    var dot = dialPoint(deg, 47);
     document.getElementById("bw-dial-fill").setAttribute("d", i === 0 ? "" : dialArc(-DIAL_SWEEP, deg, 70));
     var d = document.getElementById("bw-dial-dot");
     d.setAttribute("cx", dot[0].toFixed(1)); d.setAttribute("cy", dot[1].toFixed(1));
@@ -1994,15 +2030,13 @@
     });
     var price = priceForFrequency(selectedFrequency);
     document.getElementById("bw-dial-price").textContent = price == null ? "—" : formatPrice(price).replace(/\.00$/, "");
-    // Beside the dial: how often, and what the plan saves against one visit.
+    // Under the dial, one line: how often, and what it saves against a one-time visit.
     var once = priceForFrequency("one_time");
     var off = price != null && once != null ? once - price : 0;
-    document.getElementById("bw-dial-side").innerHTML =
-      "<div class='bw-dial-freq'>" + esc(FREQ_SHORT[selectedFrequency] || "") + "</div>" +
-      (off > 0
-        ? "<div class='bw-dial-save'>Save " + formatPrice(off).replace(/\.00$/, "") + "</div><div class='bw-dial-note'>a visit vs one-time " + formatPrice(once).replace(/\.00$/, "") + "</div>"
-        : hcOn ? "<div class='bw-dial-save'>Detailing included</div><div class='bw-dial-note'>Home Care Plan</div>"
-        : selectedFrequency === "one_time" ? "<div class='bw-dial-note'>Turn the dial to save on a plan</div>" : "");
+    document.getElementById("bw-dial-side").innerHTML = esc(FREQ_SHORT[selectedFrequency] || "") +
+      (hcOn ? " · <b>detailing included</b>" : off > 0 ? " · <b>save " + formatPrice(off).replace(/\.00$/, "") + "</b>"
+        : selectedFrequency === "one_time" && once != null && priceForFrequency("weekly") != null && once > priceForFrequency("weekly")
+          ? " · turn left to save " + formatPrice(once - priceForFrequency("weekly")).replace(/\.00$/, "") : "");
   }
   function updatePricing() {
     updateCustomBreakdown();
@@ -4183,7 +4217,9 @@
   #bw-root .bw-freq-field { margin-bottom: 12px; }
   #bw-root .bw-freq-select { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
   #bw-root .bw-freq-chips { display: block; }
-  #bw-root .bw-dial-wrap { display: flex; align-items: center; justify-content: center; gap: 18px; }
+  #bw-root .bw-freq-field { text-align: center; }
+  #bw-root .bw-freq-title { display: block; text-align: center; }
+  #bw-root .bw-dial-wrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   #bw-root .bw-dial { position: relative; width: 220px; height: 220px; margin: 0 12px; flex: none; touch-action: none; cursor: grab; border-radius: 50%; outline: none; }
   #bw-root .bw-dial.is-turning { cursor: grabbing; }
   #bw-root .bw-dial:focus-visible { box-shadow: 0 0 0 3px rgba(31,94,255,.25); }
@@ -4200,7 +4236,8 @@
   #bw-root .bw-dial-label i { display: block; font-style: normal; font-size: 9.5px; font-weight: 700; color: var(--t-green); }
   #bw-root .bw-dial-label.is-on { color: var(--t-blue); }
   #bw-root .bw-dial-label.is-off { opacity: .35; }
-  #bw-root .bw-dial-side { min-width: 110px; display: grid; gap: 4px; }
+  #bw-root .bw-dial-side { font-size: 14px; color: var(--t-ink-2); text-align: center; margin-top: -18px; }
+  #bw-root .bw-dial-side b { color: var(--t-blue); font-weight: 700; }
   #bw-root .bw-dial-freq { font-size: 15px; font-weight: 700; color: var(--t-ink); }
   #bw-root .bw-dial-save { display: inline-block; justify-self: start; font-size: 14px; font-weight: 700; color: var(--t-green); background: var(--t-green-soft); border-radius: 999px; padding: 4px 10px; }
   #bw-root .bw-dial-note { font-size: 12px; color: var(--t-muted); line-height: 1.35; }
@@ -4243,6 +4280,20 @@
   #bw-root .bw-wx-toggle, #bw-root .bw-wx-qty button { border-color: var(--t-blue); color: var(--t-blue); }
   #bw-root .bw-wx-row.is-on .bw-wx-toggle { background: var(--t-blue); color: #fff; }
   #bw-root .bw-works-extras [hidden] { display: none !important; }
+  #bw-root .bw-opt-fit { color: var(--t-blue) !important; font-weight: 600; }
+  #bw-root .bw-opt-info { border: 0; background: none; padding: 6px 0 0; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--t-blue); text-decoration: underline; cursor: pointer; }
+  #bw-root .bw-2h-pop { position: fixed; inset: 0; background: rgba(11,26,51,.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+  #bw-root .bw-2h-pop[hidden] { display: none; }
+  #bw-root .bw-2h-card { position: relative; background: #fff; border-radius: 18px; padding: 20px; max-width: 380px; width: 100%; box-shadow: 0 18px 50px rgba(11,26,51,.25); }
+  #bw-root .bw-2h-card h4 { margin: 0 0 10px; font-size: 17px; color: var(--t-ink); }
+  #bw-root .bw-2h-x { position: absolute; top: 10px; right: 12px; border: 0; background: none; font-size: 22px; color: var(--t-muted); cursor: pointer; }
+  #bw-root .bw-2h-fit { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 0 0 10px; padding: 0; list-style: none; }
+  #bw-root .bw-2h-fit li { background: var(--t-blue-soft); color: var(--t-blue-ink); border-radius: 10px; padding: 8px 10px; font-size: 13px; font-weight: 600; }
+  #bw-root .bw-2h-sub { font-size: 13px; color: var(--t-ink-2); margin: 0 0 12px; line-height: 1.4; }
+  #bw-root .bw-2h-warn { border-top: 1px solid var(--t-line); padding-top: 12px; font-size: 13px; color: var(--t-ink-2); line-height: 1.4; }
+  #bw-root .bw-2h-warn b { display: block; color: var(--t-ink); margin-bottom: 4px; }
+  #bw-root .bw-2h-warn p { margin: 0 0 6px; }
+  #bw-root .bw-2h-warn ul { margin: 0 0 6px; padding-left: 18px; }
   #bw-root .bw-notes-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -6px 0 10px; }
   #bw-root .bw-notes-photo { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--t-blue); cursor: pointer; }
   #bw-root .bw-notes-status { font-size: 12.5px; color: var(--t-muted); }
@@ -4384,7 +4435,7 @@
   #bw-root .bw-info:hover .bw-info-pop, #bw-root .bw-info:focus-within .bw-info-pop, #bw-root .bw-info.is-open .bw-info-pop { display: block; }
   #bw-root .bw-order-total .bw-info-pop { bottom: calc(100% + 8px); }
   @media (max-width: 380px) {
-    #bw-root .bw-dial-wrap { gap: 10px; }
+    #bw-root .bw-dial-wrap { gap: 4px; }
     #bw-root .bw-field-row { grid-template-columns: 1fr 92px; }
   }
 </style>
