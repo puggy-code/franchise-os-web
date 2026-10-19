@@ -2001,6 +2001,7 @@
       "<div class='bw-dial-freq'>" + esc(FREQ_SHORT[selectedFrequency] || "") + "</div>" +
       (off > 0
         ? "<div class='bw-dial-save'>Save " + formatPrice(off).replace(/\.00$/, "") + "</div><div class='bw-dial-note'>a visit vs one-time " + formatPrice(once).replace(/\.00$/, "") + "</div>"
+        : hcOn ? "<div class='bw-dial-save'>Detailing included</div><div class='bw-dial-note'>Home Care Plan</div>"
         : selectedFrequency === "one_time" ? "<div class='bw-dial-note'>Turn the dial to save on a plan</div>" : "");
   }
   function updatePricing() {
