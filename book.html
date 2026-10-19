@@ -4399,6 +4399,41 @@
   #bw-root .bw-2h-card { max-width: 340px; padding: 22px 20px 18px; }
   #bw-root .bw-2h-x { position: absolute; top: 8px; right: 10px; border: 0; background: none; font-size: 22px; line-height: 1; color: var(--t-muted); cursor: pointer; padding: 4px; }
   #bw-root .bw-adv-title { font-size: 20px; font-weight: 800; letter-spacing: -0.4px; color: var(--t-ink); text-align: center; margin: -6px 0 14px; }
+  /* macOS-style booking page (Jack, 2026-10-18): a soft blue fog behind frosted white tiles that lift; blue and white; the system font at
+     regular weights. Pure presentation: no layout logic changes. */
+  #bw-root { --mac-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Work Sans", system-ui, sans-serif;
+    --frost: rgba(255,255,255,.74); --frost-edge: rgba(255,255,255,.9);
+    --lift: 0 1px 2px rgba(11,26,51,.05), 0 10px 26px rgba(31,94,255,.10), inset 0 1px 0 rgba(255,255,255,.95); }
+  #bw-root, #bw-root button, #bw-root input, #bw-root select, #bw-root textarea, #bw-root [class*="bw-"] { font-family: var(--mac-font) !important; }
+  #bw-step-gate, #bw-step-services, #bw-step-calendar, #bw-step-form, #bw-step-done {
+    background: radial-gradient(140% 70% at 50% 0%, #FFFFFF 0%, #F2F6FF 55%, #E9F0FF 100%) !important; }
+  /* frosted tile */
+  #bw-root .bw-opt, #bw-root .bw-wx-scene, #bw-root .bw-hc-card, #bw-root .bw-2h-prio textarea, #bw-root .bw-2h-prio-found,
+  #bw-root .bw-wx-pop, #bw-root .bw-freq-field {
+    background: var(--frost) !important; -webkit-backdrop-filter: saturate(180%) blur(22px); backdrop-filter: saturate(180%) blur(22px);
+    border: 1px solid var(--frost-edge) !important; box-shadow: var(--lift) !important; }
+  /* clean cards: separate lifted tiles instead of a divided list */
+  #bw-root .bw-svcs { background: transparent !important; overflow: visible; }
+  #bw-root #bw-svcs-list { display: grid !important; gap: 12px !important; padding: 6px 14px 10px !important; }
+  #bw-root .bw-opt-recur, #bw-root .bw-opt-recur b, #bw-root .bw-opt-recur-text { color: var(--t-blue) !important; }
+  #bw-root .bw-opt-arrow path { stroke: var(--t-blue) !important; }
+  #bw-root .bw-opt { border-radius: 20px !important; border-bottom: 1px solid var(--frost-edge) !important; padding: 18px 18px 20px !important; }
+  #bw-root .bw-opt-name { font-weight: 600 !important; letter-spacing: -0.2px; }
+  #bw-root .bw-opt-price { font-weight: 600 !important; letter-spacing: -0.5px; }
+  #bw-root .bw-opt-hl { font-weight: 500; }
+  #bw-root .bw-opt-go { border-radius: 12px !important; font-weight: 600 !important; box-shadow: 0 6px 16px rgba(31,94,255,.25) !important; }
+  #bw-root .bw-opt-pill { background: rgba(31,94,255,.08) !important; color: var(--t-blue-ink) !important; font-weight: 600; }
+  /* rooms */
+  #bw-root .bw-wx-scene { border-radius: 20px !important; padding: 6px; }
+  #bw-root .bw-wx-scene svg rect:first-child { fill: #F6F9FF; }
+  #bw-root .bw-wx-views, #bw-root .bw-wx-roomtabs { background: rgba(255,255,255,.6) !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.9), 0 2px 8px rgba(31,94,255,.06); }
+  #bw-root .bw-hc-card { border-radius: 20px !important; }
+  #bw-root .bw-hc-card.is-on { box-shadow: 0 0 0 2px var(--t-blue), 0 10px 26px rgba(31,94,255,.14) !important; }
+  #bw-root .bw-hc-item, #bw-root .bw-wx-chip { background: rgba(31,94,255,.08) !important; font-weight: 500 !important; }
+  /* the dial: unchanged, only set on a lifted frosted tile */
+  #bw-root .bw-freq-field { border-radius: 24px !important; padding: 16px 12px 14px !important; margin: 6px 0 14px; }
+  #bw-root .bw-dial-knob { filter: drop-shadow(0 8px 16px rgba(31,94,255,.14)) drop-shadow(0 1px 2px rgba(11,26,51,.08)); }
+  #bw-root .bw-freq-title { font-weight: 600 !important; }
   /* macOS-style pop-ups (Jack, 2026-10-18): frosted white tiles lifted over a soft blue fog, blue and white only, regular weights. */
   #bw-root .bw-2h-pop { background: radial-gradient(120% 80% at 50% 30%, rgba(214,228,255,.55), rgba(11,26,51,.28)); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   #bw-root .bw-2h-card { background: rgba(255,255,255,.72); -webkit-backdrop-filter: saturate(180%) blur(28px); backdrop-filter: saturate(180%) blur(28px);
