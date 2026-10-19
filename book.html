@@ -198,6 +198,15 @@
       <p id="bw-catalog-quote" class="bw-note" hidden></p>
     </div>
 
+    <!-- Two Hour Clean priorities (Jack, 2026-10-18): what matters most this visit, 240 characters. Read by booking-intake: anything that is
+         an extra (baseboards, inside cabinets, the oven) is not part of the Two Hour Clean, and the page says so and offers the Checklist Clean. -->
+    <div id="bw-2h-prio" class="bw-2h-prio" hidden>
+      <label for="bw-2h-prio-text">Priority areas <span class="bw-optional">optional</span></label>
+      <textarea id="bw-2h-prio-text" rows="2" maxlength="240" placeholder="e.g. Kitchen and main bathroom first"></textarea>
+      <div class="bw-2h-prio-meta"><span id="bw-2h-prio-status" aria-live="polite"></span><span id="bw-2h-prio-count">0/240</span></div>
+      <div id="bw-2h-prio-found" class="bw-2h-prio-found" hidden></div>
+    </div>
+
     <p id="bw-two-hour-warning" class="bw-warning" hidden>
       For well-kept homes. Very cluttered or heavily soiled? Choose The Checklist Clean.
     </p>
@@ -1613,6 +1622,51 @@
     renderTipOptions();
   });
 
+  // ---------- Two Hour Clean priorities ----------
+  var prioTimer = null, prioLast = "", prioExtras = [];
+  document.addEventListener("input", function (e) {
+    if (!e.target || e.target.id !== "bw-2h-prio-text") return;
+    var t = e.target.value;
+    document.getElementById("bw-2h-prio-count").textContent = t.length + "/240";
+    clearTimeout(prioTimer);
+    prioTimer = setTimeout(function () { prioCheck(t.trim()); }, 1400);
+  });
+  function prioCheck(t) {
+    if (t.length < 10 || t === prioLast || !CONFIG.INTAKE_URL) return;
+    prioLast = t;
+    var st = document.getElementById("bw-2h-prio-status");
+    st.textContent = "Checking…";
+    fetch(CONFIG.INTAKE_URL, { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ org_slug: CONFIG.ORG_SLUG, text: t, bedrooms: selectedBedrooms, bathrooms: selectedBathrooms }) })
+      .then(function (res) { return res.json(); })
+      .then(function (d) {
+        st.textContent = "";
+        var plan = d && d.ok && d.plan;
+        if (!plan) return;
+        prioExtras = (plan.extras || []).filter(function (e) { return extraByKey(e.key); });
+        var labels = prioExtras.map(function (e) { return e.label; }).concat((plan.on_request || []).map(function (o) { return o.label; }));
+        var box = document.getElementById("bw-2h-prio-found");
+        if (!labels.length) { box.hidden = true; box.innerHTML = ""; return; }
+        box.innerHTML = "<div><b>Not in the Two Hour Clean:</b> " + esc(labels.join(", ")) + "</div>" +
+          "<button type='button' id='bw-2h-prio-switch'>Get them with the Checklist Clean</button>";
+        box.hidden = false;
+      })
+      .catch(function () { st.textContent = ""; });
+  }
+  document.addEventListener("click", function (e) {
+    if (!e.target || e.target.id !== "bw-2h-prio-switch") return;
+    // Switch to the Checklist Clean and add the extras they asked for (the usual limits apply: three on a first visit, four hours).
+    var b = document.querySelector('.bw-service-toggle [data-service="works"]');
+    if (b) b.click();
+    var note = (document.getElementById("bw-2h-prio-text").value || "").trim();
+    var sr = document.getElementById("bw-special-requests");
+    if (sr && note && sr.value.indexOf(note) < 0) sr.value = (sr.value ? sr.value + "\n" : "") + note;
+    prioExtras.forEach(function (x) { if (!wxPending) setWorksExtra(x.key, 1); });
+    if (wxPending) { wxPending = null; renderWorksExtras(); }
+    var w = document.getElementById("bw-works-extras");
+    if (w && w.scrollIntoView) w.scrollIntoView({ block: "start" });
+  });
+
   // ---------- Home Care Plan ----------
   // Same rules as create-booking (_shared/housePrice.ts homeCarePlan): $275 flat (or the regular every-4-weeks price + $40 for a large home),
   // each visit's extras within four hours and within the plan's extras value, a first visit holds three.
@@ -2102,6 +2156,7 @@
     }
 
     twoHourWarning.hidden = selectedService !== "two_hour";
+    document.getElementById("bw-2h-prio").hidden = selectedService !== "two_hour";
     customFieldsWrap.hidden = selectedService !== "works";
     promoWrap.hidden = selectedService !== "two_hour";
     if (selectedService !== "two_hour") promoNote.hidden = true;
@@ -3182,7 +3237,8 @@
       // Detailing: the ranked list goes first, so the team works it in the customer's order.
       special_requests: (selectedService === "four_hour" && detailPicks.length
         ? ["Detailing, most important first: " + detailPicks.map(function (p, i) { return (i + 1) + ") " + p.label + (p.unit === "each" ? " x" + p.qty : ""); }).join(", ")].map(function (x) { return x.slice(0, 300); })
-        : []).concat(wxRequests()).concat((document.getElementById("bw-special-requests").value || "").split("\n").map(function (x) { return x.trim(); }).filter(Boolean)).slice(0, 10),
+        : []).concat(selectedService === "two_hour" && document.getElementById("bw-2h-prio-text").value.trim()
+          ? ["Priority areas: " + document.getElementById("bw-2h-prio-text").value.trim().slice(0, 240)] : []).concat(wxRequests()).concat((document.getElementById("bw-special-requests").value || "").split("\n").map(function (x) { return x.trim(); }).filter(Boolean)).slice(0, 10),
       service_items: isCatalogService() ? catalogQty : null,
       works_extras: selectedService === "works" ? worksExtrasOrder.map(function (k) { return { key: k, qty: worksExtras[k] }; }) : null,
       // Extras for the next visits: create-booking prices them and they are charged with those visits (migration 0326).
@@ -4308,6 +4364,15 @@
   #bw-root .bw-wx-toggle, #bw-root .bw-wx-qty button { border-color: var(--t-blue); color: var(--t-blue); }
   #bw-root .bw-wx-row.is-on .bw-wx-toggle { background: var(--t-blue); color: #fff; }
   #bw-root .bw-works-extras [hidden] { display: none !important; }
+  #bw-root .bw-2h-prio { margin: 4px 0 14px; display: grid; gap: 6px; }
+  #bw-root .bw-2h-prio[hidden] { display: none; }
+  #bw-root .bw-2h-prio label { font-size: 14px; font-weight: 700; color: var(--t-ink); }
+  #bw-root .bw-2h-prio textarea { border: 1px solid var(--t-line); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14px; resize: none; }
+  #bw-root .bw-2h-prio-meta { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--t-muted); }
+  #bw-root .bw-2h-prio-found { background: var(--t-blue-soft); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--t-ink-2); display: grid; gap: 8px; }
+  #bw-root .bw-2h-prio-found[hidden] { display: none; }
+  #bw-root .bw-2h-prio-found b { color: var(--t-ink); }
+  #bw-root .bw-2h-prio-found button { justify-self: start; border: 0; background: var(--t-blue); color: #fff; font: inherit; font-size: 13px; font-weight: 600; border-radius: 999px; padding: 7px 14px; cursor: pointer; }
   #bw-root .bw-opt-fit { color: var(--t-blue) !important; font-weight: 600; }
   #bw-root .bw-opt-info { border: 0; background: none; padding: 6px 0 0; font: inherit; font-size: 12.5px; font-weight: 600; color: var(--t-blue); text-decoration: underline; cursor: pointer; }
   #bw-root .bw-2h-pop { position: fixed; inset: 0; background: rgba(11,26,51,.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
