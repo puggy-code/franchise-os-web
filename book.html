@@ -416,11 +416,11 @@
            The page no longer asks for marketing consent (0191), so marketing_consent is sent as false: the outbox gate keeps offers from
            going to anyone who has not agreed some other way. -->
       <p class="bw-sms-note">We'll text you about your appointment. Reply STOP anytime.</p>
-      <!-- Marketing consent, optional and never pre-ticked (TCPA: not a condition of booking). Wording version 2 in consent_wording
+      <!-- Marketing consent, optional and never pre-ticked (TCPA: not a condition of booking). Wording version 3 in consent_wording
            (0320); changing it means a new version. Ticking it is what lets offers and rewards texts go to this customer. -->
       <label class="bw-checkbox-row bw-rewards-optin">
         <input type="checkbox" id="bw-marketing-consent">
-        <span><b>Join Two-eys rewards.</b> Earn credit toward window, carpet and air duct cleaning, plus member offers by text. Up to 4 texts a month; msg &amp; data rates may apply. Reply STOP to opt out. Not required to book.</span>
+        <span><b>Join TWONEYs rewards.</b> Earn credit toward window, carpet and air duct cleaning, plus member offers by text. Up to 4 texts a month; msg &amp; data rates may apply. Reply STOP to opt out. Not required to book.</span>
       </label>
 
       <!-- Order summary + tip (Jack, 2026-10-10: smart flat-amount tips, aiming at about $26 for the team). Nothing is pre-selected. -->
@@ -3273,7 +3273,7 @@
       promo_applied: promoAppliesFor(selectedFrequency),
       beds_baths_confirmed: selectedService === "works" ? document.getElementById("bw-accuracy-confirm").checked : null,
       marketing_consent: document.getElementById("bw-marketing-consent").checked === true,
-      marketing_consent_version: 2,
+      marketing_consent_version: 3, // TWONEYs wording (0331)
       batch_code: batchCode(),
       // Name three (0303): first names only, never a friend's number. The server decides the discount.
       referral_names: n3Names().map(function (n) { return { first_name: n }; }),
@@ -4406,7 +4406,7 @@
     --lift: 0 1px 2px rgba(11,26,51,.05), 0 10px 26px rgba(31,94,255,.10), inset 0 1px 0 rgba(255,255,255,.95); }
   #bw-root, #bw-root button, #bw-root input, #bw-root select, #bw-root textarea, #bw-root [class*="bw-"] { font-family: var(--mac-font) !important; }
   #bw-step-gate, #bw-step-services, #bw-step-calendar, #bw-step-form, #bw-step-done {
-    background: radial-gradient(140% 70% at 50% 0%, #FFFFFF 0%, #F2F6FF 55%, #E9F0FF 100%) !important; }
+    background: radial-gradient(140% 70% at 50% 0%, #FFFFFF 0%, #F1F7FF 55%, #E4F0FF 100%) !important; }
   /* frosted tile */
   #bw-root .bw-opt, #bw-root .bw-wx-scene, #bw-root .bw-hc-card, #bw-root .bw-2h-prio textarea, #bw-root .bw-2h-prio-found,
   #bw-root .bw-wx-pop, #bw-root .bw-freq-field {
@@ -4435,7 +4435,7 @@
   #bw-root .bw-dial-knob { filter: drop-shadow(0 8px 16px rgba(31,94,255,.14)) drop-shadow(0 1px 2px rgba(11,26,51,.08)); }
   #bw-root .bw-freq-title { font-weight: 600 !important; }
   /* macOS-style pop-ups (Jack, 2026-10-18): frosted white tiles lifted over a soft blue fog, blue and white only, regular weights. */
-  #bw-root .bw-2h-pop { background: radial-gradient(120% 80% at 50% 30%, rgba(214,228,255,.55), rgba(11,26,51,.28)); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  #bw-root .bw-2h-pop { background: radial-gradient(120% 80% at 50% 30%, rgba(206,230,255,.55), rgba(11,26,51,.28)); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
   #bw-root .bw-2h-card { background: rgba(255,255,255,.72); -webkit-backdrop-filter: saturate(180%) blur(28px); backdrop-filter: saturate(180%) blur(28px);
     border: 1px solid rgba(255,255,255,.65); border-radius: 22px; box-shadow: 0 30px 60px rgba(11,26,51,.18), 0 2px 6px rgba(11,26,51,.06), inset 0 1px 0 rgba(255,255,255,.9);
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "Work Sans", system-ui, sans-serif; }
