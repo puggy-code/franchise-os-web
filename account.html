@@ -105,7 +105,7 @@
       (crewNames.length ? '<button class="tile" data-panel="p-team"><span class="ic">\ud83d\udc4b</span>Meet your team<span class="sub">Who is coming</span></button>' : '') +
       '</div>' +
       '<div class="panel" id="p-plan">' + (rd.plan && rd.plan.length ? rd.plan.map(function (r) { return '<div class="room"><b>' + esc(r.room) + '</b><ul>' + r.items.map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('') + '</ul></div>'; }).join('') : '<p>Your cleaning plan will appear here once your clean is scheduled.</p>') + '</div>' +
-      '<div class="panel" id="p-team"><p>' + (crewNames.length ? 'Your team on this clean: <b>' + esc(crewNames.join(', ')) + '</b>.' : '') + '</p></div>' +
+      '<div class="panel" id="p-team">' + (rd.team && rd.team.length ? rd.team.map(function (m) { return '<div class="room"><b>' + esc(m.first_name) + '</b>' + (m.video_url ? '<video controls playsinline preload="metadata" style="width:100%;border-radius:12px;margin:8px 0" src="' + esc(m.video_url) + '"></video>' : '') + (m.fun_facts && m.fun_facts.length ? '<ul>' + m.fun_facts.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') + '<p class="sub">' + (m.background_checked ? '\u2705 Background checked' : '') + (m.insured ? ' &nbsp; \u2705 Insured' : '') + (m.cleans ? ' &nbsp; ' + m.cleans + ' cleans' : '') + (m.avg_rating ? ' &nbsp; \u2605 ' + m.avg_rating : '') + '</p></div>'; }).join('') : '<p>' + (crewNames.length ? 'Your team on this clean: <b>' + esc(crewNames.join(', ')) + '</b>.' : '') + '</p>') + '</div>' +
       '</div>';
 
     // About your home: its own card, linked from the top, so it is easy to find (2026-10-16). Staff read it before every clean.
