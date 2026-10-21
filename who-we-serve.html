@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Who Two Hour Maids is for</title>
+<!--
+  "Who we serve" graphic (2026-10-21): a bell curve of homes. The middle is us. Pure inline SVG, no scripts, no images, scales to any screen.
+  Plain words (fifth grade level). No numbers or comparisons that need proof.
+-->
+<style>
+  :root { --brand: #0A47A8; --ink: #10151E; --muted: #4B5563; --bg: #F4F5F7; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif; line-height: 1.5; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 24px 16px 56px; }
+  h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -0.5px; }
+  .lead { color: var(--muted); font-size: 17px; margin: 0 0 14px; }
+  .card { background: #fff; border-radius: 20px; padding: 16px; margin: 0 0 14px; }
+  svg { width: 100%; height: auto; display: block; }
+  .opts { display: grid; gap: 12px; } @media (min-width: 560px) { .opts { grid-template-columns: 1fr 1fr; } }
+  h2 { font-size: 19px; margin: 0 0 6px; } ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted); } li { margin: 3px 0; }
+  .cta { display: block; text-align: center; background: var(--brand); color: #fff; text-decoration: none; font-weight: 800; border-radius: 999px; padding: 16px; margin-top: 18px; font-size: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Who we are for</h1>
+  <p class="lead">Homes come in every shape. We are built for the big middle.</p>
+  <div class="card">
+    <svg viewBox="0 0 600 290" role="img" aria-label="A bell curve of homes. Very dirty homes on the left, mansions on the right, and regular homes in the big middle, which is who we serve.">
+      <defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#0A47A8" stop-opacity=".95"/><stop offset="1" stop-color="#0A47A8" stop-opacity=".55"/></linearGradient>
+      <clipPath id="mid"><rect x="150" y="0" width="300" height="250"/></clipPath></defs>
+      <path d="M20 240 C 110 238, 160 225, 205 160 C 245 100, 270 40, 300 40 C 330 40, 355 100, 395 160 C 440 225, 490 238, 580 240 Z" fill="#E5E7EB"/>
+      <path d="M20 240 C 110 238, 160 225, 205 160 C 245 100, 270 40, 300 40 C 330 40, 355 100, 395 160 C 440 225, 490 238, 580 240 Z" fill="url(#g)" clip-path="url(#mid)"/>
+      <line x1="20" y1="240" x2="580" y2="240" stroke="#9CA3AF" stroke-width="2"/>
+      <text x="300" y="32" text-anchor="middle" font-size="28" font-weight="800" fill="#0A47A8">That is us</text>
+      <text x="300" y="188" text-anchor="middle" font-size="22" font-weight="800" fill="#fff">Regular people</text>
+      <text x="300" y="212" text-anchor="middle" font-size="17" fill="#fff">who do not want to spend</text>
+      <text x="300" y="232" text-anchor="middle" font-size="17" fill="#fff">an arm and a leg</text>
+      <text x="82" y="215" text-anchor="middle" font-size="19" font-weight="700" fill="#374151">Very dirty homes</text>
+      <text x="82" y="272" text-anchor="middle" font-size="19" fill="#6B7280">Extreme cleans</text>
+      <text x="518" y="215" text-anchor="middle" font-size="19" font-weight="700" fill="#374151">Mansions</text>
+      <text x="518" y="272" text-anchor="middle" font-size="19" fill="#6B7280">Huge estates</text>
+    </svg>
+  </div>
+  <p class="lead">We have two ways to help you.</p>
+  <div class="opts">
+    <div class="card"><h2>Two Hour Clean</h2><p class="lead" style="font-size:16px;margin:0">Two people, two hours. We choose what matters most.</p>
+      <ul><li>Kitchen</li><li>Bathrooms</li><li>Floors</li></ul></div>
+    <div class="card"><h2>Checklist Clean</h2><p class="lead" style="font-size:16px;margin:0">We stay until the full checklist for your home is done. We tell you how long it should take before you book.</p>
+      <ul><li>Every room on the list</li><li>Gets a little easier each visit</li></ul></div>
+  </div>
+  <a class="cta" href="book.html">See times and book</a>
+</div>
+</body>
+</html>
