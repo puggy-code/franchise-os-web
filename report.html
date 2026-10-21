@@ -661,6 +661,7 @@
     var pm = !!(d.job && d.job.pm_report);
     root.innerHTML = head + summary + requestsCard + extrasCard + card(list) + (pm ? '' : missedBlock(d)) + (pm ? '' : issueBlock(d)) + (pm ? '' : feedbackBlock(d)) + (pm ? '' : ideasBlock(d)) + photos + videos + (pm ? '' : referralBlock(d)) + pdf +
       (d.portal_token ? card('<h2>Your account</h2><p>Your records, photos, invoices and a direct line to us, all in one place that stays yours.</p><a class="btn" href="account.html?t=' + esc(d.portal_token) + '">Open your account</a>') : '') +
+      (!pm && d.org.three_rs_video_url && /^https:\/\//i.test(d.org.three_rs_video_url) ? card('<h2>One minute: referrals, reviews and recurring</h2><p>Three easy ways to get the most from us.</p><a class="btn" href="' + esc(d.org.three_rs_video_url) + '" target="_blank" rel="noopener">Watch the video</a>') : '') +
       '<p class="foot">' + esc(d.org.name) + '</p>';
 
     document.title = d.org.name + ' — your clean report';

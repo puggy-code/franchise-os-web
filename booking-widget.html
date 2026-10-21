@@ -606,6 +606,10 @@
     // send it. Found live 2026-09-29 wiring this up: without it, every request 404s.
     ORG_SLUG: "two-hour-maids",
 
+    // "Watch how it works" (Jack, 2026-10-21): the pre-booking explainer video. Paste a YouTube, Vimeo or Loom link; leave empty to hide the section.
+    // Shown on the first panel and on the service list, in the page's own card style.
+    PRE_BOOKING_VIDEO_URL: "",
+
     // "Name three" referrals (0303). DISPLAY ONLY: create-booking takes the real discount off from the app's settings
     // (Admin > Referrals > Name three). Keep these equal to those settings so the page shows what is charged.
     NAME_THREE: { ENABLED: true, DISCOUNT_CENTS: 500, MIN_NAMES: 2, FRIEND_CREDIT_CENTS: 1000, FRIEND_GIFT_CENTS: 3300 },
@@ -3607,6 +3611,28 @@
   updateServiceView();
   updatePricing();
   applyFirstVisitMode(); // first visit: The Checklist Clean (Basic) is the selected service
+  // ---------- the pre-booking video ----------
+  function videoEmbedUrl(u) {
+    var m;
+    if ((m = u.match(/^https:\/\/(?:www\.)?youtube\.com\/watch\?(?:.*&)?v=([\w-]{6,})/i)) || (m = u.match(/^https:\/\/youtu\.be\/([\w-]{6,})/i)) || (m = u.match(/^https:\/\/(?:www\.)?youtube\.com\/embed\/([\w-]{6,})/i))) return "https://www.youtube-nocookie.com/embed/" + m[1] + "?rel=0";
+    if ((m = u.match(/^https:\/\/(?:www\.)?vimeo\.com\/(\d+)/i))) return "https://player.vimeo.com/video/" + m[1];
+    if ((m = u.match(/^https:\/\/(?:www\.)?loom\.com\/(?:share|embed)\/([\w]+)/i))) return "https://www.loom.com/embed/" + m[1];
+    return null;
+  }
+  function addWatchCard(host) {
+    var url = (CONFIG.PRE_BOOKING_VIDEO_URL || "").trim();
+    if (!host || !/^https:\/\//i.test(url)) return;
+    var card = document.createElement("div");
+    card.className = "bw-watch";
+    var embed = videoEmbedUrl(url);
+    card.innerHTML = "<h4>Watch how it works</h4><p>Two minutes on who we are, what we do and what to expect.</p>" +
+      (embed ? "<div class='bw-watch-frame'><iframe loading='lazy' allow='fullscreen; picture-in-picture' allowfullscreen title='How Two Hour Maids works'></iframe></div>"
+             : "<a class='bw-watch-link' target='_blank' rel='noopener'>Watch the video &rarr;</a>");
+    if (embed) card.querySelector("iframe").src = embed; else card.querySelector("a").href = url;
+    host.appendChild(card);
+  }
+  addWatchCard(document.getElementById("bw-step-gate"));
+  addWatchCard(document.getElementById("bw-step-services"));
   loadMonth(viewYear, viewMonth);
 })();
 </script>
@@ -4260,6 +4286,13 @@
   /* cards */
   #bw-root .bw-card, #bw-root .bw-svcs { background: #fff; border: 1px solid var(--t-line); border-radius: 20px; box-shadow: var(--t-shadow); }
   #bw-root .bw-card { padding: 22px 20px; }
+  /* pre-booking video card */
+  #bw-root .bw-watch { margin-top: 14px; padding: 16px 16px 18px; background: var(--t-soft); border: 1px solid var(--t-line); border-radius: 16px; }
+  #bw-root .bw-watch h4 { margin: 0 0 4px; font-size: 16px; color: var(--t-ink); }
+  #bw-root .bw-watch p { margin: 0 0 10px; font-size: 13.5px; color: var(--t-ink-2); }
+  #bw-root .bw-watch-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 12px; overflow: hidden; background: #0B1A33; }
+  #bw-root .bw-watch-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  #bw-root .bw-watch a.bw-watch-link { display: inline-block; font-weight: 700; color: var(--bw-accent, #0A47A8); }
 
   /* step progress (no empty space for it on the first panel or the services list) */
   #bw-root:has(#bw-step-gate:not([hidden])) .bw-progress, #bw-root:has(#bw-step-services:not([hidden])) .bw-progress, #bw-root:has(#bw-step-outofarea:not([hidden])) .bw-progress { display: none; }
