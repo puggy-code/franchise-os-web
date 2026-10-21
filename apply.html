@@ -43,6 +43,14 @@
     <select id="a"><option value="">Choose one</option><option value="yes">Yes</option><option value="no">No</option></select>
     <label for="l">5. Do you have a driver's license?</label>
     <select id="l"><option value="">Choose one</option><option value="yes">Yes</option><option value="no">No</option></select>
+    <label for="av">Days and hours you can work</label>
+    <input id="av" placeholder="For example: Mon to Fri, 8 AM to 4 PM">
+    <label for="car">Do you have a car you can drive to jobs?</label>
+    <select id="car"><option value="">Choose one</option><option value="yes">Yes</option><option value="no">No</option></select>
+    <label for="lift">Can you lift 25 pounds and be on your feet for hours?</label>
+    <select id="lift"><option value="">Choose one</option><option value="yes">Yes</option><option value="no">No</option></select>
+    <label for="hh">How did you hear about us?</label>
+    <input id="hh" placeholder="A sign, a friend, Indeed, Facebook...">
     <input id="w" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
     <button id="go">Send my application</button>
     <p id="note"></p>
@@ -70,11 +78,11 @@
   document.getElementById('go').onclick = function () {
     var note = document.getElementById('note'), b = this;
     if (v('n').length < 2 || v('p').replace(/\D/g, '').length < 10) { note.className = 'err'; note.textContent = 'Please add your name and a mobile number.'; return; }
-    if (!selfie || !v('j1') || !v('e') || !v('a') || !v('l')) { note.className = 'err'; note.textContent = 'Please answer all five questions (at least one job).'; return; }
+    if (!selfie || !v('j1') || !v('e') || !v('a') || !v('l') || !v('car') || !v('lift')) { note.className = 'err'; note.textContent = 'Please answer all five questions (at least one job).'; return; }
     b.disabled = true; note.className = ''; note.textContent = 'Sending...';
     fetch(SUPABASE_URL + '/functions/v1/public-signup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
       kind: 'applicant', org_slug: ORG_SLUG, name: v('n'), phone: v('p'), email: v('m'), selfie: selfie, jobs: [v('j1'), v('j2'), v('j3')],
-      education: v('e'), authorized: v('a') === 'yes', license: v('l') === 'yes', website: v('w') }) })
+      education: v('e'), authorized: v('a') === 'yes', license: v('l') === 'yes', availability: v('av'), has_car: v('car') === 'yes', can_lift: v('lift') === 'yes', how_heard: v('hh'), website: v('w') }) })
       .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
       .then(function () { document.getElementById('form').innerHTML = '<h1>Thank you!</h1><p class="ok">We have your application. Someone from our team will text you about an interview.</p>'; })
       .catch(function () { b.disabled = false; note.className = 'err'; note.textContent = 'That did not send. Please check your phone number and try again.'; });

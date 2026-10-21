@@ -2001,7 +2001,19 @@
     return t ? { price_test_id: t.id, price_arm: priceArm(t) } : { price_test_id: null, price_arm: null };
   }
 
+  // The small-apartment name code (Jack, 2026-10-21; not advertised): the server says whether the code and the name match a manager's list; the page just shows its price.
+  var nameRate = null; // { price_cents, minutes } or null
+  function checkNameCode() {
+    var code = promoInput ? promoInput.value.trim() : "", nm = (document.getElementById("bw-name") || {}).value || "";
+    if (!code || nm.trim().split(/\s+/).length < 2 || selectedService !== "two_hour" || selectedFrequency === "one_time") { if (nameRate) { nameRate = null; updatePricing(); } return; }
+    fetch(CONFIG.CREATE_BOOKING_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "check_code", org_slug: CONFIG.ORG_SLUG, name: nm.trim(), promo_code: code, frequency: selectedFrequency }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { nameRate = j && j.applies ? { price_cents: j.price_cents, minutes: j.minutes } : null; updatePricing(); })
+      .catch(function () { /* the server prices it at booking either way */ });
+  }
+  function nameRateOn() { return !!nameRate && selectedService === "two_hour" && selectedFrequency !== "one_time"; }
   function priceForFrequency(freq) {
+    if (nameRateOn() && freq !== "one_time") return extraHalfOn() ? Math.max(0, rawPriceForFrequency(freq) - EXTRA_HALF_CENTS) : nameRate.price_cents;
     if (promoAppliesFor(freq)) return CONFIG.PROMO_CODES[currentPromoCode()].priceCents + (extraHalfOn() ? EXTRA_HALF_CENTS : 0);
     var raw = rawPriceForFrequency(freq);
     var t = priceTest();
@@ -2012,7 +2024,8 @@
   function currentDurationMinutes() {
     if (isCatalogService()) return catalogQuote().minutes;
     if (selectedService === "works") return worksMinutes(null, 0);
-    return CONFIG.SERVICES[selectedService].durationMinutes + (extraHalfOn() ? 30 : 0);
+    if (nameRateOn() && !extraHalfOn()) return nameRate.minutes;
+    return CONFIG.SERVICES[selectedService].durationMinutes + (extraHalfOn() && !nameRateOn() ? 30 : 0);
   }
 
   function describeCustomClean() {
@@ -2904,6 +2917,9 @@
   });
 
   promoInput.addEventListener("input", updatePricing);
+  promoInput.addEventListener("change", checkNameCode);
+  document.getElementById("bw-name").addEventListener("blur", checkNameCode);
+  freqSelect.addEventListener("change", checkNameCode);
   // 150 minutes fits the same booking time as 120, so the held time stays; only the price and length change.
   document.getElementById("bw-2h-half").addEventListener("change", function () {
     extraHalf = this.checked;
