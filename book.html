@@ -381,6 +381,7 @@
       <label class="bw-field">
         <span>Anything we should know? <em class="bw-opt-label">Optional</em></span>
         <textarea id="bw-special-requests" rows="3" maxlength="1500" placeholder="e.g. Focus on the bathrooms"></textarea>
+        <label class="bw-yard-sign"><input type="checkbox" id="bw-yard-sign"> It is OK to place a small 2 Hour Maids sign in my yard after the clean</label>
       </label>
       <!-- 2026-10-18: what they type, or a photo, is matched to our extras ("that's an extra, add it?") and to what we don't do. -->
       <div class="bw-notes-tools">
@@ -433,6 +434,10 @@
         <div id="bw-paytime" class="bw-tip-options" hidden></div>
       </div>
 
+      <!-- Last-step add-on (Jack, 2026-10-21): +30 minutes for $40 on the Two Hour Clean (150 minutes still fits one booking time). -->
+      <div class="bw-field" id="bw-half-wrap" hidden>
+        <label class="bw-2h-half"><input type="checkbox" id="bw-2h-half"> Add a half hour for $40 (2.5 hours total)</label>
+      </div>
       <div class="bw-field" id="bw-tip-wrap">
         <span>Add a tip for your team (optional)</span>
         <div class="bw-tip-options" id="bw-tip-options"></div>
@@ -726,7 +731,8 @@
     // convenience, but "first-time" can't be verified in the browser —
     // CREATE_BOOKING_URL must re-check that server-side. See zapier-make-setup.md.
     PROMO_CODES: {
-      SPONGE: { serviceKey: "two_hour", frequencyKey: "one_time", priceCents: 18900 }
+      SPONGE: { serviceKey: "two_hour", frequencyKey: "one_time", priceCents: 18900 },
+      SENIOR: { serviceKey: "two_hour", frequencyKey: "one_time", priceCents: 18900 } // 60 and over; the team confirms age at the door
     },
 
     // How many months forward a visitor may book.
@@ -839,8 +845,8 @@
   function pad(n) { return n < 10 ? "0" + n : "" + n; }
   function dateStr(y, m, d) { return y + "-" + pad(m + 1) + "-" + pad(d); }
   function monthKey(y, m) { return y + "-" + pad(m + 1); }
-  // Long jobs (past 2 h 25 min) need two back-to-back times, so their open times differ from a short job's: cache them apart.
-  function availKey(ym) { return ym + (currentDurationMinutes() > 145 ? "|L" : "|S"); }
+  // Long jobs (past 2 h 30 min) need two back-to-back times, so their open times differ from a short job's: cache them apart.
+  function availKey(ym) { return ym + (currentDurationMinutes() > 150 ? "|L" : "|S"); }
   function monthName(m) {
     return ["January","February","March","April","May","June","July",
             "August","September","October","November","December"][m];
@@ -1065,6 +1071,7 @@
         "<div class='bw-2h-head'>Before you book</div>" +
         "<div class='bw-adv-title'>Our Two Hour Clean is for</div>" +
         "<div class='bw-adv-row is-yes'><i aria-hidden='true'>&#10003;</i><b>Well-kept homes</b></div>" +
+        "<div class='bw-adv-row is-yes'><i aria-hidden='true'>&#10003;</i><b>Soft ending: the team may need to leave at two hours for the next home. We will send photos or a short video of anything left, and you can choose to add time.</b></div>" +
         "<div class='bw-adv-not'>Not for</div>" +
         "<div class='bw-adv-row is-no'><i aria-hidden='true'>&times;</i><b>Heavy clutter</b></div>" +
         "<div class='bw-adv-row is-no'><i aria-hidden='true'>&times;</i><b>Strong odors</b></div>" +
@@ -1883,9 +1890,11 @@
            (bathroom ? bathroom.addOnCents : 0);
   }
 
+  var EXTRA_HALF_CENTS = 4000, extraHalf = false; // the server prices it again (create-booking extra_half_hours)
+  function extraHalfOn() { return selectedService === "two_hour" && extraHalf; }
   function subtotalCents() {
     if (isCatalogService()) return catalogQuote().total;
-    if (selectedService === "two_hour") return CONFIG.BASE_PRICE_CENTS;
+    if (selectedService === "two_hour") return CONFIG.BASE_PRICE_CENTS + (extraHalfOn() ? EXTRA_HALF_CENTS : 0);
     if (selectedService === "works" && hcOn) return hcPriceCents();
     if (selectedService === "works") return CONFIG.BASE_PRICE_CENTS + customCleanAddOnsCents() + worksExtrasCents();
     if (selectedService === "four_hour") return CONFIG.SERVICES.four_hour.oneTimeCents;
@@ -1989,7 +1998,7 @@
   }
 
   function priceForFrequency(freq) {
-    if (promoAppliesFor(freq)) return CONFIG.PROMO_CODES[currentPromoCode()].priceCents;
+    if (promoAppliesFor(freq)) return CONFIG.PROMO_CODES[currentPromoCode()].priceCents + (extraHalfOn() ? EXTRA_HALF_CENTS : 0);
     var raw = rawPriceForFrequency(freq);
     var t = priceTest();
     if (t && priceArm(t) === 'B' && raw > 0) return Math.round(raw * (1 + Number(t.uplift_pct) / 100) / 100) * 100;
@@ -1999,7 +2008,7 @@
   function currentDurationMinutes() {
     if (isCatalogService()) return catalogQuote().minutes;
     if (selectedService === "works") return worksMinutes(null, 0);
-    return CONFIG.SERVICES[selectedService].durationMinutes;
+    return CONFIG.SERVICES[selectedService].durationMinutes + (extraHalfOn() ? 30 : 0);
   }
 
   function describeCustomClean() {
@@ -2171,6 +2180,8 @@
 
     twoHourWarning.hidden = true; // said by the Before you book advisory on the Two Hour card
     document.getElementById("bw-2h-prio").hidden = selectedService !== "two_hour";
+    document.getElementById("bw-half-wrap").hidden = selectedService !== "two_hour";
+    if (selectedService !== "two_hour" && extraHalf) { extraHalf = false; document.getElementById("bw-2h-half").checked = false; }
     customFieldsWrap.hidden = selectedService !== "works";
     promoWrap.hidden = selectedService !== "two_hour";
     if (selectedService !== "two_hour") promoNote.hidden = true;
@@ -2889,6 +2900,12 @@
   });
 
   promoInput.addEventListener("input", updatePricing);
+  // 150 minutes fits the same booking time as 120, so the held time stays; only the price and length change.
+  document.getElementById("bw-2h-half").addEventListener("change", function () {
+    extraHalf = this.checked;
+    updatePricing();
+    updateTipUi();
+  });
 
   // ---------- fetch availability for the visible month ----------
   function loadMonth(y, m) {
@@ -3253,7 +3270,7 @@
       special_requests: (selectedService === "four_hour" && detailPicks.length
         ? ["Detailing, most important first: " + detailPicks.map(function (p, i) { return (i + 1) + ") " + p.label + (p.unit === "each" ? " x" + p.qty : ""); }).join(", ")].map(function (x) { return x.slice(0, 300); })
         : []).concat(selectedService === "two_hour" && document.getElementById("bw-2h-prio-text").value.trim()
-          ? ["Priority areas: " + document.getElementById("bw-2h-prio-text").value.trim().slice(0, 240)] : []).concat(wxRequests()).concat((document.getElementById("bw-special-requests").value || "").split("\n").map(function (x) { return x.trim(); }).filter(Boolean)).slice(0, 10),
+          ? ["Priority areas: " + document.getElementById("bw-2h-prio-text").value.trim().slice(0, 240)] : []).concat(wxRequests()).concat(document.getElementById("bw-yard-sign").checked ? ["Yard sign OK: customer said a small sign may be placed at the end of the clean."] : []).concat((document.getElementById("bw-special-requests").value || "").split("\n").map(function (x) { return x.trim(); }).filter(Boolean)).slice(0, 10),
       service_items: isCatalogService() ? catalogQty : null,
       works_extras: selectedService === "works" ? worksExtrasOrder.map(function (k) { return { key: k, qty: worksExtras[k] }; }) : null,
       // Extras for the next visits: create-booking prices them and they are charged with those visits (migration 0326).
@@ -3262,6 +3279,7 @@
       home_care: selectedService === "works" && hcOn,
       home_care_visits: selectedService === "works" && hcOn ? hcRotation() : null,
       duration_minutes: currentDurationMinutes(),
+      extra_half_hours: extraHalfOn() ? 1 : 0,
       bedrooms: selectedService === "works" || selectedService === "four_hour" ? selectedBedrooms : null,
       bathrooms: selectedService === "works" || selectedService === "four_hour" ? selectedBathrooms : null,
       frequency: selectedFrequency,
