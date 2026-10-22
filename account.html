@@ -85,7 +85,7 @@
       (j.crew && j.crew.length ? ' · ' + esc(j.crew.join(', ')) : '') + '</div>' +
       (j.progress && j.status === 'in_progress' ? '<div class="bar"><i style="width:' + Math.round(100 * j.progress.done / j.progress.total) + '%"></i></div>' : '') +
       (link ? '<div class="sub">' + link + '</div>' : '') + tip +
-      (live && j.can_move ? '<div class="sub"><a href="#" data-move="' + esc(j.id) + '">Change date</a></div><div id="mv-' + esc(j.id) + '"></div>' : '') +
+      (live && j.can_move ? '<div class="sub"><a href="#" data-move="' + esc(j.id) + '">Change date</a> · <a href="#" data-cancel="' + esc(j.id) + '">Skip or cancel</a></div><div id="mv-' + esc(j.id) + '"></div>' : '') +
       '</div><span class="tag ' + st[1] + '">' + esc(st[0]) + '</span></div>';
   }
 
@@ -188,6 +188,19 @@
               .then(function (r2) { if (!r2.ok) { box.innerHTML = '<div class="sub err">' + (r2.j.error === 'slot_taken' ? 'That time was just taken. Please pick another.' : 'That did not save. Please try again.') + '</div>'; return; } box.innerHTML = '<div class="sub ok">Moved to ' + esc(day(r2.j.date)) + ' at ' + esc(r2.j.label) + '. See you then!</div>'; setTimeout(load, 1500); });
           };
         }).catch(function () { box.innerHTML = '<div class="sub err">That did not load. Please try again.</div>'; });
+    };
+    var cnl = document.querySelectorAll('[data-cancel]');
+    for (var ci = 0; ci < cnl.length; ci++) cnl[ci].onclick = function (ev) {
+      ev.preventDefault();
+      var id = this.getAttribute('data-cancel'), box = document.getElementById('mv-' + id);
+      box.innerHTML = '<div class="sub">Cancel this one visit? No fee, because it is more than 48 hours away. <button class="btn alt" id="cy-' + esc(id) + '">Yes, cancel it</button></div>';
+      document.getElementById('cy-' + id).onclick = function () {
+        this.disabled = true;
+        fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'cancel', job_id: id }) })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (res) { if (!res.ok) { box.innerHTML = '<div class="sub err">' + (res.j.error === 'too_close' ? 'This clean is less than 48 hours away. Please message us below.' : 'That did not save. Please message us below.') + '</div>'; return; } box.innerHTML = '<div class="sub">Done. ' + (res.j.refunded ? 'Your payment is being refunded in full. ' : '') + 'You can book again any time.</div>'; load(); })
+          .catch(function () { box.innerHTML = '<div class="sub err">That did not save. Please try again.</div>'; });
+      };
     };
     var tsb = document.getElementById('tsend');
     if (tsb) tsb.onclick = function () {
