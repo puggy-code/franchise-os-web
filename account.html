@@ -143,11 +143,33 @@
     h += '<div class="card" id="request"><h2>Request future work</h2><p>Want us back, a different date, or something added? Tell us and we will reply here.</p>' +
       '<select id="rtype">' + Object.keys(REQ).map(function (k) { return '<option value="' + k + '">' + esc(REQ[k]) + '</option>'; }).join('') + '</select>' +
       '<textarea id="rtext" placeholder="What would you like? Dates that work are helpful."></textarea><button id="rsend">Send request</button> <span id="rnote"></span></div>';
+    h += '<div class="card" id="occasions"><h2>About you and your home</h2><p>Optional. Tell us what makes your home yours: pets, kids, a birthday, when you moved in. Your team can greet everyone by name.</p>' +
+      '<label>Birthday (month and day)</label><div><select id="obm"><option value="">Month</option>' + ['January','February','March','April','May','June','July','August','September','October','November','December'].map(function (m, i) { return '<option value="' + (i + 1) + '">' + m + '</option>'; }).join('') + '</select> <select id="obd"><option value="">Day</option>' + Array.apply(null, Array(31)).map(function (_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + '</option>'; }).join('') + '</select></div>' +
+      '<label>When did you move in?</label><input type="date" id="omv">' +
+      '<label>Pets, kids and anything the team should know</label><textarea id="ohh" maxlength="300" placeholder="Biscuit the beagle, Maya (6) and Leo (3)"></textarea><button id="osave">Save</button> <span id="onote"></span></div>';
     h += '<div class="card" id="texts"><h2>Texts from us</h2><p>' + (d.customer.texts_on ? 'You get texts about your cleans and occasional offers. Up to 4 a month.' : 'Want texts about your cleans and occasional offers? Up to 4 a month; message and data rates may apply. Reply STOP any time to opt out.') + '</p><button id="tsend">' + (d.customer.texts_on ? 'Turn texts off' : 'Yes, text me') + '</button> <span id="tnote"></span></div>';
     if (new URLSearchParams(location.search).get('tip') === 'thanks') h = '<div class="card"><p class="ok">Thank you! Your tip goes to your team.</p></div>' + h;
     h = h.replace('<div class="card" id="billing">', '<div class="card" id="upload"><h2>Send us a file</h2><p>A floor plan, a lease, a photo of a spot that needs care. PDF or photo, up to 8 MB. It is kept with your documents.</p><input type="file" id="ufile" accept="application/pdf,image/jpeg,image/png,image/heic,image/webp"> <button id="usend">Send</button> <span id="unote"></span></div><div class="card" id="billing">');
     root.innerHTML = h;
     if (window.loadDocs) window.loadDocs();
+    (function () {
+      function oPost(body) { body.t = token; return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); }
+      oPost({ action: 'occasions_get' }).then(function (r) { return r.json(); }).then(function (j) {
+        var o = j && j.occasions; if (!o) return;
+        if (o.birthday_month) document.getElementById('obm').value = String(o.birthday_month);
+        if (o.birthday_day) document.getElementById('obd').value = String(o.birthday_day);
+        if (o.move_in_date) document.getElementById('omv').value = o.move_in_date;
+        if (o.household) document.getElementById('ohh').value = o.household;
+      }).catch(function () {});
+      var sv = document.getElementById('osave');
+      if (sv) sv.onclick = function () {
+        sv.disabled = true;
+        oPost({ action: 'occasions_save', birthday_month: document.getElementById('obm').value, birthday_day: document.getElementById('obd').value, move_in_date: document.getElementById('omv').value, household: document.getElementById('ohh').value })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (res) { var n = document.getElementById('onote'); sv.disabled = false; n.className = res.ok ? 'ok' : 'err'; n.textContent = res.ok ? 'Saved. Thank you!' : (res.j && res.j.error === 'bad_birthday' ? 'Please pick both a month and a day.' : 'That did not save. Please try again.'); })
+          .catch(function () { sv.disabled = false; var n = document.getElementById('onote'); n.className = 'err'; n.textContent = 'That did not save. Please try again.'; });
+      };
+    })();
 
     function send(action, body, type, btn, note, box) {
       if (!body.trim()) return;
