@@ -143,6 +143,11 @@
     h += '<div class="card" id="request"><h2>Request future work</h2><p>Want us back, a different date, or something added? Tell us and we will reply here.</p>' +
       '<select id="rtype">' + Object.keys(REQ).map(function (k) { return '<option value="' + k + '">' + esc(REQ[k]) + '</option>'; }).join('') + '</select>' +
       '<textarea id="rtext" placeholder="What would you like? Dates that work are helpful."></textarea><button id="rsend">Send request</button> <span id="rnote"></span></div>';
+    h += '<div class="card" id="punch"><h2>Your punch list</h2><p>Photograph anything you would like your team to look at: a spot on the stove, the baseboards, a window track. They will do it on the next visit and show you an after photo. <span id="pbn"></span></p><div id="plist"></div>' +
+      '<label>Which room?</label><select id="proom"><option value="">Choose</option><option>Kitchen</option><option>Bathroom</option><option>Bedroom</option><option>Living room</option><option>Entry</option><option>Laundry</option><option>Other</option></select>' +
+      '<label>What should they do?</label><textarea id="pnote" maxlength="300" placeholder="The stove top has burned-on spots"></textarea>' +
+      '<label>Photo</label><input type="file" id="pfile" accept="image/*" capture="environment"><div id="pbwrap" style="display:none"><label>Bounty for the team (optional)</label><select id="pbounty"><option value="0">No bounty</option><option value="100">$1</option><option value="200">$2</option><option value="300">$3</option></select></div>' +
+      '<button id="padd">Add to my punch list</button> <span id="pnote2"></span></div>';
     h += '<div class="card" id="explore"><h2>Explore your home</h2><p>Tap the parts of your home and see what two cleaners can do in the time you have, and which level fits best.</p><a class="btn alt" href="explore.html">Open the home explorer</a></div>';
     h += '<div class="card" id="occasions"><h2>About you and your home</h2><p>Optional. Tell us what makes your home yours: pets, kids, a birthday, when you moved in. Your team can greet everyone by name.</p>' +
       '<label>Birthday (month and day)</label><div><select id="obm"><option value="">Month</option>' + ['January','February','March','April','May','June','July','August','September','October','November','December'].map(function (m, i) { return '<option value="' + (i + 1) + '">' + m + '</option>'; }).join('') + '</select> <select id="obd"><option value="">Day</option>' + Array.apply(null, Array(31)).map(function (_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + '</option>'; }).join('') + '</select></div>' +
@@ -153,6 +158,265 @@
     h = h.replace('<div class="card" id="billing">', '<div class="card" id="upload"><h2>Send us a file</h2><p>A floor plan, a lease, a photo of a spot that needs care. PDF or photo, up to 8 MB. It is kept with your documents.</p><input type="file" id="ufile" accept="application/pdf,image/jpeg,image/png,image/heic,image/webp"> <button id="usend">Send</button> <span id="unote"></span></div><div class="card" id="billing">');
     root.innerHTML = h;
     if (window.loadDocs) window.loadDocs();
+    (function () {
+      function pPost(body) { body.t = token; return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }); }
+      var STAT = { open: 'Waiting for the next visit', assigned: 'On your next visit', done: 'Done: please check the photo', confirmed: 'Confirmed, thank you', declined: 'Could not be done' };
+      function loadPunch() {
+        pPost({ action: 'punch_list' }).then(function (res) {
+          if (!res.ok) return;
+          var list = document.getElementById('plist'); if (!list) return;
+          document.getElementById('pbwrap').style.display = res.j.bounties_on ? 'block' : 'none';
+          document.getElementById('pbn').textContent = res.j.bounties_on ? 'You can add a small bounty ($1 to $3) the team earns when it is done and you confirm.' : '';
+          list.innerHTML = res.j.items.length ? res.j.items.map(function (it) {
+            return '<div class="row"><div><b>' + esc(it.room || 'Item') + '</b> ' + (it.bounty_cents ? '<span class="sub">bounty 
+    (function () {
+      function oPost(body) { body.t = token; return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); }
+      oPost({ action: 'occasions_get' }).then(function (r) { return r.json(); }).then(function (j) {
+        var o = j && j.occasions; if (!o) return;
+        if (o.birthday_month) document.getElementById('obm').value = String(o.birthday_month);
+        if (o.birthday_day) document.getElementById('obd').value = String(o.birthday_day);
+        if (o.move_in_date) document.getElementById('omv').value = o.move_in_date;
+        if (o.household) document.getElementById('ohh').value = o.household;
+      }).catch(function () {});
+      var sv = document.getElementById('osave');
+      if (sv) sv.onclick = function () {
+        sv.disabled = true;
+        oPost({ action: 'occasions_save', birthday_month: document.getElementById('obm').value, birthday_day: document.getElementById('obd').value, move_in_date: document.getElementById('omv').value, household: document.getElementById('ohh').value })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (res) { var n = document.getElementById('onote'); sv.disabled = false; n.className = res.ok ? 'ok' : 'err'; n.textContent = res.ok ? 'Saved. Thank you!' : (res.j && res.j.error === 'bad_birthday' ? 'Please pick both a month and a day.' : 'That did not save. Please try again.'); })
+          .catch(function () { sv.disabled = false; var n = document.getElementById('onote'); n.className = 'err'; n.textContent = 'That did not save. Please try again.'; });
+      };
+    })();
+
+    function send(action, body, type, btn, note, box) {
+      if (!body.trim()) return;
+      btn.disabled = true; note.className = ''; note.textContent = '';
+      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: action, body: body, request_type: type }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          btn.disabled = false;
+          if (!res.ok) { note.className = 'err'; note.textContent = res.j.error === 'slow_down' ? 'Please wait a little before sending more.' : 'That did not send. Please try again.'; return; }
+          box.value = ''; note.className = 'ok'; note.textContent = 'Sent. We will reply here.'; setTimeout(load, 600);
+        }).catch(function () { btn.disabled = false; note.className = 'err'; note.textContent = 'That did not send. Please try again.'; });
+    }
+    var tiles = document.querySelectorAll('[data-panel]');
+    for (var pi = 0; pi < tiles.length; pi++) tiles[pi].onclick = function () {
+      var id = this.getAttribute('data-panel'), open = document.getElementById(id).className.indexOf('on') >= 0;
+      var all = document.querySelectorAll('.panel'); for (var a = 0; a < all.length; a++) all[a].className = 'panel';
+      var ts = document.querySelectorAll('.tile'); for (var b = 0; b < ts.length; b++) ts[b].className = 'tile';
+      if (!open) { document.getElementById(id).className = 'panel on'; this.className = 'tile on'; }
+    };
+    if (location.hash === '#ready') { var firstTile = document.querySelector('[data-panel]'); if (firstTile) firstTile.click(); }
+    // Change date (self-reschedule): options from the server, one tap to move. Inside 48 hours the page says to contact us.
+    var mvl = document.querySelectorAll('[data-move]');
+    for (var mi = 0; mi < mvl.length; mi++) mvl[mi].onclick = function (ev) {
+      ev.preventDefault();
+      var id = this.getAttribute('data-move'), box = document.getElementById('mv-' + id);
+      box.innerHTML = '<div class="sub">Finding open times…</div>';
+      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'reschedule_options', job_id: id }) })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          if (!res.ok) { box.innerHTML = '<div class="sub err">' + (res.j.error === 'too_close' ? 'This clean is less than 48 hours away. Please message us below to change it.' : 'That clean cannot be moved online. Please message us below.') + '</div>'; return; }
+          if (!res.j.options.length) { box.innerHTML = '<div class="sub">No open times in the next three weeks. Please message us below.</div>'; return; }
+          box.innerHTML = '<div class="sub">Pick a new time (only this visit moves):</div>' + res.j.options.map(function (o) { return '<button class="btn alt" data-pick="' + o.date + '|' + o.slot + '">' + esc(day(o.date)) + ' · ' + esc(o.label) + '</button>'; }).join(' ');
+          var picks = box.querySelectorAll('[data-pick]');
+          for (var pi2 = 0; pi2 < picks.length; pi2++) picks[pi2].onclick = function () {
+            var p = this.getAttribute('data-pick').split('|'); this.disabled = true;
+            fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'reschedule', job_id: id, date: p[0], slot: p[1] }) })
+              .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+              .then(function (r2) { if (!r2.ok) { box.innerHTML = '<div class="sub err">' + (r2.j.error === 'slot_taken' ? 'That time was just taken. Please pick another.' : 'That did not save. Please try again.') + '</div>'; return; } box.innerHTML = '<div class="sub ok">Moved to ' + esc(day(r2.j.date)) + ' at ' + esc(r2.j.label) + '. See you then!</div>'; setTimeout(load, 1500); });
+          };
+        }).catch(function () { box.innerHTML = '<div class="sub err">That did not load. Please try again.</div>'; });
+    };
+    var cnl = document.querySelectorAll('[data-cancel]');
+    for (var ci = 0; ci < cnl.length; ci++) cnl[ci].onclick = function (ev) {
+      ev.preventDefault();
+      var id = this.getAttribute('data-cancel'), box = document.getElementById('mv-' + id);
+      box.innerHTML = '<div class="sub">Cancel this one visit? No fee, because it is more than 48 hours away. <button class="btn alt" id="cy-' + esc(id) + '">Yes, cancel it</button></div>';
+      document.getElementById('cy-' + id).onclick = function () {
+        this.disabled = true;
+        fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'cancel', job_id: id }) })
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (res) { if (!res.ok) { box.innerHTML = '<div class="sub err">' + (res.j.error === 'too_close' ? 'This clean is less than 48 hours away. Please message us below.' : 'That did not save. Please message us below.') + '</div>'; return; } box.innerHTML = '<div class="sub">Done. ' + (res.j.refunded ? 'Your payment is being refunded in full. ' : '') + 'You can book again any time.</div>'; load(); })
+          .catch(function () { box.innerHTML = '<div class="sub err">That did not save. Please try again.</div>'; });
+      };
+    };
+    var tsb = document.getElementById('tsend');
+    if (tsb) tsb.onclick = function () {
+      tsb.disabled = true;
+      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'texts', on: !d.customer.texts_on }) })
+        .then(function (r) { if (!r.ok) throw 0; return load(); })
+        .catch(function () { tsb.disabled = false; var n = document.getElementById('tnote'); n.className = 'err'; n.textContent = 'That did not save. Please try again.'; });
+    };
+    var nb = document.getElementById('nsend');
+    if (nb) nb.onclick = function () {
+      var box = document.getElementById('ntext'), note = document.getElementById('nnote');
+      if (!box.value.trim()) return;
+      nb.disabled = true; note.className = ''; note.textContent = '';
+      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'house_note', body: box.value }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) {
+          nb.disabled = false;
+          if (!res.ok) { note.className = 'err'; note.textContent = res.j.error === 'slow_down' ? 'Please wait a little before adding more.' : 'That did not save. Please try again.'; return; }
+          box.value = ''; note.className = 'ok'; note.textContent = 'Added. Thank you!'; setTimeout(function () { load().then(function () { var h0 = document.getElementById('home'); if (h0) h0.scrollIntoView(); }); }, 700);
+        }).catch(function () { nb.disabled = false; note.className = 'err'; note.textContent = 'That did not save. Please try again.'; });
+    };
+    var tb = document.querySelectorAll('[data-tip]');
+    for (var ti = 0; ti < tb.length; ti++) tb[ti].onclick = function () {
+      var b = this; b.disabled = true;
+      var amt = +b.getAttribute('data-tip');
+      var base = { t: token, action: 'tip', report_token: b.getAttribute('data-rt'), amount_cents: amt, return_url: location.origin + location.pathname + '?t=' + token };
+      var post = function (extra) { return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({}, base, extra)) }).then(function (r) { return r.json(); }); };
+      var checkout = function () { return post({}).then(function (j) { if (j && j.url) location.href = j.url; else { b.disabled = false; } }); };
+      // Saved card first (asked once), then Stripe's own page if the bank wants a check.
+      if (SAVED && confirm('Tip ' + money(amt) + ' on your card ending ' + SAVED.last4 + '?')) {
+        post({ saved: true }).then(function (j) {
+          if (j && j.charged) location.href = base.return_url + '&tip=thanks';
+          else if (j && j.fallback) checkout();
+          else { b.disabled = false; alert('That tip did not go through. Nothing was charged.'); }
+        }).catch(function () { b.disabled = false; });
+      } else if (SAVED) { b.disabled = false; }
+      else checkout().catch(function () { b.disabled = false; });
+    };
+    var cob = document.querySelectorAll('[data-co]');
+    for (var ci = 0; ci < cob.length; ci++) cob[ci].onclick = function () {
+      var b = this; b.disabled = true;
+      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'change_order', change_order_id: b.getAttribute('data-co'), decision: b.getAttribute('data-d') }) })
+        .then(function () { load(); }).catch(function () { b.disabled = false; });
+    };
+    document.getElementById('msend').onclick = function () { send('message', document.getElementById('mtext').value, null, this, document.getElementById('mnote'), document.getElementById('mtext')); };
+    document.getElementById('rsend').onclick = function () { send('request', document.getElementById('rtext').value, document.getElementById('rtype').value, this, document.getElementById('rnote'), document.getElementById('rtext')); };
+    document.title = d.org.name + ' · your account';
+  }
+
+  function load() {
+    return fetch(FN + '/customer-portal?t=' + encodeURIComponent(token))
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(render)
+      .catch(function () { root.innerHTML = '<div class="card"><p class="err">This link is not valid or has been replaced. Please contact us for a new one.</p></div>'; });
+  }
+  if (!/^[0-9a-f]{32}$/.test(token)) root.innerHTML = '<div class="card"><p class="err">This link is not valid. Please contact us for a new one.</p></div>';
+  else load();
+</script>
+<script>
+  // Agreements, the customer's needs (written record + checklist), and files they send us: the customer-docs function (2026-10-12).
+  (function () {
+    var D = FN + '/customer-docs';
+    function post(body) {
+      body.t = token;
+      return fetch(D, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); });
+    }
+    var ERR = { too_short: 'Tell us a little more (a sentence or two).', slow_down: 'That is a lot for one day. Please try again tomorrow or message us.', could_not_understand: 'We could not turn that into a plan. Try describing it room by room.', ai_unavailable: 'Our assistant is not available right now. Please message us instead.', not_configured: 'This is not switched on yet. Please message us instead.', name_required: 'Type your full name and tick the box.', too_big: 'That file is over 8 MB.', bad_type: 'Please send a PDF or a photo.', bad_file: 'That file could not be read.' };
+    function errText(j) { return ERR[j && j.error] || 'Something went wrong. Please try again.'; }
+    function list(items) { return '<ul>' + items.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>'; }
+    function planHtml(p, draft) {
+      var rooms = {};
+      (p.items || []).forEach(function (i) { (rooms[i.room] = rooms[i.room] || []).push(i.label); });
+      return '<p><b>' + esc(p.summary) + '</b></p>' +
+        (p.record || []).map(function (r) { return '<div class="room"><b>' + esc(r.heading) + '</b>' + list(r.points) + '</div>'; }).join('') +
+        (Object.keys(rooms).length ? '<h2 style="margin-top:14px">Done at every clean</h2>' + Object.keys(rooms).map(function (k) { return '<div class="room"><b>' + esc(k) + '</b>' + list(rooms[k]) + '</div>'; }).join('') : '') +
+        ((p.questions || []).length ? '<h2 style="margin-top:14px">' + (draft ? 'We will follow up on' : 'Questions for our team') + '</h2>' + list(p.questions) : '');
+    }
+    var BOX = 'background:#f6f5fb;border-radius:14px;padding:12px 14px;margin:0 0 12px';
+    function renderNeeds(care) {
+      var el = document.getElementById('needs-slot');
+      if (!el) return;
+      var h = '';
+      if (care.draft) {
+        h += '<p>Here is how we wrote it down. Is this right?</p><div style="' + BOX + '">' + planHtml(care.draft, true) + '</div>' +
+          '<button id="nyes">Yes, this is right</button> <button class="btn alt" id="nno">Start over</button> <span id="nnote2"></span>';
+      } else {
+        if (care.active) h += '<p>Your plan, confirmed ' + esc(day((care.active.confirmed_at || '').slice(0, 10))) + '. Our team follows it at every clean.</p><div style="' + BOX + '">' + planHtml(care.active, false) + '</div><p>Want to change it? Describe everything you want again below; the new plan replaces this one once you confirm it.</p>';
+        else h += '<p>In your own words: what matters to you, room by room, products to use or avoid, pets, things to skip. We turn it into a written plan and a checklist our team does at every clean. You check it before it is used.</p>';
+        h += '<textarea id="ntxt" placeholder="For example: we have a cat, so close the laundry room door. Unscented products in the nursery. Always wipe the fridge handles and make the beds. Skip the office."></textarea><button id="ngo">Write up my plan</button> <span id="nnote2"></span>';
+      }
+      el.innerHTML = h;
+      var go = document.getElementById('ngo');
+      if (go) go.onclick = function () {
+        var t = document.getElementById('ntxt').value.trim(), n = document.getElementById('nnote2');
+        if (t.length < 15) { n.className = 'err'; n.textContent = ERR.too_short; return; }
+        go.disabled = true; n.className = 'sub'; n.textContent = 'Writing it up (about 20 seconds)...';
+        post({ action: 'needs_draft', text: t }).then(function (r) { go.disabled = false; if (!r.ok) { n.className = 'err'; n.textContent = errText(r.j); return; } renderNeeds({ draft: r.j.plan, active: care.active }); });
+      };
+      var yes = document.getElementById('nyes'), no = document.getElementById('nno');
+      if (yes) yes.onclick = function () { yes.disabled = true; post({ action: 'needs_confirm', plan_id: care.draft.id }).then(function (r) { if (!r.ok) { yes.disabled = false; document.getElementById('nnote2').textContent = errText(r.j); return; } load(); }); };
+      if (no) no.onclick = function () { post({ action: 'needs_discard', plan_id: care.draft.id }).then(function () { renderNeeds({ active: care.active }); }); };
+    }
+    function renderAgreements(items) {
+      var el = document.getElementById('agreements-slot');
+      if (!el) return;
+      if (!items.length) { el.innerHTML = '<p>Your service agreement will appear here when we send it.</p>'; return; }
+      el.innerHTML = items.map(function (a) {
+        var done = a.status === 'accepted';
+        return '<div class="row"><div><b>' + esc(a.title) + '</b><div class="sub">' + (done ? 'Accepted by ' + esc(a.accepted_name) + ' on ' + esc(day((a.accepted_at || '').slice(0, 10))) : 'Sent ' + esc(day(a.date)) + ', waiting for you') + '</div></div>' +
+          (a.pdf_url ? '<a class="btn alt" href="' + esc(a.pdf_url) + '" target="_blank" rel="noopener">PDF</a>' : '') + '</div>' +
+          (done ? '' : '<details style="margin:6px 0 12px"><summary style="cursor:pointer;font-weight:700;color:#004aad">Read and accept</summary>' +
+            (a.sections || []).map(function (s) { return '<div class="room" style="margin-top:10px"><b>' + esc(s.heading) + '</b>' + s.paragraphs.map(function (p) { return '<p style="color:#15121f">' + esc(p) + '</p>'; }).join('') + '</div>'; }).join('') +
+            '<label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0"><input type="checkbox" id="ag-ok-' + esc(a.id) + '"> <span>I have read this agreement and I agree to it.</span></label>' +
+            '<input id="ag-name-' + esc(a.id) + '" placeholder="Type your full name" autocomplete="name" style="width:100%;font:inherit;border:1px solid #ddd9ea;border-radius:12px;padding:10px 12px;margin:0 0 10px">' +
+            '<button data-accept="' + esc(a.id) + '">Accept</button> <span id="ag-note-' + esc(a.id) + '"></span></details>');
+      }).join('');
+      var bs = el.querySelectorAll('[data-accept]');
+      for (var i = 0; i < bs.length; i++) bs[i].onclick = function () {
+        var id = this.getAttribute('data-accept'), b = this, n = document.getElementById('ag-note-' + id);
+        var name = document.getElementById('ag-name-' + id).value.trim(), ok = document.getElementById('ag-ok-' + id).checked;
+        if (!ok || name.length < 3) { n.className = 'err'; n.textContent = ERR.name_required; return; }
+        b.disabled = true; n.className = 'sub'; n.textContent = 'Saving your signed copy...';
+        post({ action: 'accept', agreement_id: id, name: name, agree: true }).then(function (r) { if (!r.ok) { b.disabled = false; n.className = 'err'; n.textContent = errText(r.j); return; } load(); });
+      };
+    }
+    window.loadDocs = function () {
+      var u = document.getElementById('usend');
+      if (u) u.onclick = function () {
+        var f = document.getElementById('ufile').files[0], n = document.getElementById('unote');
+        if (!f) return;
+        if (f.size > 8 * 1024 * 1024) { n.className = 'err'; n.textContent = ERR.too_big; return; }
+        u.disabled = true; n.className = 'sub'; n.textContent = 'Sending...';
+        var rd = new FileReader();
+        rd.onload = function () {
+          var b64 = String(rd.result).split(',')[1] || '';
+          post({ action: 'upload', file_name: f.name, mime_type: f.type, data_base64: b64 }).then(function (r) { u.disabled = false; if (!r.ok) { n.className = 'err'; n.textContent = errText(r.j); return; } n.className = 'ok'; n.textContent = 'Sent. Thank you!'; setTimeout(load, 1200); });
+        };
+        rd.readAsDataURL(f);
+      };
+      fetch(D + '?t=' + encodeURIComponent(token)).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); }).then(function (d) {
+        renderAgreements(d.agreements || []);
+        renderNeeds(d.care || {});
+      }).catch(function () {
+        var a = document.getElementById('agreements-slot'), n = document.getElementById('needs-slot');
+        if (a) a.innerHTML = '<p>Agreements could not load. Reload the page to try again.</p>';
+        if (n) n.innerHTML = '<p>This could not load. Reload the page to try again.</p>';
+      });
+    };
+    // The page may already have rendered (a fast response) before this script ran.
+    if (document.getElementById('needs-slot')) window.loadDocs();
+  })();
+</script>
+</body>
+</html>
+ + (it.bounty_cents / 100) + '</span>' : '') + '<div class="sub">' + esc(it.note || '') + '</div><div class="sub">' + esc(STAT[it.status] || it.status) + (it.declined_reason ? ': ' + esc(it.declined_reason) : '') + '</div>' +
+              (it.before_url ? '<img src="' + esc(it.before_url) + '" alt="Before" style="width:90px;border-radius:8px;margin:4px 6px 0 0">' : '') + (it.after_url ? '<img src="' + esc(it.after_url) + '" alt="After" style="width:90px;border-radius:8px;margin-top:4px">' : '') + '</div>' +
+              (it.status === 'done' ? '<div><button class="btn" data-pc="' + esc(it.id) + '">Looks good</button></div>' : (it.status === 'open' || it.status === 'assigned' ? '<div><a href="#" data-px="' + esc(it.id) + '">Remove</a></div>' : '')) + '</div>';
+          }).join('') : '<p class="sub">Nothing yet.</p>';
+          Array.prototype.forEach.call(list.querySelectorAll('[data-pc]'), function (b) { b.onclick = function () { b.disabled = true; pPost({ action: 'punch_confirm', id: b.getAttribute('data-pc') }).then(loadPunch); }; });
+          Array.prototype.forEach.call(list.querySelectorAll('[data-px]'), function (a) { a.onclick = function (e) { e.preventDefault(); pPost({ action: 'punch_cancel', id: a.getAttribute('data-px') }).then(loadPunch); }; });
+        });
+      }
+      var add = document.getElementById('padd');
+      if (add) {
+        loadPunch();
+        add.onclick = function () {
+          var f = document.getElementById('pfile').files[0], note = document.getElementById('pnote').value, n = document.getElementById('pnote2');
+          if (!f && !note.trim()) { n.className = 'err'; n.textContent = 'Add a photo or a note.'; return; }
+          add.disabled = true; n.className = 'sub'; n.textContent = 'Saving…';
+          pPost({ action: 'punch_add', room: document.getElementById('proom').value, note: note, bounty_cents: Number(document.getElementById('pbounty').value) || 0, has_photo: !!f, content_type: f ? f.type : 'image/jpeg' }).then(function (res) {
+            if (!res.ok) { throw new Error(res.j && res.j.error === 'too_many_open' ? 'You have 10 open items already.' : res.j && res.j.error === 'bounty_cap' ? 'Open bounties are capped at $15.' : res.j && res.j.error === 'bounties_not_open' ? 'Bounties are not open yet.' : 'That did not save. Please try again.'); }
+            if (res.j.upload && f) { var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', f); return fetch(res.j.upload.url, { method: 'PUT', body: fd }); }
+          }).then(function () { document.getElementById('pnote').value = ''; document.getElementById('pfile').value = ''; n.className = 'ok'; n.textContent = 'Added. Your team will see it on the next visit.'; add.disabled = false; loadPunch(); })
+            .catch(function (e) { add.disabled = false; n.className = 'err'; n.textContent = e.message || 'That did not save.'; });
+        };
+      }
+    })();
     (function () {
       function oPost(body) { body.t = token; return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); }
       oPost({ action: 'occasions_get' }).then(function (r) { return r.json(); }).then(function (j) {
