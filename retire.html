@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>For cleaning company owners</title>
+<style>
+  :root { --brand:#004aad; --ink:#15121f; --muted:#5b5870; --bg:#f6f7fb; --card:#fff; --line:#e3e5ee; --ok:#0a7a3d; --err:#b42318; }
+  @media (prefers-color-scheme: dark) { :root { --ink:#f3f2f8; --muted:#a9a6bd; --bg:#12111a; --card:#1b1a26; --line:#2b2a3a; } }
+  * { box-sizing: border-box } body { margin:0; font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif; background:var(--bg); color:var(--ink); line-height:1.55 }
+  main { max-width:640px; margin:0 auto; padding:24px 16px 56px } h1 { font-size:26px; margin:0 0 8px } h2 { font-size:18px; margin:24px 0 6px }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-top:16px } .muted { color:var(--muted); font-size:14px }
+  video, iframe { width:100%; border:0; border-radius:12px; aspect-ratio:16/9; background:#000 } label { display:block; font-weight:600; margin-top:12px; font-size:14px }
+  input, textarea { width:100%; padding:11px; border:1px solid var(--line); border-radius:10px; font:inherit; background:var(--card); color:var(--ink) } textarea { min-height:90px }
+  button { margin-top:16px; width:100%; padding:13px; border:0; border-radius:10px; background:var(--brand); color:#fff; font:inherit; font-weight:700 } button:disabled { opacity:.6 }
+  .ok { color:var(--ok); font-weight:700 } .err { color:var(--err) } .hp { position:absolute; left:-9999px; height:0; overflow:hidden }
+</style>
+</head>
+<body>
+<main id="root"><p class="muted">Loading…</p></main>
+<script>
+(function () {
+  var FN = 'https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/owner-inquiry';
+  var ORG = new URLSearchParams(location.search).get('org') || 'two-hour-maids';
+  var root = document.getElementById('root');
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  fetch(FN + '?org=' + encodeURIComponent(ORG)).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.ready) { root.innerHTML = '<h1>For cleaning company owners</h1><p class="muted">This page is not open yet. If you received a letter, please call the number on it.</p>'; return; }
+    var buys = d.buys === 'lead_list' ? 'your lead list' : d.buys === 'client_list' ? 'your client list' : 'your client list or your lead list';
+    var vid = d.video_url ? (/\.(mp4|mov|webm)(\?|$)/i.test(d.video_url) ? '<video controls preload="metadata" src="' + esc(d.video_url) + '"></video>' : '<iframe src="' + esc(d.video_url) + '" allowfullscreen></iframe>') : '';
+    root.innerHTML =
+      '<h1>A different way to be paid for the company you built</h1>' +
+      '<p>' + esc(d.business) + ' partners with cleaning company owners. We buy ' + esc(buys) + ' and you receive <b>' + esc(d.royalty_pct) + ' percent</b> of what those customers pay us, every month, ' + esc(d.term_text) + '. Your customers keep getting careful service from a team that treats them well.</p>' +
+      (vid ? '<div class="card"><h2 style="margin-top:0">See how it works</h2>' + vid + '</div>' : '') +
+      '<div class="card"><h2 style="margin-top:0">If you ever want to retire, we have that</h2><p>We can take over your whole business, your customers and your team, and make sure they are looked after. No pressure and no timeline.</p></div>' +
+      '<div class="card"><h2 style="margin-top:0">Tell us a little about your company</h2><form id="f">' +
+      '<label>Your name</label><input name="name" autocomplete="name" required>' +
+      '<label>Company</label><input name="company" autocomplete="organization">' +
+      '<label>Phone</label><input name="phone" type="tel" autocomplete="tel">' +
+      '<label>Email</label><input name="email" type="email" autocomplete="email">' +
+      '<label>Anything you would like us to know?</label><textarea name="message" maxlength="600"></textarea>' +
+      '<div class="hp"><label>Website</label><input name="website" tabindex="-1" autocomplete="off"></div>' +
+      '<button id="go" type="submit">Send</button><p id="msg" class="muted"></p></form></div>' +
+      '<p class="muted">This page is an invitation to talk, not a contract. Any real agreement is put in writing and reviewed by your own attorney first. ' + esc(d.sender_name) + ', ' + esc(d.business) + '.</p>';
+    var f = document.getElementById('f'), go = document.getElementById('go'), msg = document.getElementById('msg');
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (!f.phone.value.trim() && !f.email.value.trim()) { msg.className = 'err'; msg.textContent = 'Please give a phone number or an email.'; return; }
+      go.disabled = true; msg.className = 'muted'; msg.textContent = 'Sending…';
+      fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ org_slug: ORG, name: f.name.value, company: f.company.value, phone: f.phone.value, email: f.email.value, message: f.message.value, website: f.website.value }) })
+        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (res) { if (res.ok && res.j.ok) { f.innerHTML = '<p class="ok">Thank you. I will call you personally.</p>'; } else { go.disabled = false; msg.className = 'err'; msg.textContent = res.j && res.j.error === 'rate_limited' ? 'Please try again in a little while.' : 'That did not send. Please call the number on the letter.'; } })
+        .catch(function () { go.disabled = false; msg.className = 'err'; msg.textContent = 'That did not send. Please call the number on the letter.'; });
+    });
+  }).catch(function () { root.innerHTML = '<h1>For cleaning company owners</h1><p class="muted">Please call the number on the letter.</p>'; });
+})();
+</script>
+</body>
+</html>
