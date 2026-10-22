@@ -3086,6 +3086,24 @@
       row.appendChild(b);
     });
     box.appendChild(row);
+    // A full day: offer the waitlist. Joining is the consent to ONE text if a time opens (the form says so).
+    var anyOpen = CONFIG.SLOTS.some(function (sl) { return slotIsAvailable(dStr, sl.key); });
+    if (!anyOpen) {
+      var wl = document.createElement("div");
+      wl.className = "bw-waitlist";
+      wl.innerHTML = '<p>This day is full. Join the waitlist and we will text you once if a time opens.</p>' +
+        '<input type="text" id="bw-wl-name" placeholder="Your name" autocomplete="name"><input type="tel" id="bw-wl-phone" placeholder="Mobile number" autocomplete="tel">' +
+        '<button type="button" id="bw-wl-go">Join the waitlist</button><p class="bw-wl-note" id="bw-wl-note">By joining you agree to one text from us about this day. Reply STOP to opt out.</p>';
+      box.appendChild(wl);
+      document.getElementById("bw-wl-go").addEventListener("click", function () {
+        var btn = this, note = document.getElementById("bw-wl-note");
+        btn.disabled = true;
+        fetch(CONFIG.AVAILABILITY_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "waitlist", org_slug: CONFIG.ORG_SLUG, date: dStr, name: document.getElementById("bw-wl-name").value, phone: document.getElementById("bw-wl-phone").value }) })
+          .then(function (r) { return r.json(); })
+          .then(function (j) { note.textContent = j.ok ? "You are on the list. We will text you if a time opens." : (j.error === "bad_phone" ? "Please check the phone number." : "That did not save. Please try again."); btn.disabled = !!j.ok; })
+          .catch(function () { note.textContent = "That did not save. Please try again."; btn.disabled = false; });
+      });
+    }
   }
 
   document.getElementById("bw-prev").addEventListener("click", function () {
@@ -4727,4 +4745,5 @@
     #bw-root .bw-dial-wrap { gap: 4px; }
     #bw-root .bw-field-row { grid-template-columns: 1fr 92px; }
   }
+.bw-waitlist{margin-top:12px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;display:grid;gap:8px}.bw-waitlist input{padding:10px;border:1px solid #d1d5db;border-radius:8px;font:inherit}.bw-waitlist button{padding:10px;border-radius:8px;border:0;background:#1d4ed8;color:#fff;font:inherit}.bw-wl-note{font-size:12px;color:#6b7280;margin:0}
 </style>
