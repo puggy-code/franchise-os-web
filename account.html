@@ -143,6 +143,7 @@
     h += '<div class="card" id="request"><h2>Request future work</h2><p>Want us back, a different date, or something added? Tell us and we will reply here.</p>' +
       '<select id="rtype">' + Object.keys(REQ).map(function (k) { return '<option value="' + k + '">' + esc(REQ[k]) + '</option>'; }).join('') + '</select>' +
       '<textarea id="rtext" placeholder="What would you like? Dates that work are helpful."></textarea><button id="rsend">Send request</button> <span id="rnote"></span></div>';
+    h += '<div class="card" id="explore"><h2>Explore your home</h2><p>Tap the parts of your home and see what two cleaners can do in the time you have, and which level fits best.</p><a class="btn alt" href="explore.html">Open the home explorer</a></div>';
     h += '<div class="card" id="occasions"><h2>About you and your home</h2><p>Optional. Tell us what makes your home yours: pets, kids, a birthday, when you moved in. Your team can greet everyone by name.</p>' +
       '<label>Birthday (month and day)</label><div><select id="obm"><option value="">Month</option>' + ['January','February','March','April','May','June','July','August','September','October','November','December'].map(function (m, i) { return '<option value="' + (i + 1) + '">' + m + '</option>'; }).join('') + '</select> <select id="obd"><option value="">Day</option>' + Array.apply(null, Array(31)).map(function (_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + '</option>'; }).join('') + '</select></div>' +
       '<label>When did you move in?</label><input type="date" id="omv">' +
