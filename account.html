@@ -143,10 +143,11 @@
     h += '<div class="card" id="request"><h2>Request future work</h2><p>Want us back, a different date, or something added? Tell us and we will reply here.</p>' +
       '<select id="rtype">' + Object.keys(REQ).map(function (k) { return '<option value="' + k + '">' + esc(REQ[k]) + '</option>'; }).join('') + '</select>' +
       '<textarea id="rtext" placeholder="What would you like? Dates that work are helpful."></textarea><button id="rsend">Send request</button> <span id="rnote"></span></div>';
+    h += '<div class="card" id="tiptie" hidden><h2>Your tip tied to results</h2><div id="tipbody"></div></div>';
     h += '<div class="card" id="punch"><h2>Your punch list</h2><p>Photograph anything you would like your team to look at: a spot on the stove, the baseboards, a window track. They will do it on the next visit and show you an after photo. <span id="pbn"></span></p><div id="plist"></div>' +
       '<label>Which room?</label><select id="proom"><option value="">Choose</option><option>Kitchen</option><option>Bathroom</option><option>Bedroom</option><option>Living room</option><option>Entry</option><option>Laundry</option><option>Other</option></select>' +
       '<label>What should they do?</label><textarea id="pnote" maxlength="300" placeholder="The stove top has burned-on spots"></textarea>' +
-      '<label>Photo</label><input type="file" id="pfile" accept="image/*" capture="environment"><div id="pbwrap" style="display:none"><label>Bounty for the team (optional)</label><select id="pbounty"><option value="0">No bounty</option><option value="100">$1</option><option value="200">$2</option><option value="300">$3</option></select></div>' +
+      '<label>Photo</label><input type="file" id="pfile" accept="image/*" capture="environment"><label id="ptiedwrap" style="display:none"><input type="checkbox" id="ptied"> Tie my tip to this item (needs a photo)</label><div id="pbwrap" style="display:none"><label>Bounty for the team (optional)</label><select id="pbounty"><option value="0">No bounty</option><option value="100">$1</option><option value="200">$2</option><option value="300">$3</option></select></div>' +
       '<button id="padd">Add to my punch list</button> <span id="pnote2"></span></div>';
     h += '<div class="card" id="explore"><h2>Explore your home</h2><p>Tap the parts of your home and see what two cleaners can do in the time you have, and which level fits best.</p><a class="btn alt" href="explore.html">Open the home explorer</a></div>';
     h += '<div class="card" id="occasions"><h2>About you and your home</h2><p>Optional. Tell us what makes your home yours: pets, kids, a birthday, when you moved in. Your team can greet everyone by name.</p>' +
@@ -160,6 +161,26 @@
     if (window.loadDocs) window.loadDocs();
     (function () {
       function pPost(body) { body.t = token; return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }); }
+      function loadTip() {
+        pPost({ action: 'tip_get' }).then(function (res) {
+          var card = document.getElementById('tiptie'), body = document.getElementById('tipbody'); if (!card || !res.ok || !res.j.pledge) return;
+          var p = res.j.pledge; card.hidden = false;
+          var amt = '$' + (p.amount_cents / 100);
+          var msg = { pledged: 'Your ' + amt + ' tip is tied to the items on your punch list' + (p.visit_date ? ' for your ' + esc(p.visit_date) + ' visit' : '') + '. After the visit your team takes after photos and our management decides. You pay it only if the goals are met.',
+            earned: 'Management confirmed the goals were met, so your ' + amt + ' tip goes to your team. ' + (p.decision_note ? esc(p.decision_note) : ''),
+            declined: 'Management decided the goals were not fully met, so you will not be charged the ' + amt + ' tip. ' + (p.decision_note ? esc(p.decision_note) : ''),
+            objected: 'Thank you. We are reviewing your objection and will reply.', void: 'You cancelled this tip.' }[p.status] || '';
+          var h2 = '<p>' + msg + '</p>';
+          if (p.can_change) h2 += '<label>Change the amount</label><select id="tipamt">' + [500, 1000, 2000, 3000, 5000, 10000].map(function (c) { return '<option value="' + c + '"' + (c === p.amount_cents ? ' selected' : '') + '>$' + (c / 100) + '</option>'; }).join('') + '</select> <button id="tipsave">Save</button> <a href="#" id="tipcancel">Cancel my tip</a>';
+          if (p.status === 'earned' || p.status === 'declined') h2 += '<label>Disagree with the decision?</label><textarea id="tipobj" maxlength="400" placeholder="Tell us what you think"></textarea><button id="tipobject">Send my objection</button>';
+          h2 += ' <span id="tipnote"></span>';
+          body.innerHTML = h2;
+          var w = document.getElementById('ptiedwrap'); if (w) w.style.display = p.status === 'pledged' ? 'block' : 'none';
+          var sv = document.getElementById('tipsave'); if (sv) sv.onclick = function () { pPost({ action: 'tip_change', id: p.id, amount_cents: Number(document.getElementById('tipamt').value) }).then(loadTip); };
+          var cn = document.getElementById('tipcancel'); if (cn) cn.onclick = function (e) { e.preventDefault(); pPost({ action: 'tip_change', id: p.id, cancel: true }).then(loadTip); };
+          var ob = document.getElementById('tipobject'); if (ob) ob.onclick = function () { var n = document.getElementById('tipnote'); pPost({ action: 'tip_object', id: p.id, note: document.getElementById('tipobj').value }).then(function (r2) { if (r2.ok) loadTip(); else { n.className = 'err'; n.textContent = 'Please write a few words.'; } }); };
+        });
+      }
       var STAT = { open: 'Waiting for the next visit', assigned: 'On your next visit', done: 'Done: please check the photo', confirmed: 'Confirmed, thank you', declined: 'Could not be done' };
       function loadPunch() {
         pPost({ action: 'punch_list' }).then(function (res) {
@@ -403,13 +424,14 @@
         });
       }
       var add = document.getElementById('padd');
+      loadTip();
       if (add) {
         loadPunch();
         add.onclick = function () {
           var f = document.getElementById('pfile').files[0], note = document.getElementById('pnote').value, n = document.getElementById('pnote2');
           if (!f && !note.trim()) { n.className = 'err'; n.textContent = 'Add a photo or a note.'; return; }
           add.disabled = true; n.className = 'sub'; n.textContent = 'Saving…';
-          pPost({ action: 'punch_add', room: document.getElementById('proom').value, note: note, bounty_cents: Number(document.getElementById('pbounty').value) || 0, has_photo: !!f, content_type: f ? f.type : 'image/jpeg' }).then(function (res) {
+          pPost({ action: 'punch_add', tied: !!(document.getElementById('ptied') || {}).checked, room: document.getElementById('proom').value, note: note, bounty_cents: Number(document.getElementById('pbounty').value) || 0, has_photo: !!f, content_type: f ? f.type : 'image/jpeg' }).then(function (res) {
             if (!res.ok) { throw new Error(res.j && res.j.error === 'too_many_open' ? 'You have 10 open items already.' : res.j && res.j.error === 'bounty_cap' ? 'Open bounties are capped at $15.' : res.j && res.j.error === 'bounties_not_open' ? 'Bounties are not open yet.' : 'That did not save. Please try again.'); }
             if (res.j.upload && f) { var fd = new FormData(); fd.append('cacheControl', '3600'); fd.append('', f); return fetch(res.j.upload.url, { method: 'PUT', body: fd }); }
           }).then(function () { document.getElementById('pnote').value = ''; document.getElementById('pfile').value = ''; n.className = 'ok'; n.textContent = 'Added. Your team will see it on the next visit.'; add.disabled = false; loadPunch(); })

@@ -445,6 +445,14 @@
         <input type="text" id="bw-tip-custom" inputmode="decimal" placeholder="Amount in dollars" hidden>
         <p class="bw-card-note" id="bw-tip-note">Tips go 100% to the people who clean your home.</p>
       </div>
+      <div class="bw-field bw-tie" id="bw-tie-wrap" hidden>
+        <label class="bw-tie-check"><input type="checkbox" id="bw-tie-on"> <b>Tie my tip to results</b></label>
+        <div id="bw-tie-body" hidden>
+          <p class="bw-card-note">Photograph the things you want special care on, like the stove top or the baseboards. After your visit your team takes an after photo, and our management reviews both. If the goals are met, your tip goes to the team. If not, you pay nothing. You can change or cancel it in your account until the visit, and you can object to our decision there.</p>
+          <div class="bw-tip-options" id="bw-tie-options"></div>
+          <p class="bw-card-note">This is separate from any tip above and is charged to your saved card only if it is approved.</p>
+        </div>
+      </div>
 
       <label class="bw-field">
         <span>Card</span>
@@ -3328,6 +3336,7 @@
       frequency: selectedFrequency,
       price_cents: priceCents,
       tip_cents: tipCents(),
+      tie_tip_cents: tieTipCents(),
       pay_now: true,
       card_payment_method_id: cardPm, // the server reads its funding from Stripe and prices the fee by it
       recurring_consent: selectedFrequency !== "one_time" && document.getElementById("bw-recurring-consent").checked === true,
@@ -3714,6 +3723,24 @@
       if (opt) { sel.value = opt.value; sel.dispatchEvent(new Event("change")); }
     }
     setTimeout(function () { pick(bedroomSelect, q.get("beds")); pick(bathroomSelect, q.get("baths")); }, 400);
+  })();
+  // Tie my tip to results (0406): shown only when the business has it switched on.
+  var tieCents = 0;
+  function tieTipCents() { var on = document.getElementById("bw-tie-on"); return on && on.checked ? tieCents : 0; }
+  (function () {
+    var wrap = document.getElementById("bw-tie-wrap"); if (!wrap) return;
+    fetch(CONFIG.AVAILABILITY_URL + "?flags=1&org_slug=" + encodeURIComponent(CONFIG.ORG_SLUG)).then(function (r) { return r.json(); }).then(function (d) {
+      if (!d || !d.flags || !d.flags.tie_tip) return;
+      wrap.hidden = false;
+      var opts = document.getElementById("bw-tie-options");
+      [500, 1000, 2000, 3000, 5000].forEach(function (c, i) {
+        var b = document.createElement("button"); b.type = "button"; b.className = "bw-tip-btn" + (i === 1 ? " is-on" : ""); b.textContent = "$" + (c / 100);
+        if (i === 1) tieCents = c;
+        b.addEventListener("click", function () { tieCents = c; Array.prototype.forEach.call(opts.children, function (x) { x.classList.remove("is-on"); }); b.classList.add("is-on"); });
+        opts.appendChild(b);
+      });
+      document.getElementById("bw-tie-on").addEventListener("change", function () { document.getElementById("bw-tie-body").hidden = !this.checked; });
+    }).catch(function () {});
   })();
   addWatchCard(document.getElementById("bw-step-gate"));
   addWatchCard(document.getElementById("bw-step-services"));
@@ -4332,6 +4359,8 @@
     .bw-card { padding: 16px; }
     .bw-svc-name { font-size: 11px; }
   }
+  .bw-tie { border: 1px solid var(--bw-hairline); border-radius: 12px; padding: 10px 12px; margin: 12px 0; }
+  .bw-tie-check { display: flex; gap: 8px; align-items: center; font-size: 15px; cursor: pointer; }
   .bw-explore { border: 1px solid var(--bw-hairline); border-radius: 12px; padding: 10px 12px; margin: 0 0 12px; font-size: 14px; }
   .bw-explore a { color: inherit; text-decoration: none; display: block; }
   .bw-tier-wrap { border: 1px solid var(--bw-hairline); border-radius: 12px; padding: 10px 12px; margin: 12px 0; }
