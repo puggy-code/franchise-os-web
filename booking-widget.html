@@ -745,7 +745,7 @@
     },
 
     // How many months forward a visitor may book.
-    MAX_MONTHS_AHEAD: 2,
+    MAX_MONTHS_AHEAD: 2, // the server closes anything past 8 weeks (booking-availability)
 
     // Which weekdays you take appointments on (0=Sun ... 6=Sat). Example below = Mon-Fri.
     OPEN_WEEKDAYS: [1, 2, 3, 4, 5],
@@ -3456,6 +3456,7 @@
         if (!r.ok || !j || j.ok === false) {
           var code = j && j.error;
           throw new Error(
+            code === "too_soon" ? "A first clean needs 48 hours' notice. Please pick a later day." : code === "same_day_closed" ? "Same-day booking closes at 9 AM. Please pick another day or text us." : code === "too_far" ? "We book up to 8 weeks ahead. Please pick an earlier day." :
             code === "slot_taken" ? "That time was just taken and your card was not charged. Please pick another time." :
             code === "payment_not_confirmed" ? "Your payment didn't go through. Please check your card and try again." :
             "Your card went through, but we couldn't lock in this time. We'll text you shortly to set it up. Please don't book again.");
