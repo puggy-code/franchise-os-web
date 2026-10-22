@@ -163,7 +163,6 @@
       '<p>Rate your ' + esc(d.org.name) + ' cleaning to see the full report from ' +
       esc(prettyDate(d.job.scheduled_date)) + ' — room by room, with photos.</p>' +
       '<form id="f"><div class="stars">' + stars + '</div>' +
-      '<label id="superrow" class="superrow" hidden><input type="checkbox" name="super"> <span>Above and beyond! Give us a <b>6 out of 5</b> super score.</span></label>' +
       '<textarea name="comment" placeholder="Anything we should know?"></textarea>' +
       '<input type="text" name="reviewer_name" placeholder="Your name (optional)">' +
       '<button type="submit" id="go">See my report</button>' +
@@ -171,13 +170,6 @@
     );
 
     var f = document.getElementById('f'), go = document.getElementById('go'), err = document.getElementById('err');
-    // The 6/5 option only appears once five stars are picked.
-    f.addEventListener('change', function () {
-      var p = f.querySelector('input[name=rating]:checked');
-      var show = !!p && p.value === '5';
-      document.getElementById('superrow').hidden = !show;
-      if (!show) f.super.checked = false;
-    });
     f.addEventListener('submit', function (e) {
       e.preventDefault();
       var picked = f.querySelector('input[name=rating]:checked');
@@ -187,7 +179,7 @@
       fetch(FN + '/submit-review', {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          t: d.review_token, rating: Number(picked.value), super: !!(f.super && f.super.checked),
+          t: d.review_token, rating: Number(picked.value),
           comment: f.comment.value, reviewer_name: f.reviewer_name.value
         })
       })
