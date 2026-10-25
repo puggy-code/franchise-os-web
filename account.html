@@ -62,6 +62,14 @@
   var SAVED = null; // the saved card for one-tap tips (brand, last4), set on each render
   var FN = SUPABASE_URL + '/functions/v1';
   var token = new URLSearchParams(location.search).get('t') || '';
+  // "Add a card" (Jack, 2026-10-25): opens Stripe's own card page (setup mode). Nothing is charged; we never see the card number.
+  window.addCardClick = function (btn) {
+    btn.disabled = true; btn.textContent = 'Opening...';
+    fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'add_card' }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (j && j.url) { location.href = j.url; } else { btn.disabled = false; btn.textContent = 'Add a card'; alert('Something went wrong. Please try again.'); } })
+      .catch(function () { btn.disabled = false; btn.textContent = 'Add a card'; alert('Something went wrong. Please try again.'); });
+  };
   var root = document.getElementById('root');
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -96,6 +104,8 @@
 
     var rd = d.ready || {};
     var crewNames = d.current.length && d.current[0].crew ? d.current[0].crew : [];
+    if (!d.has_card) h += '<div class="card" id="card"><h2>Add a card</h2><p>Keep a card on file so paying and tipping take one tap. It is saved securely by Stripe; we never see the number, and nothing is charged now.</p><button class="btn" onclick="addCardClick(this)">Add a card</button></div>';
+    if (new URLSearchParams(location.search).get('card') === 'added') h = '<div class="card"><p class="ok">Thank you, your card is saved.</p></div>' + h;
     h += '<div class="card" id="ready"><h2>Getting ready for your clean</h2>' +
       '<p>' + (rd.next_clean ? 'Your next clean is ' + esc(day(rd.next_clean.date)) + '. ' : '') + 'A few things that help us do it right.</p>' +
       '<div class="tiles">' +

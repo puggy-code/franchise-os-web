@@ -834,6 +834,7 @@
       '<p class="meta">' + esc(status) + '</p>' +
       '<div class="summary"><span class="big">' + pct + '%</span><span>' + d.progress.done + ' of ' + d.progress.total + ' tasks</span></div>' +
       '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
+      (d.rooms && d.rooms.length ? '<h2>Room by room</h2><ul class="feed">' + d.rooms.map(function (r) { return '<li>' + (r.state === 'done' ? '&#10003; ' : r.state === 'in_progress' ? '&#9679; ' : '&#9675; ') + esc(r.room) + ' <span class="meta">' + (r.state === 'done' ? 'done' : r.state === 'in_progress' ? 'in progress' : 'coming up') + '</span></li>'; }).join('') + '</ul>' : '') +
       (d.activity && d.activity.length ? '<h2>Happening now</h2><ul class="feed">' + d.activity.map(function (a) { return '<li>' + esc(a.text) + ' <span class="meta">' + esc(new Date(a.at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })) + '</span></li>'; }).join('') + '</ul>' : '') +
       (d.requests.total ? '<p class="meta">Your special requests: ' + d.requests.done + ' of ' + d.requests.total + ' done</p>' : '') +
       (d.job.status === 'completed' ? '<p>Your full report is on its way by text.</p>' : '<p class="meta">This page updates by itself.</p>')
