@@ -41,6 +41,10 @@
   .msg.customer { background: #eef2fb; margin-left: auto; } .msg.staff { background: #f6f5fb; }
   .msg .sub { display: block; margin-top: 2px; }
   .tipbox { margin: 6px 0 10px; } .tipbox .btn { padding: 9px 14px; font-size: 14px; margin: 0 6px 6px 0; }
+  .dots { display: flex; gap: 8px; margin: 8px 0; } .dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #0d9488; } .dot.on { background: #0d9488; }
+  .badge { display: inline-block; background: #ccfbf1; color: #115e59; border-radius: 999px; padding: 3px 10px; font-size: 13px; font-weight: 700; }
+  .nrow select { width: 130px; flex: none; }
+  .nrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid #eef0f4; }
   .co-btns { display: flex; gap: 8px; margin: 4px 0 8px; } .co-btns .btn { padding: 8px 14px; font-size: 14px; }
   .err { color: #b91c1c; } .ok { color: #166534; font-weight: 700; }
   ul { margin: 0; padding-left: 18px; color: #6b6880; }
@@ -100,9 +104,12 @@
   function render(d) {
     SAVED = d.saved_card || null;
     var h = '<div class="card"><h1>Hi ' + esc(d.customer.first_name) + '</h1><p>Your records and a direct line to ' + esc(d.org.name) + '. This page is yours to keep: bookmark it any time.</p></div>';
-    h += '<nav><a href="#home">Your home</a><a href="#ready">Getting ready</a><a href="#status">Status</a><a href="#photos">Photos</a><a href="#needs">Your needs</a><a href="#agreements">Agreements</a><a href="#documents">Documents</a><a href="#billing">Billing</a><a href="#messages">Messages</a><a href="#request">Request</a></nav>';
+    h += '<nav><a href="#home">Your home</a><a href="#ready">Getting ready</a><a href="#status">Status</a><a href="#photos">Photos</a><a href="#needs">Your needs</a><a href="#agreements">Agreements</a><a href="#documents">Documents</a><a href="#perks">Perks</a><a href="#billing">Billing</a><a href="#messages">Messages</a><a href="#request">Request</a></nav>';
 
     var rd = d.ready || {};
+    var ex = d.extras || {};
+    // Getting-ready tips at the top for every customer (Jack, cus-0150).
+    if (ex.tips && ex.tips.length) h += '<div class="card"><h2>Before each clean</h2><ul>' + ex.tips.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
     var crewNames = d.current.length && d.current[0].crew ? d.current[0].crew : [];
     if (!d.has_card) h += '<div class="card" id="card"><h2>Add a card</h2><p>Keep a card on file so paying and tipping take one tap. It is saved securely by Stripe; we never see the number, and nothing is charged now.</p><button class="btn" onclick="addCardClick(this)">Add a card</button></div>';
     if (new URLSearchParams(location.search).get('card') === 'added') h = '<div class="card"><p class="ok">Thank you, your card is saved.</p></div>' + h;
@@ -121,12 +128,35 @@
     // About your home: its own card, linked from the top, so it is easy to find (2026-10-16). Staff read it before every clean.
     h += '<div class="card" id="home"><h2>About your home</h2><p>Anything we should know: a pet, a fragile item, a spot you want extra care, what to skip. Our team reads this before every clean.</p>' +
       (rd.notes && rd.notes.length ? '<div class="sub" style="margin-bottom:8px">You have shared:</div>' + rd.notes.map(function (n) { return '<div class="msg customer">' + esc(n.body) + '<span class="sub">' + esc(day(n.at)) + '</span></div>'; }).join('') : '') +
+      // Pets (0529) and key tag numbers (0531, number only).
+      '<h3>Your pets</h3>' + (ex.pets && ex.pets.length ? ex.pets.map(function (p) { return '<div class="row"><div><b>' + esc(p.name) + '</b><div class="sub">' + esc(p.kind) + (p.where_during ? ' · ' + esc(p.where_during) : '') + (p.temperament === 'crate' ? ' · keep crated' : '') + '</div></div><button class="btn alt" data-petrm="' + esc(p.id) + '">Remove</button></div>'; }).join('') : '<p class="sub">No pets on file.</p>') +
+      '<div class="row"><input id="pname" maxlength="40" placeholder="Pet name"><select id="pkind"><option value="dog">Dog</option><option value="cat">Cat</option><option value="other">Other</option></select></div>' +
+      '<input id="pwhere" maxlength="120" placeholder="Where they will be during the clean"><label class="sub"><input type="checkbox" id="pcrate"> Keep crated</label> <button id="padd" class="btn alt">Add pet</button>' +
+      (ex.key_tags && ex.key_tags.length ? '<p class="sub">We hold your ' + ex.key_tags.map(function (k) { return esc(k.kind.replace('_', ' ')) + ' on tag #' + esc(k.number); }).join(', ') + '.</p>' : '') +
       '<textarea id="ntext" maxlength="1000" placeholder="For example: we have a friendly dog, please skip the baby\'s room."></textarea><button id="nsend">Add to my house notes</button> <span id="nnote"></span></div>';
 
     h += '<div class="card" id="needs"><h2>Tell us what you need</h2><div id="needs-slot"><p>Loading...</p></div></div>';
     h += '<div class="card" id="status"><h2>Your cleanings</h2>' +
+      (ex.free_skips && ex.free_skips.total != null && ex.free_skips.left != null ? '<p class="sub">' + ex.free_skips.left + ' of ' + ex.free_skips.total + ' free late skip' + (ex.free_skips.total === 1 ? '' : 's') + ' left this year.</p>' : '') +
       (d.current.length ? d.current.map(function (j) { return jobRow(j, true); }).join('') : '<p>Nothing scheduled right now.</p>') +
       (d.past.length ? '<h2 style="margin-top:16px">Past cleanings</h2>' + d.past.map(function (j) { return jobRow(j, false); }).join('') : '') + '</div>';
+    // Your regular plan: pause it, or pick a new time after a pause (migration 0580). A pause gives up the regular time.
+    var FREQ = { weekly: 'Every week', biweekly: 'Every 2 weeks', every_3_weeks: 'Every 3 weeks', every_4_weeks: 'Every 4 weeks', every_5_weeks: 'Every 5 weeks', every_6_weeks: 'Every 6 weeks' };
+    if (d.cleaning_plans && d.cleaning_plans.length) {
+      h += '<div class="card" id="plan"><h2>Your regular plan</h2>' + d.cleaning_plans.map(function (p) {
+        var head = '<b>' + esc(p.label || 'Cleaning') + '</b><div class="sub">' + esc(FREQ[p.frequency] || 'Regular') + (p.status === 'active' ? ' · usually ' + esc(time(p.time)) : '') + '</div>';
+        var body = '';
+        if (p.status === 'paused' && p.can_pick_time) {
+          body = '<p>' + (p.restart_due ? 'Your plan is paused. Welcome back! Pick a new time below to start again.' : 'Paused until ' + esc(day(p.paused_until)) + '. Pick your new time whenever you are ready; times start on that date.') + '</p>' +
+            '<button class="btn" data-rs="' + esc(p.id) + '">Pick a new time</button> <a href="#" data-pz="' + esc(p.id) + '">Change the restart date</a>';
+        } else if (p.status === 'paused') {
+          body = '<p>Paused' + (p.paused_until ? ' until ' + esc(day(p.paused_until)) : '') + '. Message us below to change it.</p>';
+        } else if (p.can_pause) {
+          body = '<a href="#" data-pz="' + esc(p.id) + '">Pause my cleanings</a>';
+        }
+        return '<div class="room">' + head + body + '<div id="pz-' + esc(p.id) + '" data-min="' + esc(p.pause_min_date) + '" data-max="' + esc(p.pause_max_date) + '"></div></div>';
+      }).join('') + '</div>';
+    }
 
     h += '<div class="card" id="photos"><h2>Photos</h2>' + (d.photos.length ? '<div class="photos">' + d.photos.map(function (p) { return '<a href="' + esc(p.url) + '" target="_blank" rel="noopener"><img loading="lazy" src="' + esc(p.url) + '" alt="' + esc(p.kind) + ' photo ' + esc(day(p.date)) + '"></a>'; }).join('') + '</div>' : '<p>Photos from your cleanings will appear here.</p>') + '</div>';
 
@@ -165,12 +195,54 @@
       '<label>When did you move in?</label><input type="date" id="omv">' +
       '<label>Pets, kids and anything the team should know</label><textarea id="ohh" maxlength="300" placeholder="Biscuit the beagle, Maya (6) and Leo (3)"></textarea><button id="osave">Save</button> <span id="onote"></span></div>';
     h += '<div class="card" id="texts"><h2>Texts from us</h2><p>' + (d.customer.texts_on ? 'You get texts about your cleans and occasional offers. Up to 4 a month.' : 'Want texts about your cleans and occasional offers? Up to 4 a month; message and data rates may apply. Reply STOP any time to opt out.') + '</p><button id="tsend">' + (d.customer.texts_on ? 'Turn texts off' : 'Yes, text me') + '</button> <span id="tnote"></span></div>';
+    // Perks (cus-0173, 0221-0244): Buy Six dots, give codes shared from the customer's own phone, referral status, free-clean credit.
+    var ly = ex.loyalty || null;
+    if (ly) {
+      var dots = ''; for (var di = 0; di < 6; di++) dots += '<span class="dot' + (di < ly.filled ? ' on' : '') + '"></span>';
+      h += '<div class="card" id="perks"><h2>Perks</h2>' + (ly.loyal_since ? '<p><span class="badge">Loyal since ' + esc(ly.loyal_since) + '</span></p>' : '') +
+        '<p class="sub">Buy six, gift one: every 6th clean earns a free clean to give a friend.</p><div class="dots">' + dots + '</div>' +
+        (ly.earned ? '<p class="ok">You earned a free clean to give!</p>' : '') +
+        (ly.give_codes || []).map(function (g, i) { return '<div class="row"><div><b>' + esc(g.code) + '</b><div class="sub">A free clean to give</div></div><button class="btn" data-give="' + i + '">Share</button></div>'; }).join('') +
+        (ex.free_clean_credit ? '<p class="ok">A free clean credit applies to your next clean.</p>' : '') +
+        (ex.referrals && ex.referrals.length ? '<h3>Friends you referred</h3><ul>' + ex.referrals.map(function (r) { return '<li>' + esc(r) + '</li>'; }).join('') + '</ul>' : '') +
+        '<p class="sub">Your credit comes after your friend\'s first clean.</p></div>';
+    }
+    // Notification switches (0547, cus-0245/0247): one channel per kind. Records the choice; offers still need "Yes, text me" above.
+    var nf = ex.notify || null;
+    if (nf) {
+      var NK = [['reminders', 'Clean reminders'], ['on_the_way', 'On the way'], ['reports', 'Clean reports'], ['offers', 'Offers']];
+      var NC = [['text', 'Text'], ['email', 'Email'], ['push', 'App'], ['off', 'Off']];
+      h += '<div class="card" id="notify"><h2>Notifications</h2>' + NK.map(function (k) {
+        return '<div class="nrow"><span>' + k[1] + '</span><select data-nk="' + k[0] + '">' + NC.map(function (c) { return '<option value="' + c[0] + '"' + (nf[k[0]] === c[0] ? ' selected' : '') + '>' + c[1] + '</option>'; }).join('') + '</select></div>';
+      }).join('') + '<p class="sub">Price-change notices always come by email. <span id="nfnote"></span></p></div>';
+    }
+    // Call instead of text (0564): for customers who do not use text.
+    h += '<div class="card" id="callpref"><h2>Calls or texts</h2><p>' + (d.customer.contact_pref === 'call' ? 'We call you instead of texting (reminders, on the way, reports). Calls are between 9 AM and 7 PM.' : 'We text you about your cleans. Don\'t use text? We can call you instead.') +
+      '</p><button id="cpref" data-pref="' + (d.customer.contact_pref === 'call' ? 'text' : 'call') + '">' + (d.customer.contact_pref === 'call' ? 'Switch back to texts' : 'Call me instead') + '</button> <span id="cprefnote"></span></div>';
     if (new URLSearchParams(location.search).get('tip') === 'thanks') h = '<div class="card"><p class="ok">Thank you! Your tip goes to your team.</p></div>' + h;
     h = h.replace('<div class="card" id="billing">', '<div class="card" id="upload"><h2>Send us a file</h2><p>A floor plan, a lease, a photo of a spot that needs care. PDF or photo, up to 8 MB. It is kept with your documents.</p><input type="file" id="ufile" accept="application/pdf,image/jpeg,image/png,image/heic,image/webp"> <button id="usend">Send</button> <span id="unote"></span></div><div class="card" id="billing">');
     root.innerHTML = h;
     if (window.loadDocs) window.loadDocs();
     (function () {
       function pPost(body) { body.t = token; return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }); }
+      var cp = document.getElementById('cpref');
+      if (cp) cp.addEventListener('click', function () {
+        pPost({ action: 'contact_pref', pref: cp.getAttribute('data-pref') }).then(function (res) { var n = document.getElementById('cprefnote'); if (n) n.textContent = res.ok ? 'Saved.' : 'Not saved, try again.'; if (res.ok) setTimeout(function () { location.reload(); }, 600); });
+      });
+      document.querySelectorAll('[data-give]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var g = ((ex.loyalty || {}).give_codes || [])[Number(b.getAttribute('data-give'))]; if (!g) return;
+          if (navigator.share) navigator.share({ text: g.share_text }).catch(function () {});
+          else location.href = 'sms:?&body=' + encodeURIComponent(g.share_text);
+        });
+      });
+      document.querySelectorAll('[data-nk]').forEach(function (sel) {
+        sel.addEventListener('change', function () {
+          var prefs = {}; prefs[sel.getAttribute('data-nk')] = sel.value;
+          var note = document.getElementById('nfnote');
+          pPost({ action: 'notify_prefs', prefs: prefs }).then(function (res) { if (note) note.textContent = res.ok ? 'Saved.' : 'Not saved, try again.'; });
+        });
+      });
       function loadTip() {
         pPost({ action: 'tip_get' }).then(function (res) {
           var card = document.getElementById('tiptie'), body = document.getElementById('tipbody'); if (!card || !res.ok || !res.j.pledge) return;
@@ -199,233 +271,7 @@
           document.getElementById('pbwrap').style.display = res.j.bounties_on ? 'block' : 'none';
           document.getElementById('pbn').textContent = res.j.bounties_on ? 'You can add a small bounty ($1 to $3) the team earns when it is done and you confirm.' : '';
           list.innerHTML = res.j.items.length ? res.j.items.map(function (it) {
-            return '<div class="row"><div><b>' + esc(it.room || 'Item') + '</b> ' + (it.bounty_cents ? '<span class="sub">bounty 
-    (function () {
-      function oPost(body) { body.t = token; return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); }
-      oPost({ action: 'occasions_get' }).then(function (r) { return r.json(); }).then(function (j) {
-        var o = j && j.occasions; if (!o) return;
-        if (o.birthday_month) document.getElementById('obm').value = String(o.birthday_month);
-        if (o.birthday_day) document.getElementById('obd').value = String(o.birthday_day);
-        if (o.move_in_date) document.getElementById('omv').value = o.move_in_date;
-        if (o.household) document.getElementById('ohh').value = o.household;
-      }).catch(function () {});
-      var sv = document.getElementById('osave');
-      if (sv) sv.onclick = function () {
-        sv.disabled = true;
-        oPost({ action: 'occasions_save', birthday_month: document.getElementById('obm').value, birthday_day: document.getElementById('obd').value, move_in_date: document.getElementById('omv').value, household: document.getElementById('ohh').value })
-          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-          .then(function (res) { var n = document.getElementById('onote'); sv.disabled = false; n.className = res.ok ? 'ok' : 'err'; n.textContent = res.ok ? 'Saved. Thank you!' : (res.j && res.j.error === 'bad_birthday' ? 'Please pick both a month and a day.' : 'That did not save. Please try again.'); })
-          .catch(function () { sv.disabled = false; var n = document.getElementById('onote'); n.className = 'err'; n.textContent = 'That did not save. Please try again.'; });
-      };
-    })();
-
-    function send(action, body, type, btn, note, box) {
-      if (!body.trim()) return;
-      btn.disabled = true; note.className = ''; note.textContent = '';
-      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: action, body: body, request_type: type }) })
-        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
-        .then(function (res) {
-          btn.disabled = false;
-          if (!res.ok) { note.className = 'err'; note.textContent = res.j.error === 'slow_down' ? 'Please wait a little before sending more.' : 'That did not send. Please try again.'; return; }
-          box.value = ''; note.className = 'ok'; note.textContent = 'Sent. We will reply here.'; setTimeout(load, 600);
-        }).catch(function () { btn.disabled = false; note.className = 'err'; note.textContent = 'That did not send. Please try again.'; });
-    }
-    var tiles = document.querySelectorAll('[data-panel]');
-    for (var pi = 0; pi < tiles.length; pi++) tiles[pi].onclick = function () {
-      var id = this.getAttribute('data-panel'), open = document.getElementById(id).className.indexOf('on') >= 0;
-      var all = document.querySelectorAll('.panel'); for (var a = 0; a < all.length; a++) all[a].className = 'panel';
-      var ts = document.querySelectorAll('.tile'); for (var b = 0; b < ts.length; b++) ts[b].className = 'tile';
-      if (!open) { document.getElementById(id).className = 'panel on'; this.className = 'tile on'; }
-    };
-    if (location.hash === '#ready') { var firstTile = document.querySelector('[data-panel]'); if (firstTile) firstTile.click(); }
-    // Change date (self-reschedule): options from the server, one tap to move. Inside 48 hours the page says to contact us.
-    var mvl = document.querySelectorAll('[data-move]');
-    for (var mi = 0; mi < mvl.length; mi++) mvl[mi].onclick = function (ev) {
-      ev.preventDefault();
-      var id = this.getAttribute('data-move'), box = document.getElementById('mv-' + id);
-      box.innerHTML = '<div class="sub">Finding open times…</div>';
-      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'reschedule_options', job_id: id }) })
-        .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-        .then(function (res) {
-          if (!res.ok) { box.innerHTML = '<div class="sub err">' + (res.j.error === 'too_close' ? 'This clean is less than 48 hours away. Please message us below to change it.' : 'That clean cannot be moved online. Please message us below.') + '</div>'; return; }
-          if (!res.j.options.length) { box.innerHTML = '<div class="sub">No open times in the next three weeks. Please message us below.</div>'; return; }
-          box.innerHTML = '<div class="sub">Pick a new time (only this visit moves):</div>' + res.j.options.map(function (o) { return '<button class="btn alt" data-pick="' + o.date + '|' + o.slot + '">' + esc(day(o.date)) + ' · ' + esc(o.label) + '</button>'; }).join(' ');
-          var picks = box.querySelectorAll('[data-pick]');
-          for (var pi2 = 0; pi2 < picks.length; pi2++) picks[pi2].onclick = function () {
-            var p = this.getAttribute('data-pick').split('|'); this.disabled = true;
-            fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'reschedule', job_id: id, date: p[0], slot: p[1] }) })
-              .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-              .then(function (r2) { if (!r2.ok) { box.innerHTML = '<div class="sub err">' + (r2.j.error === 'slot_taken' ? 'That time was just taken. Please pick another.' : 'That did not save. Please try again.') + '</div>'; return; } box.innerHTML = '<div class="sub ok">Moved to ' + esc(day(r2.j.date)) + ' at ' + esc(r2.j.label) + '. See you then!</div>'; setTimeout(load, 1500); });
-          };
-        }).catch(function () { box.innerHTML = '<div class="sub err">That did not load. Please try again.</div>'; });
-    };
-    var cnl = document.querySelectorAll('[data-cancel]');
-    for (var ci = 0; ci < cnl.length; ci++) cnl[ci].onclick = function (ev) {
-      ev.preventDefault();
-      var id = this.getAttribute('data-cancel'), box = document.getElementById('mv-' + id);
-      box.innerHTML = '<div class="sub">Cancel this one visit? No fee, because it is more than 48 hours away. <button class="btn alt" id="cy-' + esc(id) + '">Yes, cancel it</button></div>';
-      document.getElementById('cy-' + id).onclick = function () {
-        this.disabled = true;
-        fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'cancel', job_id: id }) })
-          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-          .then(function (res) { if (!res.ok) { box.innerHTML = '<div class="sub err">' + (res.j.error === 'too_close' ? 'This clean is less than 48 hours away. Please message us below.' : 'That did not save. Please message us below.') + '</div>'; return; } box.innerHTML = '<div class="sub">Done. ' + (res.j.refunded ? 'Your payment is being refunded in full. ' : '') + 'You can book again any time.</div>'; load(); })
-          .catch(function () { box.innerHTML = '<div class="sub err">That did not save. Please try again.</div>'; });
-      };
-    };
-    var tsb = document.getElementById('tsend');
-    if (tsb) tsb.onclick = function () {
-      tsb.disabled = true;
-      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'texts', on: !d.customer.texts_on }) })
-        .then(function (r) { if (!r.ok) throw 0; return load(); })
-        .catch(function () { tsb.disabled = false; var n = document.getElementById('tnote'); n.className = 'err'; n.textContent = 'That did not save. Please try again.'; });
-    };
-    var nb = document.getElementById('nsend');
-    if (nb) nb.onclick = function () {
-      var box = document.getElementById('ntext'), note = document.getElementById('nnote');
-      if (!box.value.trim()) return;
-      nb.disabled = true; note.className = ''; note.textContent = '';
-      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'house_note', body: box.value }) })
-        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
-        .then(function (res) {
-          nb.disabled = false;
-          if (!res.ok) { note.className = 'err'; note.textContent = res.j.error === 'slow_down' ? 'Please wait a little before adding more.' : 'That did not save. Please try again.'; return; }
-          box.value = ''; note.className = 'ok'; note.textContent = 'Added. Thank you!'; setTimeout(function () { load().then(function () { var h0 = document.getElementById('home'); if (h0) h0.scrollIntoView(); }); }, 700);
-        }).catch(function () { nb.disabled = false; note.className = 'err'; note.textContent = 'That did not save. Please try again.'; });
-    };
-    var tb = document.querySelectorAll('[data-tip]');
-    for (var ti = 0; ti < tb.length; ti++) tb[ti].onclick = function () {
-      var b = this; b.disabled = true;
-      var amt = +b.getAttribute('data-tip');
-      var base = { t: token, action: 'tip', report_token: b.getAttribute('data-rt'), amount_cents: amt, return_url: location.origin + location.pathname + '?t=' + token };
-      var post = function (extra) { return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(Object.assign({}, base, extra)) }).then(function (r) { return r.json(); }); };
-      var checkout = function () { return post({}).then(function (j) { if (j && j.url) location.href = j.url; else { b.disabled = false; } }); };
-      // Saved card first (asked once), then Stripe's own page if the bank wants a check.
-      if (SAVED && confirm('Tip ' + money(amt) + ' on your card ending ' + SAVED.last4 + '?')) {
-        post({ saved: true }).then(function (j) {
-          if (j && j.charged) location.href = base.return_url + '&tip=thanks';
-          else if (j && j.fallback) checkout();
-          else { b.disabled = false; alert('That tip did not go through. Nothing was charged.'); }
-        }).catch(function () { b.disabled = false; });
-      } else if (SAVED) { b.disabled = false; }
-      else checkout().catch(function () { b.disabled = false; });
-    };
-    var cob = document.querySelectorAll('[data-co]');
-    for (var ci = 0; ci < cob.length; ci++) cob[ci].onclick = function () {
-      var b = this; b.disabled = true;
-      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'change_order', change_order_id: b.getAttribute('data-co'), decision: b.getAttribute('data-d') }) })
-        .then(function () { load(); }).catch(function () { b.disabled = false; });
-    };
-    document.getElementById('msend').onclick = function () { send('message', document.getElementById('mtext').value, null, this, document.getElementById('mnote'), document.getElementById('mtext')); };
-    document.getElementById('rsend').onclick = function () { send('request', document.getElementById('rtext').value, document.getElementById('rtype').value, this, document.getElementById('rnote'), document.getElementById('rtext')); };
-    document.title = d.org.name + ' · your account';
-  }
-
-  function load() {
-    return fetch(FN + '/customer-portal?t=' + encodeURIComponent(token))
-      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-      .then(render)
-      .catch(function () { root.innerHTML = '<div class="card"><p class="err">This link is not valid or has been replaced. Please contact us for a new one.</p></div>'; });
-  }
-  if (!/^[0-9a-f]{32}$/.test(token)) root.innerHTML = '<div class="card"><p class="err">This link is not valid. Please contact us for a new one.</p></div>';
-  else load();
-</script>
-<script>
-  // Agreements, the customer's needs (written record + checklist), and files they send us: the customer-docs function (2026-10-12).
-  (function () {
-    var D = FN + '/customer-docs';
-    function post(body) {
-      body.t = token;
-      return fetch(D, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); });
-    }
-    var ERR = { too_short: 'Tell us a little more (a sentence or two).', slow_down: 'That is a lot for one day. Please try again tomorrow or message us.', could_not_understand: 'We could not turn that into a plan. Try describing it room by room.', ai_unavailable: 'Our assistant is not available right now. Please message us instead.', not_configured: 'This is not switched on yet. Please message us instead.', name_required: 'Type your full name and tick the box.', too_big: 'That file is over 8 MB.', bad_type: 'Please send a PDF or a photo.', bad_file: 'That file could not be read.' };
-    function errText(j) { return ERR[j && j.error] || 'Something went wrong. Please try again.'; }
-    function list(items) { return '<ul>' + items.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul>'; }
-    function planHtml(p, draft) {
-      var rooms = {};
-      (p.items || []).forEach(function (i) { (rooms[i.room] = rooms[i.room] || []).push(i.label); });
-      return '<p><b>' + esc(p.summary) + '</b></p>' +
-        (p.record || []).map(function (r) { return '<div class="room"><b>' + esc(r.heading) + '</b>' + list(r.points) + '</div>'; }).join('') +
-        (Object.keys(rooms).length ? '<h2 style="margin-top:14px">Done at every clean</h2>' + Object.keys(rooms).map(function (k) { return '<div class="room"><b>' + esc(k) + '</b>' + list(rooms[k]) + '</div>'; }).join('') : '') +
-        ((p.questions || []).length ? '<h2 style="margin-top:14px">' + (draft ? 'We will follow up on' : 'Questions for our team') + '</h2>' + list(p.questions) : '');
-    }
-    var BOX = 'background:#f6f5fb;border-radius:14px;padding:12px 14px;margin:0 0 12px';
-    function renderNeeds(care) {
-      var el = document.getElementById('needs-slot');
-      if (!el) return;
-      var h = '';
-      if (care.draft) {
-        h += '<p>Here is how we wrote it down. Is this right?</p><div style="' + BOX + '">' + planHtml(care.draft, true) + '</div>' +
-          '<button id="nyes">Yes, this is right</button> <button class="btn alt" id="nno">Start over</button> <span id="nnote2"></span>';
-      } else {
-        if (care.active) h += '<p>Your plan, confirmed ' + esc(day((care.active.confirmed_at || '').slice(0, 10))) + '. Our team follows it at every clean.</p><div style="' + BOX + '">' + planHtml(care.active, false) + '</div><p>Want to change it? Describe everything you want again below; the new plan replaces this one once you confirm it.</p>';
-        else h += '<p>In your own words: what matters to you, room by room, products to use or avoid, pets, things to skip. We turn it into a written plan and a checklist our team does at every clean. You check it before it is used.</p>';
-        h += '<textarea id="ntxt" placeholder="For example: we have a cat, so close the laundry room door. Unscented products in the nursery. Always wipe the fridge handles and make the beds. Skip the office."></textarea><button id="ngo">Write up my plan</button> <span id="nnote2"></span>';
-      }
-      el.innerHTML = h;
-      var go = document.getElementById('ngo');
-      if (go) go.onclick = function () {
-        var t = document.getElementById('ntxt').value.trim(), n = document.getElementById('nnote2');
-        if (t.length < 15) { n.className = 'err'; n.textContent = ERR.too_short; return; }
-        go.disabled = true; n.className = 'sub'; n.textContent = 'Writing it up (about 20 seconds)...';
-        post({ action: 'needs_draft', text: t }).then(function (r) { go.disabled = false; if (!r.ok) { n.className = 'err'; n.textContent = errText(r.j); return; } renderNeeds({ draft: r.j.plan, active: care.active }); });
-      };
-      var yes = document.getElementById('nyes'), no = document.getElementById('nno');
-      if (yes) yes.onclick = function () { yes.disabled = true; post({ action: 'needs_confirm', plan_id: care.draft.id }).then(function (r) { if (!r.ok) { yes.disabled = false; document.getElementById('nnote2').textContent = errText(r.j); return; } load(); }); };
-      if (no) no.onclick = function () { post({ action: 'needs_discard', plan_id: care.draft.id }).then(function () { renderNeeds({ active: care.active }); }); };
-    }
-    function renderAgreements(items) {
-      var el = document.getElementById('agreements-slot');
-      if (!el) return;
-      if (!items.length) { el.innerHTML = '<p>Your service agreement will appear here when we send it.</p>'; return; }
-      el.innerHTML = items.map(function (a) {
-        var done = a.status === 'accepted';
-        return '<div class="row"><div><b>' + esc(a.title) + '</b><div class="sub">' + (done ? 'Accepted by ' + esc(a.accepted_name) + ' on ' + esc(day((a.accepted_at || '').slice(0, 10))) : 'Sent ' + esc(day(a.date)) + ', waiting for you') + '</div></div>' +
-          (a.pdf_url ? '<a class="btn alt" href="' + esc(a.pdf_url) + '" target="_blank" rel="noopener">PDF</a>' : '') + '</div>' +
-          (done ? '' : '<details style="margin:6px 0 12px"><summary style="cursor:pointer;font-weight:700;color:#004aad">Read and accept</summary>' +
-            (a.sections || []).map(function (s) { return '<div class="room" style="margin-top:10px"><b>' + esc(s.heading) + '</b>' + s.paragraphs.map(function (p) { return '<p style="color:#15121f">' + esc(p) + '</p>'; }).join('') + '</div>'; }).join('') +
-            '<label style="display:flex;gap:8px;align-items:flex-start;margin:10px 0"><input type="checkbox" id="ag-ok-' + esc(a.id) + '"> <span>I have read this agreement and I agree to it.</span></label>' +
-            '<input id="ag-name-' + esc(a.id) + '" placeholder="Type your full name" autocomplete="name" style="width:100%;font:inherit;border:1px solid #ddd9ea;border-radius:12px;padding:10px 12px;margin:0 0 10px">' +
-            '<button data-accept="' + esc(a.id) + '">Accept</button> <span id="ag-note-' + esc(a.id) + '"></span></details>');
-      }).join('');
-      var bs = el.querySelectorAll('[data-accept]');
-      for (var i = 0; i < bs.length; i++) bs[i].onclick = function () {
-        var id = this.getAttribute('data-accept'), b = this, n = document.getElementById('ag-note-' + id);
-        var name = document.getElementById('ag-name-' + id).value.trim(), ok = document.getElementById('ag-ok-' + id).checked;
-        if (!ok || name.length < 3) { n.className = 'err'; n.textContent = ERR.name_required; return; }
-        b.disabled = true; n.className = 'sub'; n.textContent = 'Saving your signed copy...';
-        post({ action: 'accept', agreement_id: id, name: name, agree: true }).then(function (r) { if (!r.ok) { b.disabled = false; n.className = 'err'; n.textContent = errText(r.j); return; } load(); });
-      };
-    }
-    window.loadDocs = function () {
-      var u = document.getElementById('usend');
-      if (u) u.onclick = function () {
-        var f = document.getElementById('ufile').files[0], n = document.getElementById('unote');
-        if (!f) return;
-        if (f.size > 8 * 1024 * 1024) { n.className = 'err'; n.textContent = ERR.too_big; return; }
-        u.disabled = true; n.className = 'sub'; n.textContent = 'Sending...';
-        var rd = new FileReader();
-        rd.onload = function () {
-          var b64 = String(rd.result).split(',')[1] || '';
-          post({ action: 'upload', file_name: f.name, mime_type: f.type, data_base64: b64 }).then(function (r) { u.disabled = false; if (!r.ok) { n.className = 'err'; n.textContent = errText(r.j); return; } n.className = 'ok'; n.textContent = 'Sent. Thank you!'; setTimeout(load, 1200); });
-        };
-        rd.readAsDataURL(f);
-      };
-      fetch(D + '?t=' + encodeURIComponent(token)).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); }).then(function (d) {
-        renderAgreements(d.agreements || []);
-        renderNeeds(d.care || {});
-      }).catch(function () {
-        var a = document.getElementById('agreements-slot'), n = document.getElementById('needs-slot');
-        if (a) a.innerHTML = '<p>Agreements could not load. Reload the page to try again.</p>';
-        if (n) n.innerHTML = '<p>This could not load. Reload the page to try again.</p>';
-      });
-    };
-    // The page may already have rendered (a fast response) before this script ran.
-    if (document.getElementById('needs-slot')) window.loadDocs();
-  })();
-</script>
-</body>
-</html>
- + (it.bounty_cents / 100) + '</span>' : '') + '<div class="sub">' + esc(it.note || '') + '</div><div class="sub">' + esc(STAT[it.status] || it.status) + (it.declined_reason ? ': ' + esc(it.declined_reason) : '') + '</div>' +
+            return '<div class="row"><div><b>' + esc(it.room || 'Item') + '</b> ' + (it.bounty_cents ? '<span class="sub">bounty $' + (it.bounty_cents / 100) + '</span>' : '') + '<div class="sub">' + esc(it.note || '') + '</div><div class="sub">' + esc(STAT[it.status] || it.status) + (it.declined_reason ? ': ' + esc(it.declined_reason) : '') + '</div>' +
               (it.before_url ? '<img src="' + esc(it.before_url) + '" alt="Before" style="width:90px;border-radius:8px;margin:4px 6px 0 0">' : '') + (it.after_url ? '<img src="' + esc(it.after_url) + '" alt="After" style="width:90px;border-radius:8px;margin-top:4px">' : '') + '</div>' +
               (it.status === 'done' ? '<div><button class="btn" data-pc="' + esc(it.id) + '">Looks good</button></div>' : (it.status === 'open' || it.status === 'assigned' ? '<div><a href="#" data-px="' + esc(it.id) + '">Remove</a></div>' : '')) + '</div>';
           }).join('') : '<p class="sub">Nothing yet.</p>';
@@ -507,6 +353,50 @@
               .then(function (r2) { if (!r2.ok) { box.innerHTML = '<div class="sub err">' + (r2.j.error === 'slot_taken' ? 'That time was just taken. Please pick another.' : 'That did not save. Please try again.') + '</div>'; return; } box.innerHTML = '<div class="sub ok">Moved to ' + esc(day(r2.j.date)) + ' at ' + esc(r2.j.label) + '. See you then!</div>'; setTimeout(load, 1500); });
           };
         }).catch(function () { box.innerHTML = '<div class="sub err">That did not load. Please try again.</div>'; });
+    };
+    // Pause: pick a restart date (up to 8 weeks), read what happens, confirm. Visits inside 48 hours stay on (the office calls).
+    function planPost(body) { body.t = token; return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); }); }
+    var pzl = document.querySelectorAll('[data-pz]');
+    for (var zi = 0; zi < pzl.length; zi++) pzl[zi].onclick = function (ev) {
+      ev.preventDefault();
+      var id = this.getAttribute('data-pz'), box = document.getElementById('pz-' + id);
+      box.innerHTML = '<p class="sub">Pausing gives up your regular time, so someone else can book it. Visits more than 48 hours away are cancelled with no fee (a prepaid one is refunded in full). ' +
+        'A visit less than 48 hours away stays on; we will be in touch about it. When you come back, you pick an open time here. Nothing restarts by itself.</p>' +
+        '<label>Come back on or after</label><input type="date" id="pzd-' + esc(id) + '" min="' + esc(box.getAttribute('data-min')) + '" max="' + esc(box.getAttribute('data-max')) + '"> ' +
+        '<button class="btn" id="pzy-' + esc(id) + '">Pause my cleanings</button> <span id="pzn-' + esc(id) + '"></span>';
+      document.getElementById('pzy-' + id).onclick = function () {
+        var btn = this, v = document.getElementById('pzd-' + id).value, n = document.getElementById('pzn-' + id);
+        if (!v || v < box.getAttribute('data-min') || v > box.getAttribute('data-max')) { n.className = 'err'; n.textContent = 'Pick a date within the next 8 weeks.'; return; }
+        btn.disabled = true;
+        planPost({ action: 'pause_plan', series_id: id, restart_date: v }).then(function (res) {
+          if (!res.ok) { btn.disabled = false; n.className = 'err'; n.textContent = res.j.error === 'bad_date' ? 'Pick a date within the next 8 weeks.' : 'That did not save. Please message us below.'; return; }
+          var held = (res.j.held || []).map(function (x) { return day(x.date) + ' at ' + time(x.time); });
+          box.innerHTML = '<div class="sub ok">Paused until ' + esc(day(res.j.restart_on)) + '. ' + (res.j.cancelled ? res.j.cancelled + ' visit' + (res.j.cancelled === 1 ? '' : 's') + ' cancelled, no fee. ' : '') +
+            (res.j.refunded ? 'Prepaid visits are being refunded in full. ' : '') + (held.length ? 'Still on (less than 48 hours away): ' + esc(held.join(', ')) + '. We will be in touch about it. ' : '') + 'Come back here to pick your new time.</div>';
+          setTimeout(load, 2500);
+        }).catch(function () { btn.disabled = false; n.className = 'err'; n.textContent = 'That did not save. Please try again.'; });
+      };
+    };
+    // Back from a pause: open times, one tap. The time picked becomes the plan's new day and time.
+    var rsl = document.querySelectorAll('[data-rs]');
+    for (var ri = 0; ri < rsl.length; ri++) rsl[ri].onclick = function () {
+      var id = this.getAttribute('data-rs'), box = document.getElementById('pz-' + id);
+      box.innerHTML = '<div class="sub">Loading open times...</div>';
+      planPost({ action: 'restart_options', series_id: id }).then(function (res) {
+        if (!res.ok || !res.j.options) { box.innerHTML = '<div class="sub err">That did not load. Please try again.</div>'; return; }
+        if (!res.j.options.length) { box.innerHTML = '<div class="sub">No open times in the next three weeks. Please message us below and we will find one.</div>'; return; }
+        box.innerHTML = '<div class="sub">Pick your new time. Your plan continues from it on the same rhythm:</div>' + res.j.options.map(function (o) { return '<button class="btn alt" data-rp="' + o.date + '|' + o.slot + '">' + esc(day(o.date)) + ' · ' + esc(o.label) + '</button>'; }).join(' ');
+        var picks = box.querySelectorAll('[data-rp]');
+        for (var k = 0; k < picks.length; k++) picks[k].onclick = function () {
+          var p = this.getAttribute('data-rp').split('|');
+          box.innerHTML = '<div class="sub">Saving...</div>';
+          planPost({ action: 'restart_plan', series_id: id, date: p[0], slot: p[1] }).then(function (r2) {
+            if (!r2.ok) { box.innerHTML = '<div class="sub err">' + (r2.j.error === 'slot_taken' ? 'That time was just taken. Tap Pick a new time again.' : 'That did not save. Please message us below.') + '</div>'; return; }
+            box.innerHTML = '<div class="sub ok">Welcome back! Your next clean is ' + esc(day(r2.j.date)) + ' at ' + esc(r2.j.label) + '.</div>';
+            setTimeout(load, 2500);
+          });
+        };
+      }).catch(function () { box.innerHTML = '<div class="sub err">That did not load. Please try again.</div>'; });
     };
     var cnl = document.querySelectorAll('[data-cancel]');
     for (var ci = 0; ci < cnl.length; ci++) cnl[ci].onclick = function (ev) {
