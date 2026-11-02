@@ -64,6 +64,16 @@
   open times. The phone is asked once, on the contact form (step 2), where the abandoned-booking capture already
   reads it. The empty gradient "photo" is hidden until a real photo is set on .bw-gate-photo.
 ===================================================================== -->
+<!-- For AI assistants and search engines (0561): what we offer and where an assistant can book. Prices here must match the price list. -->
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"HouseCleaningService","name":"Two Hour Maids","url":"https://twohourmaids.com",
+ "areaServed":{"@type":"City","name":"Minneapolis-St. Paul, MN"},
+ "hasOfferCatalog":{"@type":"OfferCatalog","name":"Home cleaning","itemListElement":[
+  {"@type":"Offer","itemOffered":{"@type":"Service","name":"Two Hour Clean","description":"Two hours, two cleaners: kitchen, floors, up to 2.5 bathrooms and 2-4 bedrooms."},"priceSpecification":{"@type":"PriceSpecification","price":"222.00","priceCurrency":"USD","valueAddedTaxIncluded":false}},
+  {"@type":"Offer","itemOffered":{"@type":"Service","name":"The Checklist Clean","description":"Our standard checklist in every room, priced by bedrooms and bathrooms."},"priceSpecification":{"@type":"PriceSpecification","minPrice":"222.00","priceCurrency":"USD","valueAddedTaxIncluded":false}}]},
+ "potentialAction":{"@type":"ReserveAction","target":{"@type":"EntryPoint","urlTemplate":"https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/agent-api/mcp?org_slug=two-hour-maids","encodingType":"application/json","contentType":"application/json"}}}
+</script>
+
 
 <div id="bw-root" class="bw-root">
 
@@ -93,7 +103,7 @@
           <small id="bw-gate-price-note"></small>
         </div>
         <!-- "Tell us what you need" (Jack, 2026-10-17): optional, a plain note for the team ("focus on the bathroom"). It goes into the
-             booking's special requests. The plan builder is switched off (hidden) so it never suggests by-request items like the oven. -->
+             booking's special requests. The plan builder is switched off (hidden) so it never suggests by-request items like the range hood. We do not clean ovens or baseboards at all (Jack, 2026-11-01). -->
         <div class="bw-intake">
           <label class="bw-intake-label" for="bw-intake-text">Anything we should know for your clean? <span>(optional)</span></label>
           <textarea id="bw-intake-text" rows="3" maxlength="1500" placeholder="e.g. Focus on the bathrooms"></textarea>
@@ -199,7 +209,7 @@
     </div>
 
     <!-- Two Hour Clean priorities (Jack, 2026-10-18): what matters most this visit, 240 characters. Read by booking-intake: anything that is
-         an extra (baseboards, inside cabinets, the oven) is not part of the Two Hour Clean, and the page says so and offers the Checklist Clean. -->
+         an extra (inside cabinets, the fridge) is not part of the Two Hour Clean, and the page says so and offers the Checklist Clean. -->
     <div id="bw-2h-prio" class="bw-2h-prio" hidden>
       <label for="bw-2h-prio-text">Your priorities</label>
       <textarea id="bw-2h-prio-text" rows="2" maxlength="240" placeholder="Kitchen and main bath first"></textarea>
@@ -229,6 +239,52 @@
       <!-- 2026-10-18 (Jack): instead of one long list, two simple sketched rooms. Tap a spot (the dishwasher, the window...) to add that
            extra; "All extras" flips to the full list. The bar counts the visit's minutes up to four hours; past that the customer chooses a
            Four Hour Home Detailing or spreading the extras over their first visits. -->
+      <!-- Shower glass and stove grates (Jack, 2026-10-31). Polish +$36 (Jack, 2026-11-01), waterproof treatment +$10, grate pumice included; for this
+           visit. create-booking prices it again (_shared/showerGlass.ts) and puts each choice on the job for the crew. -->
+      <div id="bw-glass" class="bw-glass" hidden>
+        <div class="bw-glass-card">
+          <svg class="bw-glass-pic" viewBox="0 0 320 170" role="img" aria-label="A shower door half covered in white mineral spots and soap film, half polished crystal clear">
+            <defs>
+              <clipPath id="bwgDoor"><rect x="20" y="10" width="280" height="150" rx="6"/></clipPath>
+            </defs>
+            <rect x="0" y="0" width="320" height="170" fill="#F4F1EA"/>
+            <g clip-path="url(#bwgDoor)">
+              <rect x="20" y="10" width="140" height="150" fill="#D3D6CC"/>
+              <rect x="160" y="10" width="140" height="150" fill="#DDF0FC"/>
+              <g fill="#FFFFFF" opacity=".75">
+                <circle cx="40" cy="30" r="5"/><circle cx="62" cy="48" r="3"/><circle cx="88" cy="26" r="6"/><circle cx="120" cy="40" r="4"/><circle cx="145" cy="62" r="5"/>
+                <circle cx="35" cy="80" r="4"/><circle cx="70" cy="92" r="6"/><circle cx="104" cy="76" r="3"/><circle cx="132" cy="100" r="5"/><circle cx="50" cy="120" r="5"/>
+                <circle cx="90" cy="130" r="4"/><circle cx="126" cy="140" r="6"/><circle cx="150" cy="122" r="3"/><circle cx="30" cy="148" r="4"/><circle cx="76" cy="60" r="2"/>
+              </g>
+              <path d="M20 135 Q60 125 100 138 T160 132 V160 H20 Z" fill="#BFB89C" opacity=".55"/>
+              <path d="M20 112 Q70 104 120 116 T160 110" stroke="#FFFFFF" stroke-width="3" fill="none" opacity=".5"/>
+              <path d="M180 30 L205 18 M190 60 L240 34" stroke="#FFFFFF" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+              <line x1="160" y1="10" x2="160" y2="160" stroke="#FFFFFF" stroke-width="3" stroke-dasharray="6 5"/>
+            </g>
+            <rect x="20" y="10" width="280" height="150" rx="6" fill="none" stroke="#9AA3A8" stroke-width="4"/>
+            <rect x="282" y="70" width="8" height="34" rx="3" fill="#9AA3A8"/>
+            <rect x="34" y="138" width="56" height="18" rx="9" fill="#1F2937" opacity=".75"/><text x="62" y="151" text-anchor="middle" font-size="11" font-family="Inter, sans-serif" fill="#fff">Before</text>
+            <rect x="230" y="138" width="56" height="18" rx="9" fill="#1F5EFF"/><text x="258" y="151" text-anchor="middle" font-size="11" font-family="Inter, sans-serif" fill="#fff">After</text>
+          </svg>
+          <div class="bw-glass-body">
+            <b>Would you like us to do the crystal clear glass polishing on your shower door?</b>
+            <small>Hard-water spots, mineral deposits and soap film polished off the glass. <em class="bw-glass-price">+$36</em></small>
+            <div class="bw-glass-yn" role="radiogroup" aria-label="Glass polishing">
+              <button type="button" data-glass="yes">Yes, polish it</button>
+              <button type="button" data-glass="no" class="is-on">No thanks</button>
+            </div>
+            <label class="bw-glass-seal" id="bw-glass-seal" hidden>
+              <input type="checkbox" id="bw-glass-seal-on">
+              <span><b>Add a waterproof treatment</b><small>Water beads and rolls off, so spots come back slower.</small></span>
+              <em>+$10</em>
+            </label>
+          </div>
+        </div>
+        <label class="bw-glass-grates">
+          <input type="checkbox" id="bw-grate-pumice">
+          <span><b>Pumice stone cleaning on your stove-top grates</b><small>Baked-on grease lifted off cast-iron grates. Included.</small></span>
+        </label>
+      </div>
       <div id="bw-works-extras" class="bw-works-extras" hidden>
         <!-- Home Care Plan (Jack, 2026-10-18): one flat price every 4 weeks, the whole home detailed on rotation, extras pre-selected. -->
         <label class="bw-hc-card" id="bw-hc-card">
@@ -267,11 +323,9 @@
       <span class="bw-freq-title">Frequency</span>
       <div id="bw-freq-chips" class="bw-freq-chips" role="radiogroup" aria-label="How often"></div>
       <select id="bw-frequency" class="bw-freq-select" aria-hidden="true" tabindex="-1">
+        <option value="every_4_weeks">Monthly</option>
+        <option value="every_other_week">Every 2 Weeks</option>
         <option value="one_time">One-Time</option>
-        <option value="weekly">Weekly</option>
-        <option value="every_other_week">Every Other Week</option>
-        <option value="every_4_weeks">Every 4 Weeks</option>
-        <option value="every_6_weeks">Every 6 Weeks</option>
       </select>
     </div>
     <p id="bw-recurring-note" class="bw-note" hidden>Recurring plans save up to $33 a visit.</p>
@@ -294,6 +348,17 @@
     </details>
     <p id="bw-promo-note" class="bw-note" hidden></p>
 
+    <details id="bw-gift-wrap" class="bw-promo-toggle">
+      <summary>Have a gift card?</summary>
+      <div class="bw-mini-field bw-promo-field" style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="bw-gift-code" placeholder="GC-XXXX-XXXX" aria-label="Gift card code" autocapitalize="characters" autocomplete="off">
+        <button type="button" id="bw-gift-check" class="bw-navbtn" style="width:auto;padding:8px 12px">Check</button>
+      </div>
+    </details>
+    <p id="bw-gift-note" class="bw-note" hidden></p>
+    <!-- Jack's 10/21 list: "option to purchase a cleaning for a funeral / as a gift for a deceased family". The pages exist (0497/0498, test mode only). -->
+    <p class="bw-note" style="margin-top:4px">Giving a clean home instead? <a href="gift-card.html" target="_blank" rel="noopener">Send a cleaning as a gift</a> · <a href="sympathy-gift.html" target="_blank" rel="noopener">For a family who lost someone</a></p>
+
     <div id="bw-textonly-panel" class="bw-textonly" hidden>
       <div class="bw-textonly-price" id="bw-textonly-price"></div>
       <p class="bw-textonly-copy" id="bw-textonly-copy">
@@ -302,7 +367,7 @@
       <div id="bw-detailing-info" class="bw-detailing-info" hidden>
         <p><b>9:00 AM to 1:30 PM.</b> Two back-to-back two-hour sessions with a free half hour in between.</p>
         <p><b>Session 1:</b> a full standard clean, including 2&frac12; to 3 bathrooms.</p>
-        <p><b>Session 2:</b> detailing. Pick items (each takes about 15 to 45 minutes: oven, fridge, cabinets, baseboards, windows, blinds, grout and more), or choose <b>Chef&rsquo;s Choice</b> and our team details whatever your home needs most.</p>
+        <p><b>Session 2:</b> detailing. Pick items (each takes about 15 to 45 minutes: fridge, cabinets, windows, blinds, grout and more), or choose <b>Chef&rsquo;s Choice</b> and our team details whatever your home needs most.</p>
         <p class="bw-note">We do not offer a deep clean, wall or ceiling washing, mold or biohazard cleanup, or moving heavy furniture.</p>
       </div>
       <!-- Build-your-own detailing list (Jack, 2026-10-14): pick, rank, and see honestly how much fits in four hours for this home. -->
@@ -320,6 +385,7 @@
     <div class="bw-divider" id="bw-divider-1"></div>
 
     <div id="bw-calendar-block">
+      <div id="bw-best" hidden style="margin:0 0 14px"><div style="font-weight:600;margin-bottom:6px">Our best times for you</div><div id="bw-best-list" style="display:flex;flex-wrap:wrap;gap:8px"></div><div class="bw-summary-window" style="margin-top:6px">Tap one to hold it for 10 minutes. Or pick any open day below.</div></div>
       <div class="bw-header">
         <button type="button" id="bw-prev" class="bw-navbtn" aria-label="Previous month">&#8249;</button>
         <div id="bw-month-label" class="bw-month-label">Loading…</div>
@@ -358,13 +424,63 @@
       </label>
 
       <label class="bw-field">
-        <span>Email</span>
-        <input type="email" id="bw-email" name="email" autocomplete="email" required>
+        <span>Email <em class="bw-opt-label">Optional, for emailed reports</em></span>
+        <input type="email" id="bw-email" name="email" autocomplete="email">
       </label>
 
       <label class="bw-field">
         <span>Phone</span>
         <input type="tel" id="bw-phone" name="phone" autocomplete="tel" required>
+      </label>
+
+      <label class="bw-field">
+        <span>Language for our texts</span>
+        <select id="bw-lang" name="lang"><option value="en">English</option><option value="es">Español</option></select>
+      </label>
+
+      <!-- How we reach them (0564; Jack 2026-10-28): some customers, often older, do not use text. Calls replace every text for them. -->
+      <label class="bw-field">
+        <span>How should we reach you about your cleans?</span>
+        <select id="bw-contact-pref" name="contact_pref">
+          <option value="text">Text me</option>
+          <option value="call">Call me (I don't use text)</option>
+        </select>
+      </label>
+
+      <!-- Kids' holiday gift (0555; Jack 2026-10-28): free, one holiday-themed toy per child left after the clean nearest each major holiday.
+           Only an age band per child is kept, so a toddler never gets small parts. -->
+      <label class="bw-field">
+        <span>Do you have kids? We leave a free holiday-themed toy for each child after the clean nearest a holiday.</span>
+        <select id="bw-kids" name="kids">
+          <option value="0">No kids at home</option>
+          <option value="1">1 child</option>
+          <option value="2">2 children</option>
+          <option value="3">3 children</option>
+          <option value="4">4 children</option>
+          <option value="5">5 children</option>
+          <option value="6">6 children</option>
+        </select>
+      </label>
+      <div id="bw-kids-box" hidden>
+        <div id="bw-kids-ages"></div>
+        <label class="bw-checkbox-row"><input type="checkbox" id="bw-kids-gift" checked><span>Yes, leave a free holiday gift for each child</span></label>
+      </div>
+
+      <!-- How did you hear about us (71; Jack 2026-10-27 cus-0017/0018/0019): required, one tap. A friend code picks Friend (still changeable);
+           Other has an optional few words. -->
+      <label class="bw-field">
+        <span>How did you hear about us?</span>
+        <select id="bw-heard" name="heard" required>
+          <option value="">Pick one</option>
+          <option value="google">Google</option>
+          <option value="friend">Friend</option>
+          <option value="yard_sign">Yard sign</option>
+          <option value="flyer_mail">Flyer or mail</option>
+          <option value="facebook">Facebook</option>
+          <option value="nextdoor">Nextdoor</option>
+          <option value="other">Other</option>
+        </select>
+        <input type="text" id="bw-heard-other" maxlength="80" placeholder="A few words (optional)" hidden>
       </label>
 
       <div class="bw-field-row">
@@ -381,8 +497,12 @@
       <label class="bw-field">
         <span>Anything we should know? <em class="bw-opt-label">Optional</em></span>
         <textarea id="bw-special-requests" rows="3" maxlength="1500" placeholder="e.g. Focus on the bathrooms"></textarea>
+        <!-- The Two Hour Clean (Jack, 2026-11-01): no extras, up to 2 special requests, one per line; create-booking checks it again. -->
+        <span id="bw-2h-cap" class="bw-2h-cap" aria-live="polite" hidden></span>
         <label class="bw-yard-sign"><input type="checkbox" id="bw-yard-sign"> It is OK to place a small 2 Hour Maids sign in my yard after the clean</label>
       </label>
+      <!-- 2026-10-27 (ops-0365): no pet question, just the standard notice. -->
+      <p class="bw-pet-note" style="font-size:13px;color:#6B7280;margin:4px 0 0">Pets: please have them in a crate or a closed room while the team cleans.</p>
       <!-- 2026-10-18: what they type, or a photo, is matched to our extras ("that's an extra, add it?") and to what we don't do. -->
       <div class="bw-notes-tools">
         <label class="bw-notes-photo"><input type="file" id="bw-notes-photo" accept="image/*" capture="environment" hidden>
@@ -448,7 +568,7 @@
       <div class="bw-field bw-tie" id="bw-tie-wrap" hidden>
         <label class="bw-tie-check"><input type="checkbox" id="bw-tie-on"> <b>Tie my tip to results</b></label>
         <div id="bw-tie-body" hidden>
-          <p class="bw-card-note">Photograph the things you want special care on, like the stove top or the baseboards. After your visit your team takes an after photo, and our management reviews both. If the goals are met, your tip goes to the team. If not, you pay nothing. You can change or cancel it in your account until the visit, and you can object to our decision there.</p>
+          <p class="bw-card-note">Photograph the things you want special care on, like the stove top or a window track. After your visit your team takes an after photo, and our management reviews both. If the goals are met, your tip goes to the team. If not, you pay nothing. You can change or cancel it in your account until the visit, and you can object to our decision there.</p>
           <div class="bw-tip-options" id="bw-tie-options"></div>
           <p class="bw-card-note">This is separate from any tip above and is charged to your saved card only if it is approved.</p>
         </div>
@@ -484,6 +604,14 @@
           <button type="button" class="bw-tip-btn" data-method="bank">Pay by bank</button>
         </div>
         <p class="bw-card-note" id="bw-paymethod-note"></p>
+        <!-- J3 (0676): a bank payment carries no card service fee, so the visits after the first cost less. One tap adds that saving to the
+             crew's tip instead (unticked: a tip is always the customer's choice). Shown only when booking-availability ?flags=1 says
+             bank_fee_tip; create-booking works the amount out again and never charges more than shown here.
+             DRAFT WORDING: the attorney/CPA confirm it before organizations.bank_fee_tip_enabled is switched on. -->
+        <label class="bw-checkbox-row" id="bw-bank-tip-wrap" hidden>
+          <input type="checkbox" id="bw-bank-tip">
+          <span id="bw-bank-tip-text"></span>
+        </label>
       </div>
 
       <!-- ACH debit authorization (the mandate). Stripe requires the customer to see and accept this before a bank account is saved
@@ -582,6 +710,25 @@
       </div>
     </details>
 
+    <!-- What we clean with (Jack, 2026-10-31): the short version of web/products.html, which has the drawings, the never list and the
+         gentle-first ladder. Keep the two lists in step with each other and with Admin > Supplies. -->
+    <details class="bw-menu-cat">
+      <summary><span class="bw-cat-name">What we clean with</span><span class="bw-cat-sub">Fragrance-free and floor-safe</span></summary>
+      <div class="bw-cat-body">
+        <ul class="bw-products">
+          <li><b>Dish soap</b> Our everyday cleaner, wood included</li>
+          <li><b>Bar Keepers Friend</b> Soap scum and body oils on tubs, showers and glass</li>
+          <li><b>Neutral pH floor cleaner</b> Won't strip or dull your floor's finish</li>
+          <li><b>70% alcohol</b> Streak-free mirrors and glass, no scent</li>
+          <li><b>Mineral oil</b> Food-safe, for butcher block and stainless</li>
+          <li><b>Free &amp; Clear disinfectant</b> Only on handles, switches and toilets</li>
+          <li><b>Ammonia</b> Stovetop and range hood only; ask and we skip it</li>
+        </ul>
+        <p class="bw-menu-small"><b>Never:</b> oil-soap floor cleaners, silicone stainless sprays, acidic or alkaline floor products, perfumes or fragrances.</p>
+        <a class="bw-products-link" href="https://puggy-code.github.io/franchise-os-web/products.html" target="_blank" rel="noopener">See every product and why</a>
+      </div>
+    </details>
+
     <!-- Shown only while one of these services is turned on (Admin > Setup > Seasonal services; off until spring, 0323). -->
     <details class="bw-menu-cat" id="bw-menu-seasonal" hidden>
       <summary><span class="bw-cat-name">Carpet, windows and air ducts</span><span class="bw-cat-sub">Book online</span></summary>
@@ -651,6 +798,8 @@
     // Pay by bank (Stripe ACH Direct Debit) for recurring plans, after the first visit. Off until ACH Direct Debit and Financial
     // Connections are on in Stripe and organizations.bank_pay_enabled is true (ACH-PAYMENTS.md). BANK_DISCOUNT_CENTS is for display
     // only and must equal organizations.bank_pay_discount_cents (0 = none; the server applies it, never this page). Never a card fee.
+    // "Add the card fee you save to your crew's tip" (0676) and the slow-day savings (0677) are switched on the server, not here
+    // (organizations.bank_fee_tip_enabled / slow_day_enabled, Pricing > Booking discounts); this page asks booking-availability.
     PAY_BY_BANK: false,
     BANK_DISCOUNT_CENTS: 0,
 
@@ -667,7 +816,7 @@
     SERVICE_AREA_ZIPS: [
       "55101","55102","55103","55104","55105","55106","55107","55108","55109",
       "55110","55112","55113","55114","55116","55117","55118","55119","55120",
-      "55121","55122","55123","55124","55125","55126","55127","55128","55130",
+      "55121","55122","55123","55124","55126","55127","55128","55130",
       "55305","55311","55316","55317","55318","55327","55331","55340","55341",
       "55343","55344","55345","55346","55347","55356","55357","55359","55364",
       "55369","55374","55378","55379","55391","55392","55393","55401","55402",
@@ -726,7 +875,8 @@
       { value: "2", label: "2", addOnCents: 1000 },
       { value: "3", label: "3", addOnCents: 2000 },
       { value: "4", label: "4", addOnCents: 3000 },
-      { value: "5", label: "5", addOnCents: 4000 }
+      { value: "5", label: "5", addOnCents: 4000 },
+      { value: "6", label: "6+", addOnCents: 5000 }
     ],
     BATHROOM_OPTIONS: [
       { value: "1",   addOnCents: 0 },
@@ -749,6 +899,7 @@
     // CREATE_BOOKING_URL must re-check that server-side. See zapier-make-setup.md.
     PROMO_CODES: {
       SPONGE: { serviceKey: "two_hour", frequencyKey: "one_time", priceCents: 18900 },
+      SPONGE33: { serviceKey: "two_hour", frequencyKey: "one_time", priceCents: 18900 }, // the BookingKoala name for SPONGE; the server treats it as SPONGE
       SENIOR: { serviceKey: "two_hour", frequencyKey: "one_time", priceCents: 18900 } // 60 and over; the team confirms age at the door
     },
 
@@ -793,9 +944,17 @@
   var viewMonth = today.getMonth(); // 0-indexed
   var availabilityCache = {}; // "YYYY-MM" -> { "YYYY-MM-DD": {"0900":true,...} }
   var selected = null; // { dateStr, slotKey, slotLabel }
+  // Slow-day discount (0677): which days the server marks slow (booking-availability slow_days), the amount for this clean and home size
+  // (create-booking check_slow_day), and amounts the server corrected at booking (slow_day_changed). Display only; the server decides.
+  var slowDays = {};   // "YYYY-MM-DD" -> percent
+  var slowQuotes = {}; // "service|beds|baths" -> { off_cents, base_cents, pct }
+  var slowFixed = {};  // "YYYY-MM-DD|service|beds|baths" -> cents the server said
+  // Pay by bank: the business offers "add the card fee you save to your crew's tip" (0676; booking-availability ?flags=1).
+  var bankFeeTipOn = false;
 
   var selectedService = "two_hour";
-  var selectedFrequency = "one_time";
+  // Monthly is the default (56; Jack 2026-10-27 cus-0007: "Monthly first (default), then 2 weeks, weekly, one-time").
+  var selectedFrequency = "every_4_weeks";
   var selectedBedrooms = "2";
   var selectedBathrooms = "1";
 
@@ -1210,37 +1369,76 @@
       return "<li class='" + (c.kind === "extra" ? "is-extra" : "") + "'><span>" + (c.kind === "extra" ? "+" : "&#10003;") + "</span>" +
         esc(c.item) + (c.kind === "extra" ? " <em>extra</em>" : "") + "</li>";
     }).join("");
-    // By-request items the customer asked about (the oven): the price is shown, but they are arranged with us, not booked here.
+    // By-request items the customer asked about (the range hood): the price is shown, but they are arranged with us, not booked here.
     var ask = (plan.on_request || []).map(function (o) { return "<li class='is-ask'><span>&#9742;</span>" + esc(o.label) + (o.cents != null ? ": " + formatPrice(o.cents) : "") + " <em>by request, we'll confirm</em></li>"; }).join("");
     var nope = plan.not_offered.map(function (n) { return "<li class='is-no'><span>&times;</span>" + esc(n.asked) + ": " + esc(n.why) + "</li>"; }).join("");
+    // Priority areas (Jack, 2026-10-28): every clean includes 2 at our price, a 3rd if time allows; more can be added as bounties.
+    var prio = (plan.priority_areas || []).map(function (p) { return "<li class='is-extra'><span>&#9733;</span>" + esc(p.simple) + " <em>" + (p.if_time ? "priority area, if time allows" : "priority area, included") + "</em></li>"; }).join("");
+    var bnty = (plan.bounties || []).map(function (b, i) {
+      return "<li class='is-ask'><label><input type='checkbox' class='bw-bounty' data-i='" + i + "'> " + esc(b.simple) + " <em>add as a bounty: $" + (b.suggested_cents / 100) + " to the team</em></label></li>";
+    }).join("");
+    var qs = (plan.questions || []).length ? "<div class='bw-intake-note'>A quick question so we get it right:</div>" + plan.questions.map(function (q, i) {
+      return "<label class='bw-field'><span>" + esc(q) + "</span><input type='text' class='bw-intake-answer' data-q='" + i + "' maxlength='120'></label>";
+    }).join("") + "<button type='button' id='bw-intake-answer-go' class='bw-gate-submit'>Update my plan</button>" : "";
     var price = plan.base_cents == null ? "" :
       formatPrice(plan.base_cents + (plan.extras_cents || 0)) + " one-time" + (plan.extras.length && plan.extras_cents == null ? ", plus extras priced when we confirm" : "");
     box.innerHTML =
       "<div class='bw-intake-title'>" + esc(plan.label) + "</div>" +
       "<div class='bw-intake-why'>" + esc(plan.why) + "</div>" +
-      (lines || ask || nope ? "<ul>" + lines + ask + nope + "</ul>" : "") +
+      (lines || prio || bnty || ask || nope ? "<ul>" + lines + prio + bnty + ask + nope + "</ul>" : "") + qs +
       "<div class='bw-intake-meta'>About " + hm(plan.minutes) + (price ? " &middot; " + price : "") + "</div>" +
       (plan.needs_two_times ? "<div class='bw-intake-note'>This takes two of our appointment times in a row. We'll confirm the second one with you.</div>" : "") +
+      (plan.max_requests ? "<div class='bw-intake-note'>The Two Hour Clean takes up to " + plan.max_requests + " special requests and no extras.</div>" : "") +
       "<button type='button' id='bw-intake-book' class='bw-gate-submit'>Book this</button>";
     box.hidden = false;
     document.getElementById("bw-intake-book").addEventListener("click", bookIntakePlan);
+    var ag = document.getElementById("bw-intake-answer-go");
+    if (ag) ag.addEventListener("click", function () {
+      var answers = [].map.call(document.querySelectorAll(".bw-intake-answer"), function (el) { return el.value.trim() ? (plan.questions[Number(el.getAttribute("data-q"))] + " " + el.value.trim()) : ""; }).filter(Boolean);
+      if (!answers.length) return;
+      document.getElementById("bw-intake-text").value = (document.getElementById("bw-intake-text").value.trim() + "\n" + answers.join("\n")).slice(0, 1500);
+      runIntake(true);
+    });
+  }
+
+  // The plain lines the crew reads (0559): short text, the customer's detail behind it, and what kind each one is.
+  var intakeItems = [];
+  function intakeItemsFor(plan) {
+    if (plan.service === "two_hour") {
+      // The Two Hour Clean (Jack, 2026-11-01): its special requests only, priority areas first, then the included lines, at most 2;
+      // nothing "if time allows" and no bounties. The rest of the plan is part of the clean anyway.
+      return (plan.priority_areas || []).filter(function (p) { return !p.if_time; }).map(function (p) { return { text: p.simple, detail: p.detail || null, kind: "priority" }; })
+        .concat((plan.checklist || []).filter(function (c) { return c.kind === "included"; }).map(function (c) { return { text: c.simple || c.item, detail: c.detail || null, kind: "included" }; }))
+        .slice(0, plan.max_requests || 2);
+    }
+    var out = (plan.checklist || []).map(function (c) { return { text: c.simple || c.item, detail: c.detail || null, kind: c.kind }; });
+    (plan.priority_areas || []).forEach(function (p) { out.push({ text: p.simple, detail: p.detail || null, kind: p.if_time ? "priority_if_time" : "priority" }); });
+    [].forEach.call(document.querySelectorAll(".bw-bounty"), function (cb) {
+      var b = (plan.bounties || [])[Number(cb.getAttribute("data-i"))];
+      if (cb.checked && b) out.push({ text: b.simple, detail: (b.detail ? b.detail + " " : "") + "(bounty offered: $" + (b.suggested_cents / 100) + ")", kind: "bounty" });
+    });
+    return out.slice(0, 12);
   }
 
   function bookIntakePlan() {
     if (!intakePlan) return;
     var plan = intakePlan;
+    intakeItems = intakeItemsFor(plan);
     // Open the calendar the same way "See Open Times" does, then pick the planned service and carry the plan into special requests.
     if (gateForm.requestSubmit) gateForm.requestSubmit(); else gateForm.dispatchEvent(new Event("submit", { cancelable: true }));
     var btn = document.querySelector('.bw-svc-btn[data-service="' + plan.service + '"]');
     if (btn) activateService(btn);
     var req = document.getElementById("bw-special-requests");
-    if (req) {
+    // A Two Hour Clean's plan lines already go with the booking as its special requests (at most 2), so the box is left for the customer.
+    if (req && plan.service !== "two_hour") {
       var wanted = plan.checklist.map(function (c) { return (c.kind === "extra" ? "Extra: " : "") + c.item; });
       req.value = wanted.slice(0, 10).join("\n");
     }
+    paintTwoHourCap();
   }
 
-  document.getElementById("bw-intake-go").addEventListener("click", function () {
+  document.getElementById("bw-intake-go").addEventListener("click", function () { runIntake(false); });
+  function runIntake(answered) {
     var text = document.getElementById("bw-intake-text").value.trim();
     var box = document.getElementById("bw-intake-result");
     var go = document.getElementById("bw-intake-go");
@@ -1249,7 +1447,7 @@
     fetch(CONFIG.INTAKE_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ org_slug: CONFIG.ORG_SLUG, text: text, bedrooms: gateBedroomSelect.value, bathrooms: gateBathroomSelect.value })
+      body: JSON.stringify({ org_slug: CONFIG.ORG_SLUG, text: text, bedrooms: gateBedroomSelect.value, bathrooms: gateBathroomSelect.value, answered: answered === true })
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
@@ -1261,7 +1459,7 @@
       })
       .catch(function () { box.hidden = false; box.textContent = "We couldn't build a plan right now. Pick a service below."; })
       .then(function () { go.disabled = false; go.textContent = "Build my plan"; });
-  });
+  }
 
   // ---------- pricing ----------
   // ---------- extras on The Checklist Clean ----------
@@ -1431,7 +1629,7 @@
       spots: [
         ["vents-no-removal", 67, 11], ["fan-dust", 148, 13], ["cabinets-outside", 94, 60], ["blinds-room", 204, 35],
         ["window-interior", 160, 76], ["kitchen-backsplash", 52, 105], ["disposal-deodorize", 168, 122], ["cabinets-inside", 40, 160],
-        ["under-sink-cabinet", 160, 172], ["dishwasher-interior", 261, 164], ["fridge-emptied", 330, 140], ["baseboards-room", 110, 200]
+        ["under-sink-cabinet", 160, 172], ["dishwasher-interior", 261, 164], ["fridge-emptied", 330, 140]
       ],
       nots: [["dishes", 225, 98]]
     },
@@ -1463,7 +1661,7 @@
       ),
       spots: [
         ["bathroom-fan-vent", 120, 24], ["glass-sconces", 85, 38], ["windows-room", 183, 61], ["showerhead-descale", 316, 54],
-        ["glass-doors", 262, 140], ["walls-spot", 196, 104], ["doors-clean", 22, 82], ["baseboards-room", 214, 200]
+        ["glass-doors", 262, 140], ["walls-spot", 196, 104], ["doors-clean", 22, 82]
       ],
       nots: [["clothes", 122, 200]]
     }
@@ -1471,7 +1669,7 @@
   // Short words for the hint line and the pop-up title.
   var WX_ASK = {
     "window-interior": "How many windows?", "windows-room": "How many rooms of windows?", "blinds-room": "How many rooms of blinds?",
-    "baseboards-room": "How many rooms?", "glass-doors": "How many glass doors?", "fan-dust": "How many fans?", "glass-sconces": "How many lights?",
+    "glass-doors": "How many glass doors?", "fan-dust": "How many fans?", "glass-sconces": "How many lights?",
     "bathroom-fan-vent": "How many fans?", "showerhead-descale": "How many showerheads?"
   };
   // What we do not do, marked with an X on the drawings (Jack, 2026-10-18). Matches the standard exclusions (no laundry, dishes, organizing).
@@ -1481,7 +1679,7 @@
   };
   var wxOpenNot = null;
   var WX_HINT = "Tap <span class='bw-wx-hintdot'>+</span> to add. <span class='bw-wx-hintdot bw-wx-hintno'>&times;</span> = we don't.";
-  var WX_WHERE = /window|blinds|baseboards-room|glass-doors|fan-dust|sconces|walls-spot|doors-clean/;
+  var WX_WHERE = /window|blinds|glass-doors|fan-dust|sconces|walls-spot|doors-clean/;
 
   function wxQty(k) { return ((wxPending ? wxPending.map : wxWish)[k]) || 0; }
   function wxMeta(x, qty) {
@@ -1653,11 +1851,36 @@
     renderTipOptions();
   });
 
+  // ---------- The Two Hour Clean: no extras, up to 2 special requests (Jack, 2026-11-01) ----------
+  // Same rule as supabase/functions/_shared/twoHourRules.ts; create-booking refuses more (two_hour_requests_limit) and the database too.
+  // One request per line of "Anything we should know?", the priorities box counts as one, and so does each line from "Tell us what you
+  // need". The yard-sign OK is a note for the crew, not a request.
+  var TWO_HOUR_MAX_REQUESTS = 2, TWO_HOUR_EXTRA_KINDS = ["extra", "priority_if_time", "bounty"];
+  function twoHourIntakeItems() { return (intakeItems || []).filter(function (x) { return TWO_HOUR_EXTRA_KINDS.indexOf(x.kind) < 0; }); }
+  function twoHourAsked() {
+    var lines = (document.getElementById("bw-special-requests").value || "").split("\n").map(function (x) { return x.trim(); }).filter(Boolean);
+    return (document.getElementById("bw-2h-prio-text").value.trim() ? 1 : 0) + lines.length + twoHourIntakeItems().length;
+  }
+  function paintTwoHourCap() {
+    var n = document.getElementById("bw-2h-cap");
+    if (!n) return;
+    n.hidden = selectedService !== "two_hour";
+    if (n.hidden) return;
+    var used = twoHourAsked();
+    n.textContent = "The Two Hour Clean takes up to " + TWO_HOUR_MAX_REQUESTS + " special requests, one per line" +
+      (document.getElementById("bw-2h-prio-text").value.trim() ? " (your priorities count as one)" : "") + ", and no extras. " +
+      used + " of " + TWO_HOUR_MAX_REQUESTS + " used.";
+    n.classList.toggle("is-over", used > TWO_HOUR_MAX_REQUESTS);
+  }
+  document.addEventListener("input", function (e) {
+    if (e.target && (e.target.id === "bw-special-requests" || e.target.id === "bw-2h-prio-text")) paintTwoHourCap();
+  });
+
   // ---------- Two Hour Clean priorities ----------
   var prioTimer = null, prioLast = "", prioExtras = [];
   function shortLabel(l) {
     return String(l).replace(/^Inside kitchen cabinets and drawers$/i, "Inside cabinets").replace(/^Interior windows in one room$/i, "Windows")
-      .replace(/^Dishwasher interior and filter$/i, "Dishwasher").replace(/^Fridge (emptied)$/i, "Fridge").replace(/^Baseboards in one room$/i, "Baseboards");
+      .replace(/^Dishwasher interior and filter$/i, "Dishwasher").replace(/^Fridge (emptied)$/i, "Fridge");
   }
   document.addEventListener("input", function (e) {
     if (!e.target || e.target.id !== "bw-2h-prio-text") return;
@@ -1710,7 +1933,7 @@
   // each visit's extras within four hours and within the plan's extras value, a first visit holds three.
   var HC_FLAT_CENTS = 27500, HC_MIN_EXTRAS_CENTS = 4000, HC_MAX_VISITS = 12;
   var HC_DEFAULT = [["fridge-emptied", 1], ["cabinets-outside", 1], ["dishwasher-interior", 1], ["kitchen-backsplash", 1], ["under-sink-cabinet", 1],
-    ["disposal-deodorize", 1], ["cabinets-inside", 1], ["showerhead-descale", 1], ["bathroom-fan-vent", 1], ["glass-doors", 1], ["baseboards", 1],
+    ["disposal-deodorize", 1], ["cabinets-inside", 1], ["showerhead-descale", 1], ["bathroom-fan-vent", 1], ["glass-doors", 1],
     ["fan-dust", 2], ["vents-no-removal", 1], ["blinds-room", 2], ["windows-room", 2], ["doors-clean", 1], ["walls-spot", 1], ["glass-sconces", 2],
     ["couch-vacuum", 1], ["mattress-flip", 1], ["washing-machine", 1], ["dryer", 1], ["stair-handrails", 1]];
   var hcOn = false, hcOut = {};   // hcOut: keys the customer took out
@@ -1779,7 +2002,28 @@
     updatePricing();
   });
 
+  // Shower glass polish ($36), its $10 waterproof treatment, stove-grate pumice (included). create-booking prices it again.
+  var GLASS_POLISH_CENTS = 3600, GLASS_SEAL_CENTS = 1000, glassPolish = false;
+  function glassSealOn() { return selectedService === "works" && glassPolish && document.getElementById("bw-glass-seal-on").checked; }
+  function glassCents() { return (selectedService === "works" && glassPolish ? GLASS_POLISH_CENTS : 0) + (glassSealOn() ? GLASS_SEAL_CENTS : 0); }
+  function renderGlass() {
+    var g = document.getElementById("bw-glass");
+    if (!g) return;
+    g.hidden = selectedService !== "works";
+    Array.prototype.forEach.call(g.querySelectorAll("[data-glass]"), function (b) { b.classList.toggle("is-on", (b.getAttribute("data-glass") === "yes") === glassPolish); });
+    document.getElementById("bw-glass-seal").hidden = !glassPolish;
+  }
+  document.getElementById("bw-glass").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-glass]");
+    if (!b) return;
+    glassPolish = b.getAttribute("data-glass") === "yes";
+    if (!glassPolish) document.getElementById("bw-glass-seal-on").checked = false;
+    updatePricing();
+  });
+  document.getElementById("bw-glass-seal-on").addEventListener("change", function () { updatePricing(); });
+
   function renderWorksExtras() {
+    renderGlass();
     var wrap = document.getElementById("bw-works-extras");
     if (!wrap) return;
     var on = selectedService === "works" && DETAIL_EXTRAS.length > 0;
@@ -1912,8 +2156,8 @@
   function subtotalCents() {
     if (isCatalogService()) return catalogQuote().total;
     if (selectedService === "two_hour") return CONFIG.BASE_PRICE_CENTS + (extraHalfOn() ? EXTRA_HALF_CENTS : 0);
-    if (selectedService === "works" && hcOn) return hcPriceCents();
-    if (selectedService === "works") return CONFIG.BASE_PRICE_CENTS + customCleanAddOnsCents() + worksExtrasCents();
+    if (selectedService === "works" && hcOn) return hcPriceCents() + glassCents();
+    if (selectedService === "works") return CONFIG.BASE_PRICE_CENTS + customCleanAddOnsCents() + worksExtrasCents() + glassCents();
     if (selectedService === "four_hour") return CONFIG.SERVICES.four_hour.oneTimeCents;
     return null;
   }
@@ -1945,6 +2189,35 @@
 
   // "Name three" referrals (0303). A friend's link opens this page with ?ref=<code>; kept for the visit like the QR code above.
   // create-booking checks the code and takes the friend's first-clean gift off; the page only shows it.
+  (function () {
+    var heard = document.getElementById("bw-heard"), other = document.getElementById("bw-heard-other");
+    if (!heard) return;
+    heard.addEventListener("change", function () { other.hidden = heard.value !== "other"; });
+    setTimeout(function () { if (!heard.value && friendCode()) heard.value = "friend"; }, 0);
+  })();
+  // Kids' holiday gift (0555): one age band per child, nothing else.
+  (function () {
+    var sel = document.getElementById("bw-kids"), box = document.getElementById("bw-kids-box"), ages = document.getElementById("bw-kids-ages");
+    if (!sel) return;
+    sel.addEventListener("change", function () {
+      var n = Number(sel.value) || 0, h = "";
+      for (var i = 0; i < n; i++) {
+        h += '<label class="bw-field"><span>Child ' + (i + 1) + ' age</span><select class="bw-kid-age"><option value="under_3">Under 3</option><option value="3_5">3-5</option>' +
+          '<option value="6_9" selected>6-9</option><option value="10_13">10-13</option><option value="14_plus">14+</option></select></label>';
+      }
+      ages.innerHTML = h;
+      box.hidden = n === 0;
+    });
+  })();
+  function kidsAnswer() {
+    var sel = document.getElementById("bw-kids");
+    var n = sel ? Number(sel.value) || 0 : 0;
+    var bands = [];
+    var els = document.querySelectorAll(".bw-kid-age");
+    for (var i = 0; i < els.length && i < n; i++) bands.push(els[i].value);
+    var cb = document.getElementById("bw-kids-gift");
+    return { gifts: n > 0 && !!(cb && cb.checked), bands: bands };
+  }
   function friendCode() {
     var c = null;
     try { c = new URLSearchParams(location.search).get('ref'); } catch (e) {}
@@ -2070,13 +2343,14 @@
   }
 
   // How often: one tap. Recurring first (most customers pick every other week); each chip shows its price.
-  var FREQ_CHIP_ORDER = ["every_other_week", "weekly", "every_4_weeks", "every_6_weeks", "one_time"];
-  var FREQ_SHORT = { one_time: "One-time", weekly: "Weekly", every_other_week: "Every 2 weeks", every_4_weeks: "Every 4 weeks", every_6_weeks: "Every 6 weeks" };
+  var FREQ_CHIP_ORDER = ["every_4_weeks", "every_other_week", "one_time"];
+  var FREQ_SHORT = { one_time: "One-time", weekly: "Weekly", every_other_week: "Every 2 weeks", every_4_weeks: "Monthly", every_6_weeks: "Every 6 weeks" };
   // How often, as a dial (Jack, 2026-10-18: "like turning up the volume on a car"). Turn it (drag, tap a label, or arrow keys) from one-time
   // to weekly; the price sits in the middle and the recurring saving beside it. The hidden <select id="bw-frequency"> still holds the value.
-  // Cheapest first (Jack, 2026-10-18): turn it right to see the price go up, left to see how low it gets.
-  var DIAL_STOPS = ["weekly", "every_other_week", "every_4_weeks", "every_6_weeks", "one_time"];
-  var DIAL_LABEL = { weekly: "Weekly", every_other_week: "2 weeks", every_4_weeks: "4 weeks", every_6_weeks: "6 weeks", one_time: "Once" };
+  // Order (Jack, 2026-10-27 cus-0007; weekly removed 2026-10-28): Monthly first (the default), every 2 weeks, one-time. Weekly and every 6 weeks are no longer
+  // offered on the page (existing 6-week plans keep their price; CONFIG.FREQUENCIES still knows it).
+  var DIAL_STOPS = ["every_4_weeks", "every_other_week", "one_time"];
+  var DIAL_LABEL = { weekly: "Weekly", every_other_week: "2 weeks", every_4_weeks: "Monthly", every_6_weeks: "6 weeks", one_time: "Once" };
   var DIAL_SWEEP = 135;   // degrees either side of straight up
   function dialAngle(i) { return -DIAL_SWEEP + i * (2 * DIAL_SWEEP / (DIAL_STOPS.length - 1)); }
   function dialPoint(deg, rad) { var a = deg * Math.PI / 180; return [110 + Math.sin(a) * rad, 110 - Math.cos(a) * rad]; }
@@ -2170,8 +2444,8 @@
     var off = price != null && once != null ? once - price : 0;
     document.getElementById("bw-dial-side").innerHTML = esc(FREQ_SHORT[selectedFrequency] || "") +
       (hcOn ? " · <b>detailing included</b>" : off > 0 ? " · <b>save " + formatPrice(off).replace(/\.00$/, "") + "</b>"
-        : selectedFrequency === "one_time" && once != null && priceForFrequency("weekly") != null && once > priceForFrequency("weekly")
-          ? " · turn left to save " + formatPrice(once - priceForFrequency("weekly")).replace(/\.00$/, "") : "");
+        : selectedFrequency === "one_time" && once != null && priceForFrequency("every_other_week") != null && once > priceForFrequency("every_other_week")
+          ? " · turn left to save " + formatPrice(once - priceForFrequency("every_other_week")).replace(/\.00$/, "") : "");
   }
   function updatePricing() {
     updateCustomBreakdown();
@@ -2191,6 +2465,7 @@
     renderFreqChips();
     recurringNote.hidden = true; // the chips show every price, so no separate note
     updatePromoNote();
+    refreshSlowQuote(); // the slow-day amount for this clean and home size (0677), once per choice
     renderGrid();
     renderTipOptions();
   }
@@ -2210,6 +2485,7 @@
 
     twoHourWarning.hidden = true; // said by the Before you book advisory on the Two Hour card
     document.getElementById("bw-2h-prio").hidden = selectedService !== "two_hour";
+    paintTwoHourCap();
     document.getElementById("bw-half-wrap").hidden = selectedService !== "two_hour";
     if (selectedService !== "two_hour" && extraHalf) { extraHalf = false; document.getElementById("bw-2h-half").checked = false; }
     customFieldsWrap.hidden = selectedService !== "works";
@@ -2739,6 +3015,7 @@
     var r = SALES_TAX.rates && SALES_TAX.rates[z];
     return r != null ? Number(r) : Number(SALES_TAX.state_rate) || 0;
   }
+  // TAXFEES-START (src/lib/__tests__/bankFeeTip.test.ts checks these two against _shared/salesTax.ts: the bank saving shown must be the server's)
   function salesTaxOn(cents, rate) {
     if (!cents || cents <= 0 || !rate || rate <= 0) return 0;
     return Math.floor((Math.round(rate * 100000) * Math.round(cents) + 50000) / 100000);
@@ -2759,6 +3036,7 @@
     tax = salesTaxOn(Math.floor((cents + fee) * sh + 0.5), rate);
     return { tax: tax, fee: fee };
   }
+  // TAXFEES-END
   function salesTaxPct(rate) {
     return (Math.round(rate * 100000) / 1000).toFixed(3).replace(/0+$/, "").replace(/\.$/, "") + "%";
   }
@@ -2776,12 +3054,18 @@
     rows.push(["Cleaning" + (recurring ? " (each visit)" : ""), price == null ? "—" : formatPrice(price)]);
     // Name three (0303): shown here, worked out again by create-booking (which is what is charged). One-time: the price goes down
     // (and is taxed after the discount). Recurring: a one-time discount on the first visit; the per-visit price is unchanged.
-    var nOff = price == null ? 0 : Math.min(price, n3Off());
-    var cOff = price == null ? 0 : Math.min(price - nOff, n3CodeOff());
+    // One discount per booking, as create-booking decides it: a promo price (SPONGE, senior, the name code) already is the discount, and the
+    // slow-day saving (0677) applies only when it is the biggest one.
+    var promoOn = promoPriceOn();
+    var sOff = recurring ? 0 : slowShownCents();
+    var nOff = price == null || promoOn || sOff > 0 ? 0 : Math.min(price, n3Off());
+    var cOff = price == null || promoOn || sOff > 0 ? 0 : Math.min(price - nOff, n3CodeOff());
     if (nOff > 0) rows.push(["Friends named" + (recurring ? " (first visit)" : ""), "−" + formatPrice(nOff)]);
     if (cOff > 0) rows.push(["Friend's code" + (recurring ? " (first visit)" : ""), "−" + formatPrice(cOff)]);
+    if (sOff > 0) rows.push(["Slow-day savings" + infoBtn("About slow-day savings", "<b>A day we have room</b><br><span>Up to " + (Number(slowDays[selected.dateStr]) || 0) +
+      "% off the clean. One-time bookings only, one discount per booking (the biggest one applies).</span>"), "−" + formatPrice(sOff)]);
     var taxRate = salesTaxRate();
-    var tf = price == null ? { tax: 0, fee: 0 } : taxesAndFees(recurring ? price : price - nOff - cOff, taxRate, noCardFee());
+    var tf = price == null ? { tax: 0, fee: 0 } : taxesAndFees(recurring ? price : price - nOff - cOff - sOff, taxRate, noCardFee());
     var tax = tf.tax + tf.fee; // one line for the customer; the emailed receipt shows the two apart
     var sharePct = Math.round((Number(SALES_TAX.taxable_share) || 1) * 100);
     var taxPart = "<b>Sales tax " + formatPrice(tf.tax) + "</b><br><span>" + salesTaxPct(taxRate) + (sharePct < 100 ? " on " + sharePct + "% of your clean. Dusting and organizing personal items isn't taxed." : " for your address.") +
@@ -2792,7 +3076,7 @@
     var taxInfo = taxPart + feePart;
     if (tax > 0) rows.push([(tf.fee > 0 ? "Taxes and fees" : "Sales tax") + infoBtn("About taxes and fees", taxInfo), formatPrice(tax)]);
     if (tip > 0) rows.push(["Tip for your team", formatPrice(tip)]);
-    var total = price == null ? null : price - nOff - cOff + tax + tip;
+    var total = price == null ? null : price - nOff - cOff - sOff + tax + tip;
     var html = rows.map(function (r) { return "<div class='bw-order-row'><span>" + r[0] + "</span><span>" + r[1] + "</span></div>"; }).join("");
     var chargedNow = recurring || paysNowNow();
     var totalInfo = (recurring ? "Charged now, then before each visit. Cancel your plan anytime." : "Charged now. Our cancellation policy applies.") +
@@ -2811,11 +3095,14 @@
       var perVisit = price == null ? null : price + perTf.tax + perTf.fee;
       var every = (FREQ_SHORT[selectedFrequency] || (freq ? freq.label : "recurring")).toLowerCase();
       var today = total == null ? "the total above" : formatPrice(total);
-      var each = perVisit == null ? "the plan price" : formatPrice(perVisit);
+      // J3 (0676): the bank saving the customer chose to give the crew is part of each bank-paid visit, and the agreement says so.
+      var bankTip = perVisit == null ? 0 : bankTipCents();
+      var each = perVisit == null ? "the plan price" : formatPrice(perVisit + bankTip);
+      var tipNote = bankTip > 0 ? " (paid by bank, including your " + formatPrice(bankTip) + " tip for the crew)" : "";
       document.getElementById("bw-recurring-consent-text").textContent = recurring
-        ? (today === each
+        ? (today === each && !tipNote
             ? "Yes, charge " + today + " today and before each visit, " + every + ". I can cancel my plan anytime."
-            : "Yes, charge " + today + " today, then " + each + " before each visit, " + every + ". I can cancel my plan anytime.")
+            : "Yes, charge " + today + " today, then " + each + tipNote + " before each visit, " + every + ". I can cancel my plan anytime.")
         : "";
     }
     var sl = document.getElementById("bw-submit-label");
@@ -2827,8 +3114,11 @@
     tipWrap.hidden = selectedFrequency !== "one_time";
     var plan = currentTipPlan();
     var html = "<button type='button' class='bw-tip-btn" + (tipChoice === "none" ? " is-on" : "") + "' data-tip='none'>No tip</button>";
-    plan.options_cents.slice(0, 3).forEach(function (c) {
-      html += "<button type='button' class='bw-tip-btn" + (tipChoice === String(c) ? " is-on" : "") + "' data-tip='" + c + "'>" + formatPrice(c).replace(/\.00$/, "") + "</button>";
+    // Percent presets (Jack, 2026-10-22: 15, 20, 25 percent and Other). Each button shows the percent and the dollars; the amount is rounded to the dollar. The flat plan above is kept only as the fallback when the price is unknown.
+    var tipBase = priceForFrequency("one_time");
+    var tipOpts = tipBase != null && tipBase > 0 ? [15, 20, 25].map(function (pct) { return { pct: pct, cents: Math.max(100, Math.round(tipBase * pct / 100 / 100) * 100) }; }) : plan.options_cents.slice(0, 3).map(function (c) { return { pct: 0, cents: c }; });
+    tipOpts.forEach(function (o) {
+      html += "<button type='button' class='bw-tip-btn" + (tipChoice === String(o.cents) ? " is-on" : "") + "' data-tip='" + o.cents + "'>" + (o.pct ? o.pct + "% · " : "") + formatPrice(o.cents).replace(/\.00$/, "") + "</button>";
     });
     html += "<button type='button' class='bw-tip-btn" + (tipChoice === "custom" ? " is-on" : "") + "' data-tip='custom'>Other</button>";
     tipOptionsEl.innerHTML = html;
@@ -2868,13 +3158,85 @@
     document.getElementById("bw-paymethod-note").textContent = payMethod === "bank"
       ? "Your first clean is charged to the card above today. After you confirm, you connect your bank securely through Stripe, and the visits after that are paid from your bank account." + (off > 0 ? " You save " + formatPrice(off) + " on each visit paid by bank." : "")
       : "Every visit is charged to the card above." + (off > 0 ? " Pay by bank and save " + formatPrice(off) + " on each visit after your first." : "");
+    // J3 (0676): the one-tap "add the saving to your crew's tip". DRAFT WORDING (attorney/CPA before the switch goes on).
+    var tipWrap = document.getElementById("bw-bank-tip-wrap");
+    if (tipWrap) {
+      var saving = bankFeeTipOn && payMethod === "bank" ? bankSaving() : 0;
+      tipWrap.hidden = !(saving > 0);
+      if (!(saving > 0)) document.getElementById("bw-bank-tip").checked = false;
+      else document.getElementById("bw-bank-tip-text").textContent = "Paying by bank has no card service fee, so you save " + formatPrice(saving) +
+        " on each visit after your first. Add it to your crew's tip instead? Optional. Tips go 100% to the people who clean your home.";
+    }
+  }
+  // J3 (0676): what paying by bank saves on each visit after the first: the card's "Taxes and fees" minus sales tax alone (a bank payer pays
+  // no service fee). Display only: create-booking works it out again with the same rule and never charges more than this. 0 when there is
+  // no fee to save (sales tax off, a debit or prepaid card, an address whose tax fills the line).
+  function bankSaving() {
+    var price = priceForFrequency(selectedFrequency);
+    if (price == null || price <= 0 || noCardFee()) return 0;
+    var p = Math.max(0, price - Math.max(0, Number(CONFIG.BANK_DISCOUNT_CENTS) || 0));
+    var rate = salesTaxRate();
+    var card = taxesAndFees(p, rate, false), bank = taxesAndFees(p, rate, true);
+    return Math.max(0, card.tax + card.fee - bank.tax - bank.fee);
+  }
+  // The crew tip on each bank-paid visit, when the customer ticked the box.
+  function bankTipCents() {
+    var box = document.getElementById("bw-bank-tip");
+    return bankFeeTipOn && bankOffered() && payMethod === "bank" && box && box.checked ? bankSaving() : 0;
   }
   document.getElementById("bw-paymethod").addEventListener("click", function (e) {
     var b = e.target.closest ? e.target.closest("button[data-method]") : null;
     if (!b) return;
     payMethod = b.getAttribute("data-method") === "bank" ? "bank" : "card";
-    renderPayMethod();
+    renderOrder(); // the plan agreement's per-visit amount follows the method (and draws the method box again)
   });
+  document.getElementById("bw-bank-tip").addEventListener("change", function () { renderOrder(); });
+
+  // ---------- slow-day discount (0677) ----------
+  // Days the server marks slow show "Save 10%" for a one-time house clean; the amount for this clean and home size comes from create-booking
+  // (check_slow_day: the percent, cut down so the clean stays above the margin floor). One discount per booking, the biggest wins; a promo
+  // price already is one. Display only: create-booking decides again and refuses with slow_day_changed if its amount differs.
+  function slowKey() { return selectedService + "|" + (selectedService === "works" ? selectedBedrooms + "|" + selectedBathrooms : ""); }
+  function slowEligible() { return ["two_hour", "works", "four_hour"].indexOf(selectedService) !== -1 && selectedFrequency === "one_time" && !isCatalogService(); }
+  function promoPriceOn() { return promoAppliesFor(selectedFrequency) || nameRateOn(); }
+  function slowOffOn(dStr) {
+    if (!dStr || !slowEligible() || promoPriceOn()) return 0;
+    var fixed = slowFixed[dStr + "|" + slowKey()];
+    if (fixed != null) return fixed; // what the server said at booking: it already picked the biggest discount
+    if (!slowDays[dStr]) return 0;
+    var q = slowQuotes[slowKey()];
+    var off = q && q.off_cents > 0 ? q.off_cents : 0;
+    return off > Math.max(n3Off(), n3CodeOff()) ? off : 0;
+  }
+  // The slow-day saving on the picked day, as the order shows it and as the booking sends it (create-booking checks it).
+  function slowShownCents() {
+    var price = priceForFrequency(selectedFrequency);
+    return price == null || selectedFrequency !== "one_time" || !selected ? 0 : Math.min(price, slowOffOn(selected.dateStr));
+  }
+  function slowBadgeText(dStr) {
+    var off = slowOffOn(dStr);
+    if (!(off > 0)) return "";
+    var q = slowQuotes[slowKey()], pct = Number(slowDays[dStr]) || 0;
+    var full = q && q.base_cents && pct ? Math.round(q.base_cents * pct / 100) : 0;
+    return pct && off >= full ? "Save " + pct + "%" : (off >= 100 ? "Save $" + Math.floor(off / 100) : "");
+  }
+  function refreshSlowQuote() {
+    var key = slowKey();
+    if (!slowEligible() || slowQuotes[key] || !Object.keys(slowDays).length) return;
+    slowQuotes[key] = { off_cents: 0, pending: true };
+    fetch(CONFIG.CREATE_BOOKING_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "check_slow_day", org_slug: CONFIG.ORG_SLUG, service: selectedService, frequency: "one_time",
+        bedrooms: selectedService === "works" ? selectedBedrooms : null, bathrooms: selectedService === "works" ? selectedBathrooms : null })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        slowQuotes[key] = d && d.applies ? { off_cents: Math.max(0, Number(d.off_cents) || 0), base_cents: Number(d.base_cents) || 0, pct: Number(d.pct) || 0 } : { off_cents: 0 };
+        if (slowQuotes[key].off_cents > 0) { renderGrid(); renderOrder(); }
+      })
+      .catch(function () { delete slowQuotes[key]; });
+  }
 
   // Shows the ACH debit authorization and resolves true (accepted) or false (keep the card).
   function askBankMandate() {
@@ -2883,7 +3245,9 @@
     document.getElementById("bw-bank-mandate-text").textContent =
       "By clicking \u201cAuthorize bank payments\u201d, you authorize " + biz + " to debit the bank account you just connected for each cleaning visit on your plan after your first, and for other amounts you owe " + biz + " for its services, under " + biz + "'s terms, until you cancel this authorization. " +
       "You may change or cancel it at any time by giving " + biz + " 30 days' notice (reply to any of our texts). " +
-      "Payments outside your regular visits will only be debited after we get your authorization.";
+      "Payments outside your regular visits will only be debited after we get your authorization." +
+      // J3 (0676), DRAFT WORDING for the attorney/CPA: the tip the customer chose rides with each visit's debit.
+      (bankTipCents() > 0 ? " Each visit's debit includes the " + formatPrice(bankTipCents()) + " tip for your crew that you chose; text us anytime to stop it." : "");
     box.hidden = false;
     submitLabel.textContent = "Waiting for your bank authorization…";
     try { box.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {}
@@ -2908,7 +3272,7 @@
       clientSecret: data.bank_client_secret,
       params: {
         payment_method_type: "us_bank_account",
-        payment_method_data: { billing_details: { name: payload.name, email: payload.email } }
+        payment_method_data: { billing_details: { name: payload.name, email: payload.email || undefined } }
       }
     }).then(function (r) {
       if (r.error || !r.setupIntent || r.setupIntent.status !== "requires_confirmation") return null;
@@ -2959,7 +3323,15 @@
       .then(function (r) { if (!r.ok) throw new Error("bad status"); return r.json(); })
       .then(function (data) {
         availabilityCache[availKey(key)] = (data && data.slots) ? data.slots : {};
+        // Holidays (0528): closed days are greyed with "Closed for holiday" (ops-0257).
+        ((data && data.closed_days) || []).forEach(function (h) { holidayClosed[h.day] = h.label || "Holiday"; });
+        // Slow days (0677): this month's, replacing what an earlier load said about it.
+        Object.keys(slowDays).forEach(function (d) { if (d.slice(0, 7) === key) delete slowDays[d]; });
+        var sd = (data && data.slow_days) || {};
+        Object.keys(sd).forEach(function (d) { if (Number(sd[d]) > 0) slowDays[d] = Number(sd[d]); });
+        refreshSlowQuote();
         renderGrid();
+        if (!window.__bwBestLoaded) { window.__bwBestLoaded = true; loadBest(); }
       })
       .catch(function () {
         // Fail open: treat the month as fully available rather than blocking bookings
@@ -2970,6 +3342,45 @@
         calError.hidden = false;
       });
   }
+
+  // "Best times": the top three open times, next to an existing job first (booking-availability &suggest=1, BB J4). Ranking only: the
+  // calendar below still offers every open time, and a failure just leaves the strip hidden.
+  function loadBest() {
+    var box = document.getElementById("bw-best"), list = document.getElementById("bw-best-list");
+    if (!box || !list) return;
+    var t = new Date(), e = new Date(t.getTime() + 28 * 86400000);
+    var url = CONFIG.AVAILABILITY_URL + "?org_slug=" + encodeURIComponent(CONFIG.ORG_SLUG) + "&start=" + dateStr(t.getFullYear(), t.getMonth(), t.getDate()) + "&end=" + dateStr(e.getFullYear(), e.getMonth(), e.getDate()) + "&suggest=1&minutes=" + (currentDurationMinutes() || 0);
+    fetch(url).then(function (r) { if (!r.ok) throw new Error("bad"); return r.json(); }).then(function (d) {
+      var starts = CONFIG.SERVICES[selectedService] && CONFIG.SERVICES[selectedService].startSlots;
+      var sug = ((d && d.suggested) || []).filter(function (x) { return !starts || starts.indexOf(x.slot) >= 0; });
+      list.innerHTML = "";
+      sug.forEach(function (x) {
+        var slot = CONFIG.SLOTS.filter(function (s) { return s.key === x.slot; })[0];
+        if (!slot) return;
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "bw-navbtn"; b.style.cssText = "width:auto;padding:8px 12px";
+        b.textContent = prettyDate(x.day) + ", " + slot.label;
+        b.addEventListener("click", function () { pickSlot(x.day, slot); });
+        list.appendChild(b);
+      });
+      box.hidden = !list.children.length;
+    }).catch(function () { box.hidden = true; });
+  }
+
+  // Gift card (0499): check the balance. The amount that comes off is worked out on the server at payment; a repeat plan cannot use one.
+  (function () {
+    var btn = document.getElementById("bw-gift-check"), inp = document.getElementById("bw-gift-code"), note = document.getElementById("bw-gift-note");
+    if (!btn || !inp || !note) return;
+    btn.addEventListener("click", function () {
+      var code = inp.value.trim().toUpperCase();
+      if (!code) return;
+      note.hidden = false; note.textContent = "Checking...";
+      fetch(CONFIG.CREATE_BOOKING_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "check_gift", org_slug: CONFIG.ORG_SLUG, gift_code: code }) })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { note.textContent = d && d.valid ? "Gift card balance: " + formatPrice(d.balance_cents) + ". It comes off the amount you pay now (one-time cleans only; your tip is not covered)." : "We could not find a gift card with that code."; })
+        .catch(function () { note.textContent = "Could not check the card right now."; });
+    });
+  })();
 
   function isOpenWeekday(y, m, d) {
     var wd = new Date(y, m, d).getDay();
@@ -2996,6 +3407,7 @@
     prev.disabled = !canGoBack(); prev.style.visibility = prev.disabled ? "hidden" : "";
     next.disabled = !canGoForward(); next.style.visibility = next.disabled ? "hidden" : "";
   }
+  var holidayClosed = {};
   function renderGrid() {
     syncMonthButtons();
     monthLabel.textContent = monthName(viewMonth) + " " + viewYear;
@@ -3028,7 +3440,15 @@
       var beyond = cellDate > maxDate;
       var closed = !isOpenWeekday(viewYear, viewMonth, d);
 
-      if (past || beyond || closed) {
+      if (!past && !beyond && holidayClosed[dStr]) {
+        cell.classList.add("bw-cell-disabled");
+        cell.title = "Closed for holiday";
+        var hol = document.createElement("div");
+        hol.className = "bw-holiday";
+        hol.textContent = "Closed for holiday";
+        hol.style.cssText = "font-size:9px;line-height:1.1;color:#6B7280;text-align:center";
+        cell.appendChild(hol);
+      } else if (past || beyond || closed) {
         cell.classList.add("bw-cell-disabled");
       } else {
         var dotsWrap = document.createElement("div");
@@ -3056,6 +3476,14 @@
           cell.addEventListener("click", function (dStr, cell) {
             return function (ev) { if (ev.target.closest(".bw-dot")) return; showDayTimes(dStr, cell); };
           }(dStr, cell));
+          // A slow day for this clean (0677): "Save 10%" (or the dollars, when the margin floor cut it).
+          var slowText = slowBadgeText(dStr);
+          if (slowText) {
+            var slowEl = document.createElement("div");
+            slowEl.className = "bw-slow-badge";
+            slowEl.textContent = slowText;
+            cell.appendChild(slowEl);
+          }
         }
       }
 
@@ -3081,6 +3509,13 @@
     head.className = "bw-daytimes-head";
     head.textContent = prettyDate(dStr);
     box.appendChild(head);
+    var slowOff = slowOffOn(dStr);
+    if (slowOff > 0) {
+      var slowNote = document.createElement("p");
+      slowNote.className = "bw-slow-note";
+      slowNote.textContent = "Slow day: " + formatPrice(slowOff) + " off this clean (one-time bookings; one discount per booking).";
+      box.appendChild(slowNote);
+    }
     var row = document.createElement("div");
     row.className = "bw-daytimes-row";
     CONFIG.SLOTS.forEach(function (slot) {
@@ -3295,6 +3730,13 @@
       return;
     }
 
+    if (selectedService === "two_hour" && twoHourAsked() > TWO_HOUR_MAX_REQUESTS) {
+      formError.textContent = "The Two Hour Clean takes up to " + TWO_HOUR_MAX_REQUESTS + " special requests (one per line; your priorities count as one). Shorten the list, or choose The Checklist Clean.";
+      formError.hidden = false;
+      paintTwoHourCap();
+      return;
+    }
+
     setSubmitting(true);
 
     var priceCents = priceForFrequency(selectedFrequency);
@@ -3322,7 +3764,12 @@
         ? ["Detailing, most important first: " + detailPicks.map(function (p, i) { return (i + 1) + ") " + p.label + (p.unit === "each" ? " x" + p.qty : ""); }).join(", ")].map(function (x) { return x.slice(0, 300); })
         : []).concat(selectedService === "two_hour" && document.getElementById("bw-2h-prio-text").value.trim()
           ? ["Priority areas: " + document.getElementById("bw-2h-prio-text").value.trim().slice(0, 240)] : []).concat(wxRequests()).concat(document.getElementById("bw-yard-sign").checked ? ["Yard sign OK: customer said a small sign may be placed at the end of the clean."] : []).concat((document.getElementById("bw-special-requests").value || "").split("\n").map(function (x) { return x.trim(); }).filter(Boolean)).slice(0, 10),
+      // plain lines + detail from "Tell us what you need" (0559); a Two Hour Clean takes no extra / if-time / bounty lines
+      intake_items: (selectedService === "two_hour" ? twoHourIntakeItems() : intakeItems).length ? (selectedService === "two_hour" ? twoHourIntakeItems() : intakeItems) : null,
       service_items: isCatalogService() ? catalogQty : null,
+      glass_polish: selectedService === "works" && glassPolish,
+      glass_seal: glassSealOn(),
+      grate_pumice: selectedService === "works" && document.getElementById("bw-grate-pumice").checked,
       works_extras: selectedService === "works" ? worksExtrasOrder.map(function (k) { return { key: k, qty: worksExtras[k] }; }) : null,
       // Extras for the next visits: create-booking prices them and they are charged with those visits (migration 0326).
       planned_extras: selectedService === "works" && !hcOn && wxLater.length && selectedFrequency !== "one_time" ? wxLater : null,
@@ -3342,15 +3789,27 @@
       recurring_consent: selectedFrequency !== "one_time" && document.getElementById("bw-recurring-consent").checked === true,
       recurring_consent_text: selectedFrequency !== "one_time" ? document.getElementById("bw-recurring-consent-text").textContent : null,
       pay_method: bankOffered() ? payMethod : "card",
+      // J3 (0676): "add the card fee I save by paying by bank to my crew's tip", and the amount shown (the server never charges more).
+      bank_fee_tip: bankTipCents() > 0,
+      bank_fee_tip_shown_cents: bankTipCents(),
+      // Slow-day savings shown for this day (0677): the server works it out again and refuses (slow_day_changed) if it differs.
+      slow_day_shown_cents: slowShownCents(),
+      gift_code: ((document.getElementById("bw-gift-code") || {}).value || "").trim().toUpperCase() || null, // one-time cleans only; the server checks it and lowers the amount charged now
       promo_code: currentPromoCode() || null,
       promo_applied: promoAppliesFor(selectedFrequency),
       beds_baths_confirmed: selectedService === "works" ? document.getElementById("bw-accuracy-confirm").checked : null,
       marketing_consent: document.getElementById("bw-marketing-consent").checked === true,
       marketing_consent_version: 3, // TWONEYs wording (0331)
+      preferred_language: (document.getElementById("bw-lang") || {}).value === "es" ? "es" : "en", // texts to this customer go out in this language (0101)
       batch_code: batchCode(),
       // Name three (0303): first names only, never a friend's number. The server decides the discount.
       referral_names: n3Names().map(function (n) { return { first_name: n }; }),
       referral_code: friendCode(),
+      contact_pref: (document.getElementById("bw-contact-pref") || {}).value === "call" ? "call" : "text",
+      kids_gifts: kidsAnswer().gifts,
+      kids: kidsAnswer().bands,
+      how_heard: (document.getElementById("bw-heard") || {}).value || null,
+      how_heard_other: (document.getElementById("bw-heard-other") || {}).value ? document.getElementById("bw-heard-other").value.trim().slice(0, 80) : null,
       referred_by: friendCode() ? null : ((document.getElementById("bw-n3-by") || {}).value || "").trim() || null,
       price_test_id: priceTestFields().price_test_id,
       price_arm: priceTestFields().price_arm,
@@ -3376,6 +3835,16 @@
           throw fvErr;
         }
         if (data && data.error === "first_visit_extras_limit") throw new Error(WX_FIRST_VISIT_NOTE);
+        if (data && data.error === "two_hour_requests_limit") { paintTwoHourCap(); throw new Error("The Two Hour Clean takes up to " + (data.limit || TWO_HOUR_MAX_REQUESTS) + " special requests (one per line; your priorities count as one). Shorten the list, or choose The Checklist Clean."); }
+        if (data && data.error === "slow_day_changed") {
+          // The server's slow-day amount for this day differs from what the page showed (the day filled up, or the offer changed). Nothing
+          // was charged: show the server's amount and let the customer tap Pay again.
+          var slowNow = Math.max(0, Number(data.slow_day_discount_cents) || 0);
+          slowFixed[selected.dateStr + "|" + slowKey()] = slowNow;
+          throw new Error(slowNow > 0
+            ? "The slow-day savings for this day are now " + formatPrice(slowNow) + ". Check your total and tap Pay again."
+            : "The slow-day savings no longer apply to this day. Check your total and tap Pay again.");
+        }
         if (!data || data.ok === false) {
           throw new Error(data && data.error === "slot_taken"
             ? "That time was just booked by someone else — please pick another."
@@ -3383,6 +3852,10 @@
               ? "Please check the box to agree to the charges for your recurring plan."
             : data && data.error === "booking_blocked"
               ? "We can't book this online. Please call or text us."
+            : data && data.error === "bad_gift_code"
+              ? "That gift card code did not work. Check it, or remove it to continue."
+            : data && data.error === "gift_one_time_only"
+              ? "Gift cards work on one-time cleans. Please remove the code or choose one-time."
               : "Could not start booking. Please try again.");
         }
 
@@ -3398,12 +3871,21 @@
           return finalizeBooking(data.booking_id, null, null);
         }
 
+        // Past balance (0589, cus-0047): earlier cleans not yet paid are charged with this booking, as their own line. The customer OKs it first.
+        if (Number(data.past_balance_cents) > 0) {
+          var pastLine = "Past balance (earlier cleans): " + formatPrice(Number(data.past_balance_cents));
+          if (!window.confirm(pastLine + "\n\nThis is added to today's payment. OK to continue?")) {
+            var pbErr = new Error("Booking not finished. Call or text us about your past balance and we will help.");
+            throw pbErr;
+          }
+        }
+
         // The card that was checked for credit / debit (0320) is the one that pays; otherwise the card field as typed.
         var paymentMethodData = cardPm || {
           card: cardEl,
           billing_details: {
             name: payload.name,
-            email: payload.email,
+            email: payload.email || undefined,
             phone: payload.phone,
             address: { line1: payload.address }
           }
@@ -3483,7 +3965,7 @@
         if (!r.ok || !j || j.ok === false) {
           var code = j && j.error;
           throw new Error(
-            code === "too_soon" ? "A first clean needs 48 hours' notice. Please pick a later day." : code === "same_day_closed" ? "Same-day booking closes at 9 AM. Please pick another day or text us." : code === "too_far" ? "We book up to 8 weeks ahead. Please pick an earlier day." :
+            code === "too_soon" ? "A first clean needs 48 hours' notice. Please pick a later day." : code === "same_day_closed" ? "Same-day times close 1 hour before they start. Please pick a later time or text us." : code === "holiday_closed" ? "We're closed for the holiday that day. Please pick another day." : code === "too_far" ? "We book up to 8 weeks ahead. Please pick an earlier day." :
             code === "slot_taken" ? "That time was just taken and your card was not charged. Please pick another time." :
             code === "payment_not_confirmed" ? "Your payment didn't go through. Please check your card and try again." :
             "Your card went through, but we couldn't lock in this time. We'll text you shortly to set it up. Please don't book again.");
@@ -3509,7 +3991,8 @@
     var pretty = prettyDate(selected.dateStr);
     document.getElementById("bw-done-detail").textContent =
       pretty + " at " + selected.slotLabel + " with " + CONFIG.BUSINESS_NAME + ". A confirmation has been sent to your email." +
-      (res && res.bank_linked ? " Your visits after this one will be paid from your bank account." :
+      (res && res.bank_linked ? " Your visits after this one will be paid from your bank account." +
+         (Number(res.bank_fee_tip_cents) > 0 ? " The " + formatPrice(Number(res.bank_fee_tip_cents)) + " you save on each one goes to your crew as a tip. Thank you!" : "") :
        res && res.bank_wanted ? " Your bank wasn't connected, so your card will be used for later visits. Text us any time to switch to bank." : "");
     try { sessionStorage.removeItem("bw_ref"); } catch (e) {}
     renderNameThreeShares(res && res.name_three);
@@ -3683,11 +4166,13 @@
   }
   // ---------- the Meta Pixel and its notice ----------
   var PIXEL_KEY = "thm_ads_optout";
-  function pixelOptedOut() { try { return localStorage.getItem(PIXEL_KEY) === "1"; } catch (e) { return false; } }
+  // The browser privacy signal (Global Privacy Control) counts as "No thanks", the same as web/pixel.js.
+  function pixelOptedOut() { if (navigator.globalPrivacyControl === true) return true; try { return localStorage.getItem(PIXEL_KEY) === "1"; } catch (e) { return false; } }
   function loadPixel() {
     var id = (CONFIG.META_PIXEL_ID || "").replace(/[^0-9]/g, "");
     if (!id || pixelOptedOut() || window.fbq) return;
     (function (f, b, e, v, n, t, s2) { if (f.fbq) return; n = f.fbq = function () { n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments); }; if (!f._fbq) f._fbq = n; n.push = n; n.loaded = true; n.version = "2.0"; n.queue = []; t = b.createElement(e); t.async = true; t.src = v; s2 = b.getElementsByTagName(e)[0]; s2.parentNode.insertBefore(t, s2); })(window, document, "script", "https://connect.facebook.net/en_US/fbevents.js");
+    window.fbq("set", "autoConfig", false, id); // no automatic button / form events, as in web/pixel.js
     window.fbq("init", id);
     window.fbq("track", "PageView");
   }
@@ -3728,9 +4213,12 @@
   var tieCents = 0;
   function tieTipCents() { var on = document.getElementById("bw-tie-on"); return on && on.checked ? tieCents : 0; }
   (function () {
-    var wrap = document.getElementById("bw-tie-wrap"); if (!wrap) return;
+    var wrap = document.getElementById("bw-tie-wrap");
     fetch(CONFIG.AVAILABILITY_URL + "?flags=1&org_slug=" + encodeURIComponent(CONFIG.ORG_SLUG)).then(function (r) { return r.json(); }).then(function (d) {
-      if (!d || !d.flags || !d.flags.tie_tip) return;
+      // Pay by bank: offer "add the card fee you save to your crew's tip" (0676) only when the business has it on.
+      bankFeeTipOn = !!(d && d.flags && d.flags.bank_fee_tip);
+      if (bankFeeTipOn) { try { renderOrder(); } catch (e) {} }
+      if (!wrap || !d || !d.flags || !d.flags.tie_tip) return;
       wrap.hidden = false;
       var opts = document.getElementById("bw-tie-options");
       [500, 1000, 2000, 3000, 5000].forEach(function (c, i) {
@@ -3888,6 +4376,10 @@
   .bw-menu-checklist { display: grid; grid-template-columns: 1fr; gap: 6px; font-size: 13px; margin-top: 6px; }
   .bw-menu-checklist ul { margin: 2px 0 0 18px; padding: 0; }
   .bw-menu-small { font-size: 12px; color: #5F6B7A; }
+  .bw-products { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 8px; }
+  .bw-products li { font-size: 13px; color: #5F6B7A; padding: 9px 12px; border: 1px solid #E3E9F3; border-radius: 10px; }
+  .bw-products li b { display: block; font-size: 14px; color: #0B1A33; }
+  .bw-products-link { display: inline-block; margin-top: 8px; font-size: 14px; font-weight: 600; color: #0A47A8; }
   .bw-menu-h { font-size: 17px; margin: 18px 0 2px; }
   .bw-menu-extras { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; margin-top: 8px; }
   .bw-menu-cat { border: 1px solid #E6ECF5; border-radius: 12px; padding: 10px 12px; }
@@ -4533,6 +5025,9 @@
   #bw-root .bw-dot-red { background: #D3DAE6; }
   #bw-root .bw-cell-open { cursor: pointer; }
   #bw-root .bw-cell-on { background: var(--t-soft); box-shadow: inset 0 0 0 1.5px var(--t-blue); }
+  /* Slow-day discount (0677): the warm brass the palette keeps for promos. */
+  #bw-root .bw-slow-badge { margin-top: 2px; font-size: 9px; line-height: 1.1; font-weight: 700; text-align: center; color: #8a5a1c; }
+  #bw-root .bw-slow-note { margin: 0 0 8px; padding: 6px 10px; border-radius: 10px; font-size: 13px; color: #6b4514; background: #fbf3e6; border: 1px solid #ecd6ae; }
   #bw-daytimes { margin-top: 14px; }
   #bw-daytimes[hidden] { display: none; }
   #bw-root .bw-daytimes-head { font-size: 14px; font-weight: 700; color: var(--t-ink); margin-bottom: 8px; }
@@ -4559,6 +5054,9 @@
     box-shadow: 0 1px 2px rgba(11,26,51,.06), 0 8px 22px rgba(31,94,255,.10); }
   #bw-root .bw-2h-prio textarea:focus { outline: none; box-shadow: 0 0 0 2px var(--t-blue), 0 8px 22px rgba(31,94,255,.14); }
   #bw-root .bw-2h-prio-meta { display: flex; justify-content: space-between; font-size: 11px; color: var(--t-muted); padding: 0 6px; margin-top: -4px; }
+  #bw-root .bw-2h-cap { display: block; font-size: 12px; color: var(--t-muted); margin: 4px 2px 6px; }
+  #bw-root .bw-2h-cap[hidden] { display: none; }
+  #bw-root .bw-2h-cap.is-over { color: #b42318; font-weight: 700; }
   #bw-root .bw-2h-prio-found { background: #fff; border-radius: 16px; padding: 16px; display: grid; justify-items: center; gap: 10px; text-align: center;
     box-shadow: 0 1px 2px rgba(11,26,51,.06), 0 8px 22px rgba(31,94,255,.10); }
   #bw-root .bw-2h-prio-found[hidden] { display: none; }
@@ -4660,6 +5158,18 @@
   #bw-root .bw-nf-row button { border: 0; background: var(--t-blue); color: #fff; font: inherit; font-weight: 600; border-radius: 999px; padding: 5px 12px; cursor: pointer; }
   #bw-root .bw-nf-row em { font-style: normal; font-size: 12px; color: var(--t-muted); white-space: nowrap; }
   #bw-root .bw-nf-no { background: #FDF1F1; color: #8A1C23; }
+  #bw-root .bw-glass { margin-bottom: 14px; display: grid; gap: 10px; color: #1F2937; text-align: left; }
+  #bw-root .bw-glass-card { border: 1.5px solid #D5E2FF; border-radius: 16px; overflow: hidden; background: #fff; }
+  #bw-root .bw-glass-pic { display: block; width: 100%; height: auto; }
+  #bw-root .bw-glass-body { padding: 12px 14px 14px; display: grid; gap: 8px; }
+  #bw-root .bw-glass-body small, #bw-root .bw-glass-seal small, #bw-root .bw-glass-grates small { display: block; color: #5B6575; font-size: 13px; font-weight: 400; margin-top: 2px; }
+  #bw-root .bw-glass-yn { display: flex; gap: 8px; flex-wrap: wrap; }
+  #bw-root .bw-glass-yn button { flex: 1; min-width: 120px; padding: 10px; border-radius: 12px; border: 1.5px solid #D5E2FF; background: #F3F7FE; font: inherit; font-weight: 600; cursor: pointer; }
+  #bw-root .bw-glass-yn button.is-on { background: #1F5EFF; border-color: #1F5EFF; color: #fff; }
+  #bw-root .bw-glass-seal, #bw-root .bw-glass-grates { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: #F3F7FE; border: 1.5px solid #D5E2FF; cursor: pointer; }
+  #bw-root .bw-glass-seal[hidden] { display: none; }
+  #bw-root .bw-glass-seal span, #bw-root .bw-glass-grates span { flex: 1; }
+  #bw-root .bw-glass-seal em, #bw-root .bw-glass-price { font-style: normal; font-weight: 700; color: #1F5EFF; }
   #bw-root .bw-hc-card { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; background: linear-gradient(135deg, #F3F7FE, #E6EEFF); border: 1.5px solid #D5E2FF; cursor: pointer; margin-bottom: 14px; }
   #bw-root .bw-hc-card.is-on { border-color: var(--t-blue); box-shadow: 0 6px 18px rgba(31,94,255,.14); }
   #bw-root .bw-hc-card input { width: 20px; height: 20px; accent-color: var(--t-blue); flex: none; }

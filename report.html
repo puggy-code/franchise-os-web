@@ -109,6 +109,16 @@
   .miss-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid #f1eff7; font-size: 16px; }
   .miss-item input { width: 20px; height: 20px; flex: none; margin-top: 2px; accent-color: #004aad; }
   .miss-done { color: #15121f; margin: 0; }
+  /* Customer survey (migration 0659) */
+  .q { font-weight: 700; color: #15121f; margin: 0 0 6px; }
+  .scale { display: grid; grid-template-columns: repeat(11, 1fr); gap: 4px; }
+  .scale button { padding: 10px 0; font-size: 15px; background: #f6f5fb; color: #15121f; border-radius: 8px; }
+  .scale button.on { background: #004aad; color: #fff; }
+  .scale-ends { display: flex; justify-content: space-between; font-size: 12px; color: #9c99ab; margin: 4px 0 18px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+  .chips label { background: #f6f5fb; border-radius: 999px; padding: 8px 14px; font-size: 15px; cursor: pointer; }
+  .chips label.on { background: #004aad; color: #fff; }
+  .chips input { position: absolute; opacity: 0; width: 0; height: 0; }
 </style>
 </head>
 <body>
@@ -160,6 +170,7 @@
 
     root.innerHTML = card(
       '<h1>How did we do?</h1>' +
+      '<p><b>1 to 5 stars, 5 is excellent.</b></p>' +
       '<p>Rate your ' + esc(d.org.name) + ' cleaning to see the full report from ' +
       esc(prettyDate(d.job.scheduled_date)) + ' — room by room, with photos.</p>' +
       '<form id="f"><div class="stars">' + stars + '</div>' +
@@ -207,6 +218,13 @@
   // works best; THEY send it from THEIR OWN phone (this page only opens their texting app). We never text the friend and never save a friend's number.
   var REF_ASK = (new URLSearchParams(location.search)).get('a') || '';
   var REF_PHONES = {}; // kept only in this page's memory, never sent to us
+
+  // The review ask (0591): after the first clean, and once more after the next one. Every customer; the wording is the company's own.
+  function reviewAskBlock(d) {
+    if (!d.review_ask || !d.review_ask.url) return '';
+    return card('<p style="font-size:16px">' + esc(d.review_ask.text) + '</p>' +
+      '<p><a class="btn" href="' + esc(d.review_ask.url) + '" target="_blank" rel="noopener">Leave a review</a></p>');
+  }
 
   function referralBlock(d) {
     var amount = money(d.referral.gift_cents);
@@ -290,6 +308,73 @@
   // ---------------------------------------------------------------- room grading, photos, re-clean (migration 0104)
   var TEXT_NUMBER = ''; // the business text number, digits with country code, for the "text us to book" button. Leave empty to hide it.
   var SCORE_WORDS = ['', 'Needs work', 'Okay', 'Good', 'Great', 'Perfect'];
+
+  // ---------------------------------------------------------------- the customer survey (migration 0659)
+  // Three questions from the 3rd clean on. Finishing earns the same thank-you card whatever the answers: never tied to the rating or a review.
+  function giftCardHtml(cents, code) {
+    return '<div class="gift"><div class="amt">' + money(cents) + '</div><div class="code">' + esc(code) + '</div><p>Your gift card. We will take it off your next clean.</p></div>';
+  }
+
+  function surveyBlock(d) {
+    var s = d.survey;
+    if (!s) return '';
+    if (s.done) return card('<h2>Your gift card</h2>' + giftCardHtml(s.balance_cents, s.code));
+    var html = '<h2>' + (s.gift_cents > 0 ? '3 quick questions, ' + money(s.gift_cents) + ' gift card' : '3 quick questions') + '</h2>';
+    (s.questions || []).forEach(function (q) {
+      html += '<p class="q">' + esc(q.prompt) + (q.kind === 'text' ? ' <span style="font-weight:400;color:#9c99ab">(optional)</span>' : '') + '</p>';
+      if (q.kind === 'scale') {
+        var b = '';
+        for (var n = 0; n <= 10; n++) b += '<button type="button" data-v="' + n + '">' + n + '</button>';
+        html += '<div class="scale" id="svscale">' + b + '</div><div class="scale-ends"><span>Not likely</span><span>Very likely</span></div>';
+      } else if (q.kind === 'choice') {
+        html += '<div class="chips" id="svchips">' + (q.choices || []).map(function (c) {
+          return '<label><input type="checkbox" value="' + esc(c) + '"><span>' + esc(c) + '</span></label>';
+        }).join('') + '</div>';
+      } else {
+        html += '<textarea id="svtext" maxlength="1000"></textarea>';
+      }
+    });
+    return card('<div id="svbox">' + html + '<button id="svgo" type="button" disabled>Send</button><div class="err" id="sverr" hidden></div></div>');
+  }
+
+  function wireSurvey() {
+    var box = document.getElementById('svbox');
+    if (!box) return;
+    var score = null;
+    var go = document.getElementById('svgo');
+    var scaleBtns = [].slice.call(box.querySelectorAll('#svscale button'));
+    var boxes = [].slice.call(box.querySelectorAll('#svchips input'));
+    function picks() { return boxes.filter(function (i) { return i.checked; }).map(function (i) { return i.value; }); }
+    function sync() { go.disabled = score === null || picks().length === 0; }
+    function failed() {
+      var err = document.getElementById('sverr');
+      err.textContent = 'That did not send. Please try again.'; err.hidden = false; go.textContent = 'Send'; sync();
+    }
+    scaleBtns.forEach(function (b) {
+      b.addEventListener('click', function () {
+        score = Number(b.getAttribute('data-v'));
+        scaleBtns.forEach(function (x) { x.classList.toggle('on', x === b); });
+        sync();
+      });
+    });
+    boxes.forEach(function (i) {
+      i.addEventListener('change', function () { i.parentNode.classList.toggle('on', i.checked); sync(); });
+    });
+    go.addEventListener('click', function () {
+      document.getElementById('sverr').hidden = true;
+      go.disabled = true; go.textContent = 'Sending…';
+      var t = document.getElementById('svtext');
+      post({ action: 'survey', answers: { '1': score, '2': picks(), '3': t ? t.value : '' } }).then(function (r) {
+        if (r.ok && r.gift_status === 'awarded' && r.code) { box.innerHTML = '<h2>Thank you</h2>' + giftCardHtml(r.gift_cents, r.code); return; }
+        if (r.ok) {
+          box.innerHTML = '<h2>Thank you</h2><p>Your answers help us get better.' + (r.gift_status === 'cap_reached' ? ' This month’s thank-you cards are all given out.' : '') + '</p>';
+          return;
+        }
+        if (r.error === 'already_done') { box.innerHTML = '<h2>Thank you</h2><p>You already answered.</p>'; return; }
+        failed();
+      }).catch(failed);
+    });
+  }
 
   function post(body) {
     body.t = token;
@@ -629,6 +714,9 @@
           }).join('') + '</ul>';
         }).join('')
       : '<p>No task list was recorded for this visit.</p>';
+    // Final Touch (opq-0129): one line under the task list.
+    if (d.final_touch) list += '<p class="final-touch"><span class="tick">&#10003;</span> ' + esc(d.final_touch) + '</p>';
+    if (d.we_fixed) list += '<p class="final-touch"><span class="tick">&#10003;</span> ' + esc(d.we_fixed) + '</p>';
 
     var photos = (d.photos.before.length || d.photos.after.length)
       ? card('<h2>Photos</h2>' + photoBlock('Before', d.photos.before) + photoBlock('After', d.photos.after))
@@ -651,13 +739,13 @@
 
     // A property manager's report has no referral gift and no star rating.
     var pm = !!(d.job && d.job.pm_report);
-    root.innerHTML = head + summary + requestsCard + extrasCard + card(list) + (pm ? '' : missedBlock(d)) + (pm ? '' : issueBlock(d)) + (pm ? '' : feedbackBlock(d)) + (pm ? '' : ideasBlock(d)) + photos + videos + (pm ? '' : referralBlock(d)) + pdf +
+    root.innerHTML = head + summary + reviewAskBlock(d) + requestsCard + extrasCard + card(list) + (pm ? '' : surveyBlock(d)) + (pm ? '' : missedBlock(d)) + (pm ? '' : issueBlock(d)) + (pm ? '' : feedbackBlock(d)) + (pm ? '' : ideasBlock(d)) + photos + videos + (pm ? '' : referralBlock(d)) + pdf +
       (d.portal_token ? card('<h2>Your account</h2><p>Your records, photos, invoices and a direct line to us, all in one place that stays yours.</p><a class="btn" href="account.html?t=' + esc(d.portal_token) + '">Open your account</a>') : '') +
       (!pm && d.org.three_rs_video_url && /^https:\/\//i.test(d.org.three_rs_video_url) ? card('<h2>One minute: referrals, reviews and recurring</h2><p>Three easy ways to get the most from us.</p><a class="btn" href="' + esc(d.org.three_rs_video_url) + '" target="_blank" rel="noopener">Watch the video</a>') : '') +
       '<p class="foot">' + esc(d.org.name) + '</p>';
 
     document.title = d.org.name + ' — your clean report';
-    if (!pm) { wireReferral(d); wireMissed(d); wireIssue(d); wireFeedback(d); }
+    if (!pm) { wireReferral(d); wireMissed(d); wireIssue(d); wireFeedback(d); wireSurvey(); }
     document.getElementById('pdf').addEventListener('click', function () { buildPdf(d, this); });
   }
 

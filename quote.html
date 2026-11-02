@@ -34,6 +34,7 @@
     var h = '<div class="card"><h1>' + esc(d.business ? 'Proposal for ' + d.business : 'Your proposal') + '</h1><p>From ' + esc(d.company) + '</p><div class="big">' + esc(money(d.monthly_cents)) + '<span class="per"> a month</span></div><p>Supplies and equipment included.</p></div>';
     if (d.scope && d.scope.length) h += '<div class="card"><h2>Your facility and what is included</h2><p><b>' + esc(d.scope[0]) + '</b><br>' + esc(d.scope[1] || '') + '</p><ul>' + d.scope.slice(2).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul><p style="margin-top:10px">The price is confirmed at a free walkthrough of your space.</p></div>';
     else h += '<div class="card"><h2>What we will clean</h2>' + d.areas.map(function (a) { return '<div class="row"><span>' + esc(a.area) + '</span><b>' + esc(a.frequency) + '</b></div>'; }).join('') + '</div>';
+    h += '<div class="card"><h2>Terms</h2><ul><li>Any size building. A 12-month agreement; either side may end it with 60 days written notice.</li><li>We carry general liability insurance of $1,000,000 per occurrence and $2,000,000 in total. A certificate is available on request.</li><li>Payment: net 30 by ACH bank transfer. A card stays on file as a backup.</li><li>We bring all supplies and equipment.</li></ul></div>';
     if (d.accepted_at) {
       h += '<div class="card"><p class="ok">Accepted by ' + esc(d.accepted_name) + ' on ' + esc(new Date(d.accepted_at).toLocaleDateString()) + '. Thank you! We will be in touch to set your start date.</p></div>';
     } else if (d.status === 'lost') {

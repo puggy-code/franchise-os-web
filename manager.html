@@ -571,8 +571,10 @@
       insertJob: function (row) { return sb.from("jobs").insert(row).select("id").single().then(ok).then(function (r) { return r.id; }); },
       event: function (row) { return sb.from("job_events").insert(row).then(function () {}); },
       clearPeople: function (jobId) { return sb.from("job_assignments").delete().eq("job_id", jobId).then(ok); },
-      requests: function (jobId) { return sb.from("job_special_requests").select("id, text, completed_at").eq("job_id", jobId).order("created_at").then(ok); },
+      requests: function (jobId) { return sb.from("job_special_requests").select("id, text, completed_at, source, planned_extra_visit_id").eq("job_id", jobId).order("created_at").then(ok); },
       addRequest: function (rows) { return sb.from("job_special_requests").insert(rows).then(ok); },
+      // A Two Hour Clean: how many more requests it takes, its care-plan lines and punch items included (0657/0658); null for other services.
+      requestsLeft: function (jobId) { return sb.rpc("two_hour_requests_left", { p_job: jobId }).then(ok); },
       deleteRequest: function (id) { return sb.from("job_special_requests").delete().eq("id", id).then(ok); },
       payState: function (jobId) { return sb.from("job_money").select("payment_status, stripe_payment_intent_id").eq("job_id", jobId).maybeSingle().then(function (r) { return r.data || {}; }); },
       refund: function (jobId) { return sb.functions.invoke("refund-job", { body: { job_id: jobId } }).then(function (r) { if (r.error) throw r.error; return r.data || {}; }); },
@@ -691,6 +693,7 @@
       clearPeople: function (jobId) { find(jobId).assignments = []; return delay(); },
       requests: function (jobId) { return delay(clone(reqs.filter(function (r) { return r.job_id === jobId; }))); },
       addRequest: function (rows) { [].concat(rows).forEach(function (row) { reqs.push({ id: "r" + Math.random(), job_id: row.job_id, text: row.text, completed_at: null }); }); return delay(); },
+      requestsLeft: function () { return delay(null); }, // the demo counts the rows it shows
       deleteRequest: function (id) { reqs = reqs.filter(function (r) { return r.id !== id; }); return delay(); },
       payState: function (jobId) { return delay(clone(money.filter(function (m) { return m.job_id === jobId; })[0] || {})); },
       refund: function () { return delay({ refunded: true, refund_cents: 19400, fee_kept_cents: 5000 }); },
@@ -1180,6 +1183,8 @@
       var start = slotByKey(st.slot).time + ":00", end = fromMin(toMin(start) + mins), day = st.date;
       var notes = $("b-notes").value.trim() || null;
       var reqs = $("b-reqs").value.split("\n").map(function (s) { return s.trim().slice(0, 300); }).filter(Boolean).slice(0, 10);
+      // The Two Hour Clean takes up to 2 special requests and no extras (Jack, 2026-11-01); the database refuses a third.
+      if (st.service === "two_hour" && reqs.length > TWO_HOUR_MAX_REQUESTS) return show($("b-msg"), "err", "The Two Hour Clean takes up to " + TWO_HOUR_MAX_REQUESTS + " special requests. Keep two, or book the Checklist Clean.");
       var svc = SERVICES.filter(function (s) { return s.key === st.service; })[0];
       var teamId = null, customerId = null, jobId = null;
       $("b-go").disabled = true; show($("b-msg"), "", "");
@@ -1264,7 +1269,7 @@
     $("s-cust").textContent = j.customer ? j.customer.full_name.split(" ")[0] + "'s details and bookings" : "Customer";
     var notesOpen = canEdit && j.status !== "cancelled";
     $("n-notes").value = j.notes || "";
-    $("n-notes").readOnly = !notesOpen; $("n-save").hidden = !notesOpen; $("r-add").hidden = !notesOpen;
+    $("n-notes").readOnly = !notesOpen; $("n-save").hidden = !notesOpen; $("r-add").hidden = !notesOpen; $("r-add").dataset.open = notesOpen ? "1" : "";
     ["m-msg", "t-msg", "n-msg", "r-msg", "c-msg"].forEach(function (id) { $(id).innerHTML = ""; });
     $("c-confirm").hidden = true; $("c-ask").hidden = false;
     $("m-date").value = j.scheduled_date; $("m-date").min = today;
@@ -1392,6 +1397,14 @@
   });
 
   // special requests
+  // The Two Hour Clean (Jack, 2026-11-01; _shared/twoHourRules.ts): no extras, up to 2 special requests. Imported BookingKoala visits are
+  // service 'standard' and named by the label. Crew notes ("Yard sign OK") and planned-extras rows do not count; the database refuses a 3rd.
+  var TWO_HOUR_MAX_REQUESTS = 2;
+  function isTwoHourJob(j) {
+    var s = String((j && j.service) || "").toLowerCase();
+    if (["two_hour", "two_hour_clean", "2x2"].indexOf(s) >= 0) return true;
+    return (s === "" || s === "standard") && /\b2x2\b|\btwo[ -]hours?\b/i.test((j && j.service_label) || "");
+  }
   function loadRequests() {
     var j = current;
     $("r-list").innerHTML = "";
@@ -1401,6 +1414,16 @@
         return '<div class="req' + (r.completed_at ? " done" : "") + '"><span>' + esc(r.text) + "</span>" +
           (canEdit && j.status !== "cancelled" && !r.completed_at ? '<button type="button" data-req="' + esc(r.id) + '" aria-label="Remove">&times;</button>' : "") + "</div>";
       }).join("");
+      var two = isTwoHourJob(j);
+      var used = rows.filter(function (r) { return r.source !== "crew_note" && !r.planned_extra_visit_id; }).length;
+      // The database's own count also has the care-plan lines on the checklist and the punch items (Jack: "cap it at 2", 0658).
+      function paint(left) {
+        if (!current || current.id !== j.id) return;
+        if (left == null) left = Math.max(0, TWO_HOUR_MAX_REQUESTS - used);
+        $("r-add").hidden = !$("r-add").dataset.open || (two && left < 1);
+        show($("r-msg"), "", two ? "Two Hour Clean: up to " + TWO_HOUR_MAX_REQUESTS + " requests in all (care plan lines count) and no extras; " + left + " left." : "");
+      }
+      if (two) api.requestsLeft(j.id).then(paint, function () { paint(null); }); else paint(null);
     }).catch(function (err) { show($("r-msg"), "err", friendly(err)); });
   }
   $("r-list").addEventListener("click", function (e) {

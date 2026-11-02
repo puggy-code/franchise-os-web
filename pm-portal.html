@@ -111,6 +111,45 @@
     return h;
   }
 
+  // Airbnb / VRBO hosts (0552): turnovers drafted from your calendar wait for a tap (or auto-confirm all); listings take the iCal link,
+  // lockbox code and where to leave guests' forgotten items; crew reports show photos for an Airbnb damage claim.
+  function hostHtml(h, byB) {
+    if (!h) return '';
+    var drafts = (h.drafts || []).map(function (x) {
+      return '<div class="row"><div><div class="unit">' + esc(byB[x.building_id] || 'Listing') + '</div><div class="sub">Checkout ' + esc(pretty(x.checkout_date)) + ' &middot; clean at 11:40 AM</div></div>' +
+        (x.status === 'draft' ? '<span><button data-draft="' + esc(x.id) + '" data-yes="1">Confirm</button> <button class="alt" data-draft="' + esc(x.id) + '" data-yes="0">Skip</button></span>' : '<span class="tag booked">Confirmed</span>') + '</div>';
+    }).join('');
+    var lists = (h.listings || []).map(function (l) {
+      return '<div class="card" style="background:var(--bg)"><b>' + esc(l.label) + '</b><div class="sub">' + (l.ical_set ? 'Calendar linked' + (l.synced_at ? ', checked ' + esc(pretty(l.synced_at.slice(0, 10))) : '') : 'No calendar linked yet') + (l.lockbox_set ? ' &middot; lockbox code on file' : '') + '</div>' +
+        '<input data-l="' + esc(l.id) + '" data-f="ical_url" placeholder="Paste the Airbnb or VRBO iCal link (https://...)">' +
+        '<input data-l="' + esc(l.id) + '" data-f="lockbox_code" placeholder="New lockbox code (kept private)" maxlength="40">' +
+        '<input data-l="' + esc(l.id) + '" data-f="lost_items_spot" placeholder="Where to leave items guests forget" maxlength="200" value="' + esc(l.lost_items_spot || '') + '">' +
+        '<button data-save="' + esc(l.id) + '">Save</button> <span data-msg="' + esc(l.id) + '"></span></div>';
+    }).join('');
+    var reps = (h.reports || []).map(function (r) {
+      return '<div class="row"><div><div class="unit">' + (r.kind === 'damage' ? 'Guest damage' : r.kind === 'left_item' ? 'Item left by guests' : 'Running low') + '</div><div class="sub">' + esc(pretty(r.at.slice(0, 10))) + (r.note ? ' &middot; ' + esc(r.note) : '') + '</div>' +
+        (r.photos || []).map(function (u) { return '<a href="' + esc(u) + '" target="_blank" rel="noopener">Photo</a> '; }).join('') + '</div></div>';
+    }).join('');
+    return '<div class="card"><h2>Turnovers from your calendar</h2><label class="sub"><input type="checkbox" id="auto-confirm"' + (h.auto_confirm ? ' checked' : '') + '> Auto-confirm all</label>' +
+      (drafts || '<p>No checkouts coming up.</p>') + '</div>' +
+      '<div class="card"><h2>Your listings</h2>' + (lists || '<p>No listings yet.</p>') + '</div>' +
+      (reps ? '<div class="card"><h2>From the crew</h2>' + reps + '</div>' : '');
+  }
+  function hPost(body) { body.t = token; return fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }); }
+  document.addEventListener('click', function (e) {
+    var d = e.target.closest && e.target.closest('[data-draft]');
+    if (d) { d.disabled = true; hPost({ action: 'draft_decide', draft_id: d.getAttribute('data-draft'), confirm: d.getAttribute('data-yes') === '1' }).then(load); return; }
+    var sv = e.target.closest && e.target.closest('[data-save]');
+    if (sv) {
+      var id = sv.getAttribute('data-save'), body = { action: 'listing_set', building_id: id };
+      document.querySelectorAll('[data-l="' + id + '"]').forEach(function (i) { if (i.value || i.getAttribute('data-f') === 'lost_items_spot') body[i.getAttribute('data-f')] = i.value; });
+      hPost(body).then(function (r) { var m = document.querySelector('[data-msg="' + id + '"]'); if (m) m.textContent = r.ok ? 'Saved.' : 'Check the link and try again.'; });
+    }
+  });
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'auto-confirm') hPost({ action: 'auto_confirm', on: e.target.checked }).then(load);
+  });
+
   function render(d) {
     data = d;
     var byB = {};
@@ -123,6 +162,7 @@
     root.innerHTML =
       '<div class="card"><h1>' + esc(d.account.name) + '</h1><p>Your cleaning with ' + esc(d.org.name) + '</p>' +
       '<div class="stats"><div class="stat"><b>' + d.totals.upcoming + '</b>Upcoming</div><div class="stat"><b>' + d.totals.waiting + '</b>Waiting for a yes</div><div class="stat"><b>' + d.totals.cleaned + '</b>Cleaned</div></div></div>' +
+      hostHtml(d.host, byB) +
       loyaltyHtml(d.loyalty) +
       statsHtml(d.stats) +
       '<div class="card"><h2>Recent turnover requests</h2>' + (rows || '<p>Nothing in the last 4 months.</p>') + '</div>' +
