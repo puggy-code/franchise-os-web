@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Give a gift card</title>
+<style>
+  :root { --ink:#0b1220; --muted:#5b6475; --card:#ffffff; --line:#d9deea; --accent:#2563eb; --bg:#f4f6fb; --ok:#059669; --bad:#dc2626; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ink:#f1f4fa; --muted:#a3adc2; --card:#161c2b; --line:#262f45; --accent:#7aa2ff; --bg:#0d1220; } }
+  html, body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width:520px; margin:0 auto; padding:20px 16px 40px; }
+  h1 { font-size:24px; margin:8px 0 4px; }
+  .sub { color:var(--muted); margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:14px; }
+  label { display:block; font-weight:600; margin:12px 0 4px; }
+  input, textarea { width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); font:inherit; }
+  .amts { display:flex; flex-wrap:wrap; gap:8px; }
+  .amts button { flex:1 1 70px; padding:10px; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--ink); font:inherit; cursor:pointer; }
+  .amts button.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .go { width:100%; margin-top:16px; padding:14px; border:0; border-radius:12px; background:var(--accent); color:#fff; font:inherit; font-weight:700; cursor:pointer; }
+  .go[disabled] { opacity:.5; cursor:default; }
+  .note { color:var(--muted); font-size:13px; }
+  .msg { padding:12px; border-radius:10px; margin-bottom:12px; }
+  .msg.ok { background:rgba(5,150,105,.12); color:var(--ok); } .msg.bad { background:rgba(220,38,38,.12); color:var(--bad); }
+</style>
+</head>
+<body>
+<!-- Embed: <iframe src="https://YOUR-HOST/gift-card.html" style="width:100%;border:0;height:760px" title="Buy a gift card"></iframe>
+     TEST MODE ONLY: the gift-card function refuses to run unless Stripe is in test mode, so no real card can be charged yet. -->
+<div class="wrap">
+  <h1>Give a gift card</h1>
+  <p class="sub">A Two Hour Maids clean, as a gift. It never expires and has no fees.</p>
+  <div id="status"></div>
+  <div class="card" id="form">
+    <label>Amount</label>
+    <div class="amts" id="amts"></div>
+    <label for="pname">Your name</label><input id="pname" autocomplete="name">
+    <label for="pemail">Your email (for the receipt)</label><input id="pemail" type="email" autocomplete="email">
+    <label for="rname">Who is it for?</label><input id="rname">
+    <label for="remail">Their email (we send the code to them)</label><input id="remail" type="email">
+    <label for="msg">A short message (optional)</label><textarea id="msg" rows="3" maxlength="400"></textarea>
+    <button class="go" id="go" type="button">Continue to payment</button>
+    <p class="note">You pay on Stripe's secure page. The code is emailed to the person you name as soon as the payment goes through.</p>
+  </div>
+</div>
+<script>
+(function () {
+  var FN = 'https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/gift-card';
+  var ORG = 'two-hour-maids';
+  var cents = 10000;
+  var q = new URLSearchParams(location.search);
+  var status = document.getElementById('status'), go = document.getElementById('go');
+  if (q.get('done')) status.innerHTML = '<div class="msg ok">Thank you! The gift card is on its way to your recipient by email.</div>';
+  if (q.get('cancelled')) status.innerHTML = '<div class="msg bad">Checkout was cancelled. Nothing was charged.</div>';
+  var box = document.getElementById('amts');
+  [2500, 5000, 10000, 20000].forEach(function (c) {
+    var b = document.createElement('button'); b.type = 'button'; b.textContent = '$' + c / 100; if (c === cents) b.className = 'on';
+    b.onclick = function () { cents = c; [].forEach.call(box.children, function (x) { x.className = ''; }); b.className = 'on'; };
+    box.appendChild(b);
+  });
+  function v(id) { return document.getElementById(id).value.trim(); }
+  go.onclick = function () {
+    status.innerHTML = '';
+    if (!v('pname') || !v('pemail')) { status.innerHTML = '<div class="msg bad">Please add your name and email.</div>'; return; }
+    go.disabled = true; go.textContent = 'One moment...';
+    fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ org_slug: ORG, amount_cents: cents, purchaser_name: v('pname'), purchaser_email: v('pemail'), recipient_name: v('rname'), recipient_email: v('remail'), message: v('msg') }) })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (x) {
+        if (x.ok && x.d.url) { location.href = x.d.url; return; }
+        var m = x.d && x.d.error === 'test_mode_only' ? 'Gift cards are not open yet. Please check back soon.' : (x.d && x.d.message) || 'Something went wrong. Please try again.';
+        status.innerHTML = '<div class="msg bad">' + m.replace(/[<>&]/g, '') + '</div>'; go.disabled = false; go.textContent = 'Continue to payment';
+      })
+      .catch(function () { status.innerHTML = '<div class="msg bad">Something went wrong. Please try again.</div>'; go.disabled = false; go.textContent = 'Continue to payment'; });
+  };
+})();
+</script>
+<!-- Meta Pixel: consent-aware, off until the pixel ID is set in pixel.js (PAID-ADS.md) -->
+<script src="pixel.js" defer></script>
+</body>
+</html>
