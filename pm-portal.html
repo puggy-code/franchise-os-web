@@ -10,6 +10,10 @@
   > Share portal link). The token is the only credential; nothing here needs a Supabase key. Data comes from the pm-portal function (JSON), because
   Supabase rewrites text/html from the functions domain to text/plain (gotcha 1). The old portal.html forwards here.
   Shows: the schedule, this account's insights, and (when the loyalty program is on) points, tier progress, the reward catalog and requests.
+  2026-11-04 (PM-PORTAL-AUDIT-2026-11-04.md): the home screen is buildings + open turnovers + "Request a clean" (cus-0294): a manager picks a building and units,
+  gets the price (hours by size x the account's rate) and open times, and books it, by the text flow's rules. Also: add a building, the hours-by-size table,
+  statements by building, a report link on each cleaned turnover, the terms (typed name + checkbox), and sign in by email when there is no link.
+  A link is either the company's shared link or one manager's own (the company admin sees everything; another manager sees their own requests).
   Goes to the separate public web repo with the other pages; not published from here.
 -->
 <style>
@@ -46,6 +50,19 @@
   button[disabled] { opacity: .45; cursor: default; }
   input { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; margin: 6px 0; }
   .small { font-size: 12px; color: var(--muted); }
+  label.f { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 10px 0 0; }
+  select { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; margin: 6px 0; }
+  .urow { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr) 36px; gap: 6px; align-items: center; }
+  .urow input, .urow select { margin: 3px 0; padding: 9px 6px; font-size: 14px; min-width: 0; }
+  .urow button { padding: 8px 0; }
+  .ghost { background: transparent; color: var(--brand); border: 1px solid var(--line); }
+  .cta { width: 100%; padding: 14px; font-size: 16px; }
+  details > summary { cursor: pointer; font-weight: 700; color: var(--brand); padding: 4px 0; }
+  .line { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .line select { flex: 1 1 190px; width: auto; }
+  .total { display: flex; justify-content: space-between; font-weight: 800; padding-top: 10px; }
+  table.hrs { width: 100%; border-collapse: collapse; font-size: 14px; } table.hrs td { padding: 6px 0; border-bottom: 1px solid var(--line); } table.hrs td:last-child { text-align: right; font-weight: 700; }
+  a { color: var(--brand); }
 </style>
 </head>
 <body>
@@ -53,7 +70,8 @@
 <script>
   var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
   var FN = SUPABASE_URL + '/functions/v1/pm-portal';
-  var TEXT_NUMBER = '(763) 230-6795';
+  var TEXT_NUMBER = '(763) 227-9124'; // the one company number (Jack, 2026-11-02)
+  var TERMS_URL = 'https://www.twohourmaids.com/terms-and-conditions';
   var token = new URLSearchParams(location.search).get('t') || '';
   var root = document.getElementById('root');
   var LABEL = { cleaned: 'Cleaned', booked: 'Booked', waiting: 'Waiting for your yes', cancelled: 'Cancelled', problem: 'Needs attention' };
@@ -150,23 +168,182 @@
     if (e.target && e.target.id === 'auto-confirm') hPost({ action: 'auto_confirm', on: e.target.checked }).then(load);
   });
 
+  // ---- request a clean (cus-0294): building, units, optional day -> price and open times -> book ----
+  var BEDS = [[0, 'Studio'], [1, '1 bed'], [2, '2 bed'], [3, '3 bed'], [4, '4 bed'], [5, '5 bed'], [6, '6 bed']];
+  var BATHS = [1, 1.5, 2, 2.5, 3, 3.5, 4];
+  function opts(list, sel) { return list.map(function (x) { var v = x[0], l = x[1]; return '<option value="' + esc(v) + '"' + (String(v) === String(sel) ? ' selected' : '') + '>' + esc(l) + '</option>'; }).join(''); }
+  function unitRow(u) {
+    u = u || {};
+    return '<div class="urow"><input class="u-unit" placeholder="Unit, like 4B" maxlength="12" value="' + esc(u.unit || '') + '" aria-label="Unit">' +
+      '<select class="u-beds" aria-label="Bedrooms">' + opts(BEDS, u.beds == null ? 2 : u.beds) + '</select>' +
+      '<select class="u-baths" aria-label="Bathrooms">' + opts(BATHS.map(function (b) { return [b, b + ' bath']; }), u.baths == null ? 1 : u.baths) + '</select>' +
+      '<button type="button" class="ghost" data-rm-unit aria-label="Remove this unit">&times;</button></div>';
+  }
+  function requestHtml(d) {
+    if (!(d.buildings || []).length) return '<div class="card"><h2>Request a clean</h2><p>Add your building below first, then you can request a turnover here.</p></div>';
+    return '<div class="card" id="req-card"><h2>Request a clean</h2>' +
+      '<button type="button" class="cta" id="rq-open">Request a clean</button>' +
+      '<div id="rq-form" hidden>' +
+      '<label class="f">Building<select id="rq-b">' + d.buildings.map(function (b) { return '<option value="' + esc(b.id) + '">' + esc(b.label) + (b.address ? ' - ' + esc(b.address) : '') + '</option>'; }).join('') + '</select></label>' +
+      '<label class="f">Units</label><div id="rq-units">' + unitRow() + '</div>' +
+      '<button type="button" class="ghost" id="rq-add">+ Add another unit</button>' +
+      '<label class="f">Earliest day you want it (optional)<input type="date" id="rq-date"></label>' +
+      '<label class="f">Next tenant moves in (optional)<input type="date" id="rq-movein"></label>' +
+      '<label class="f">A note for the crew (optional)<input id="rq-note" maxlength="300" placeholder="Anything we should know about the unit"></label>' +
+      '<p class="small">Your price is the unit size at your account rate. We never promise same-day; the earliest is tomorrow, Monday to Saturday.</p>' +
+      '<button type="button" id="rq-quote">Get price and open times</button> <span id="rq-msg" class="err"></span>' +
+      '<div id="rq-out"></div></div></div>';
+  }
+  var ERR = {
+    unknown_size: 'That unit size is not in your price table, so our team will confirm the price and text you. You can also text us the unit and size.',
+    no_slots: 'We do not see an opening in the next few weeks, so our team will call you.',
+    need_building: 'Pick a building first.', bad_unit: 'Use a short unit label, like 4B.', bad_size: 'Pick the bedrooms and bathrooms.', no_units: 'Add at least one unit.',
+    too_many_units: 'Ten units at a time, please.', duplicate_unit: 'Each unit once per request.', bad_date: 'That day does not look right.', slot_taken: 'One of those times was just taken. Get the price again for fresh times.',
+    bad_slot: 'Pick one of the open times for each unit.', already_requested: 'You already have that unit booked at that time.', no_phone_on_file: 'We need a phone number on your account first. Text or call us and we will add it.',
+    server_error: 'That did not go through. Please try again.', not_found: 'This link is not valid or has been replaced. Ask us for a new one.'
+  };
+  function rqUnits() {
+    return Array.prototype.map.call(document.querySelectorAll('#rq-units .urow'), function (r) {
+      return { unit: r.querySelector('.u-unit').value, beds: Number(r.querySelector('.u-beds').value), baths: Number(r.querySelector('.u-baths').value) };
+    });
+  }
+  function rqBody(action) {
+    return { action: action, building_id: document.getElementById('rq-b').value, units: rqUnits(), date: document.getElementById('rq-date').value || null };
+  }
+  function slotLabel(s) { return s.when; }
+  function quoteHtml(q) {
+    var lines = q.lines.map(function (l, i) {
+      var seen = {}, all = [{ date: l.date, time: l.time, when: l.when }].concat(q.options).filter(function (o) { var k = o.date + o.time; if (seen[k]) return false; seen[k] = 1; return true; });
+      return '<div class="line"><div><div class="unit">Unit ' + esc(l.unit) + '</div><div class="sub">' + (l.beds === 0 ? 'Studio' : l.beds + ' bed') + ' / ' + l.baths + ' bath &middot; ' + l.hours + ' labor-hrs &times; ' + esc('$' + (q.rate_cents / 100).toFixed(2).replace(/\.00$/, '')) + '/hr = <b>' + esc(money(l.est_cents)) + '</b></div></div>' +
+        '<select class="q-slot" data-i="' + i + '" aria-label="Time for unit ' + esc(l.unit) + '">' + all.map(function (o) { return '<option value="' + esc(o.date + '|' + o.time) + '">' + esc(o.when) + '</option>'; }).join('') + '</select></div>';
+    }).join('');
+    return '<div style="margin-top:12px">' + (q.date_unavailable ? '<p class="err">That day is not open, so these are our next openings.</p>' : '') + lines +
+      '<div class="total"><span>Total</span><span>' + esc(money(q.total_cents)) + '</span></div>' +
+      '<p class="small">An estimate at your agreed rate; the crew confirms if a unit is much worse than described. To cancel or change a booked turnover, text or call us (inside 24 hours there is a $50 fee).</p>' +
+      '<button type="button" id="rq-book">Book ' + (q.lines.length === 1 ? 'this turnover' : 'these ' + q.lines.length + ' turnovers') + '</button> <span id="rq-msg2" class="err"></span></div>';
+  }
+  function postJson(body) {
+    body.t = token;
+    return fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); });
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (t.id === 'rq-open') { document.getElementById('rq-form').hidden = false; t.hidden = true; return; }
+    if (t.id === 'rq-add') { document.getElementById('rq-units').insertAdjacentHTML('beforeend', unitRow()); return; }
+    if (t.hasAttribute('data-rm-unit')) { var rows = document.querySelectorAll('#rq-units .urow'); if (rows.length > 1) t.closest('.urow').remove(); return; }
+    if (t.id === 'rq-quote') {
+      var msg = document.getElementById('rq-msg'), out = document.getElementById('rq-out');
+      t.disabled = true; msg.className = ''; msg.textContent = 'One moment...'; out.innerHTML = '';
+      postJson(rqBody('quote')).then(function (res) {
+        t.disabled = false;
+        if (!res.ok) { msg.className = 'err'; msg.textContent = ERR[res.j.error] || ERR.server_error; return; }
+        msg.textContent = ''; window.__quote = res.j; out.innerHTML = quoteHtml(res.j);
+      }).catch(function () { t.disabled = false; msg.className = 'err'; msg.textContent = ERR.server_error; });
+      return;
+    }
+    if (t.id === 'rq-book') {
+      var m2 = document.getElementById('rq-msg2'), out2 = document.getElementById('rq-out');
+      var picks = Array.prototype.map.call(document.querySelectorAll('.q-slot'), function (sel) { var v = sel.value.split('|'); return { date: v[0], time: v[1] }; });
+      var body = rqBody('book'); body.slots = picks; body.note = document.getElementById('rq-note').value; body.move_in_date = document.getElementById('rq-movein').value || null;
+      t.disabled = true; m2.className = ''; m2.textContent = 'Booking...';
+      postJson(body).then(function (res) {
+        if (!res.ok && !(res.j.booked && res.j.booked.length)) { t.disabled = false; m2.className = 'err'; m2.textContent = (res.j.failed && res.j.failed.length ? 'We could not book ' + res.j.failed.map(function (f) { return f.unit; }).join(', ') + '. Our team will follow up.' : (ERR[res.j.error] || ERR.server_error)); return; }
+        out2.innerHTML = '<div class="card" style="background:var(--bg);margin-top:12px"><p class="ok">Booked!</p>' + res.j.booked.map(function (b) { return '<div class="line"><span class="unit">Unit ' + esc(b.unit) + '</span><span>' + esc(b.when) + '</span></div>'; }).join('') +
+          (res.j.failed && res.j.failed.length ? '<p class="err">We could not book ' + res.j.failed.map(function (f) { return esc(f.unit); }).join(', ') + '. Our team will follow up.</p>' : '') +
+          '<p class="small">You will see each one under Recent turnovers below. We text when it is done.</p></div>';
+        setTimeout(load, 1200);
+      }).catch(function () { t.disabled = false; m2.className = 'err'; m2.textContent = ERR.server_error; });
+      return;
+    }
+    if (t.id === 'bd-save') {
+      var bm = document.getElementById('bd-msg');
+      var body2 = { action: 'add_building', label: document.getElementById('bd-label').value, address: document.getElementById('bd-address').value, zip: document.getElementById('bd-zip').value,
+        unit_count: document.getElementById('bd-units').value || null, common_area_sqft: document.getElementById('bd-area').value || null, access_notes: document.getElementById('bd-notes').value };
+      t.disabled = true; bm.className = ''; bm.textContent = 'Saving...';
+      postJson(body2).then(function (res) {
+        t.disabled = false;
+        if (!res.ok) { bm.className = 'err'; bm.textContent = ({ out_of_area: 'We do not clean at that ZIP yet. Text or call us and we will tell you if that changes.', bad_zip: 'Enter a 5-digit ZIP.', bad_label: 'Give the building a short name.', bad_address: 'Enter the street address.', bad_units: 'Units: a whole number.', bad_area: 'Common-area size: a whole number of square feet.', too_many_buildings: 'That is the most buildings we can add here. Call us.' })[res.j.error] || ERR.server_error; return; }
+        bm.className = 'ok'; bm.textContent = 'Added.'; setTimeout(load, 600);
+      }).catch(function () { t.disabled = false; bm.className = 'err'; bm.textContent = ERR.server_error; });
+      return;
+    }
+    if (t.id === 'tm-go') {
+      var tm = document.getElementById('tm-msg'), nm = document.getElementById('tm-name').value, ag = document.getElementById('tm-agree').checked;
+      if (!ag || nm.trim().length < 2) { tm.className = 'err'; tm.textContent = 'Tick the box and type your name.'; return; }
+      t.disabled = true;
+      postJson({ action: 'accept_terms', name: nm, agree: true }).then(function (res) { t.disabled = false; if (res.ok) load(); else { tm.className = 'err'; tm.textContent = ERR.server_error; } }).catch(function () { t.disabled = false; tm.className = 'err'; tm.textContent = ERR.server_error; });
+      return;
+    }
+  });
+
+  function buildingsHtml(d) {
+    var list = (d.buildings || []).map(function (b) {
+      return '<div class="row"><div><div class="unit">' + esc(b.label) + '</div><div class="sub">' + esc(b.address || '') + (b.unit_count ? ' &middot; ' + b.unit_count + ' units' : '') + (b.common_area_sqft ? ' &middot; ' + Number(b.common_area_sqft).toLocaleString('en-US') + ' sq ft common area' : '') + '</div></div></div>';
+    }).join('');
+    return '<div class="card"><h2>Your buildings</h2>' + (list || '<p>No buildings yet.</p>') +
+      '<details><summary>Add a building</summary>' +
+      '<label class="f">Name<input id="bd-label" maxlength="60" placeholder="Oak Court"></label>' +
+      '<label class="f">Street address<input id="bd-address" maxlength="120" placeholder="12 Oak St, Minneapolis"></label>' +
+      '<label class="f">ZIP<input id="bd-zip" inputmode="numeric" maxlength="5" placeholder="55407"></label>' +
+      '<label class="f">How many units?<input id="bd-units" inputmode="numeric" maxlength="4"></label>' +
+      '<label class="f">Common-area size, square feet (optional)<input id="bd-area" inputmode="numeric" maxlength="6"></label>' +
+      '<label class="f">How we get in (optional)<input id="bd-notes" maxlength="500" placeholder="Lockbox, key tag, fob, who to call"></label>' +
+      '<p class="small">Access details are kept private: they are never shown back on this page.</p>' +
+      '<button type="button" id="bd-save">Add this building</button> <span id="bd-msg"></span></details></div>';
+  }
+  function hoursHtml(d) {
+    if (!(d.hours_table || []).length) return '';
+    return '<div class="card"><h2>Your price by unit size</h2><p class="sub">Hours by size at your rate of ' + esc('$' + (d.rate_cents / 100).toFixed(2).replace(/\.00$/, '')) + ' an hour, with a two-person crew.</p><table class="hrs">' +
+      d.hours_table.map(function (r) { return '<tr><td>' + esc(r.size) + '</td><td class="sub">' + r.hours + ' hrs</td><td>' + esc(money(r.cents)) + '</td></tr>'; }).join('') + '</table></div>';
+  }
+  function statementsHtml(d) {
+    if (!d.viewer || !d.viewer.whole_account) return '';
+    var st = d.statements || [];
+    var monthName = function (m) { return new Date(m + 'T12:00:00').toLocaleDateString([], { month: 'long', year: 'numeric' }); };
+    return '<div class="card"><h2>Statements</h2><p class="sub">One a month, broken down by building. Due 15 days after it is sent.</p>' + (st.length ? st.map(function (x) {
+      return '<div class="row"><div><div class="unit">' + esc(monthName(x.month)) + '</div><div class="sub">' + x.lines.map(function (l) { return esc(l.building) + ': ' + l.turnovers + ' &middot; ' + esc(money(l.amount_cents)); }).join(' &nbsp; ') + (x.points_earned ? ' &middot; you earned ' + pts(x.points_earned) + ' points' : '') + '</div></div>' +
+        '<div style="text-align:right"><b>' + esc(money(x.total_cents)) + '</b><div class="sub">' + (x.status === 'paid' ? 'Paid' : 'Due ' + esc(pretty(x.due_date))) + '</div></div></div>';
+    }).join('') : '<p>No statements yet.</p>') + '</div>';
+  }
+  function termsHtml(d) {
+    if (d.terms && d.terms.accepted) return '';
+    return '<div class="card"><h2>Terms</h2><p>Please accept our terms for your account. Type your name and tick the box; we keep the date and time.</p>' +
+      '<input id="tm-name" maxlength="80" placeholder="Your full name" aria-label="Your full name">' +
+      '<label class="f" style="display:flex;gap:8px;align-items:flex-start;font-weight:400"><input type="checkbox" id="tm-agree" style="width:auto;margin-top:4px"> <span>I have read and agree to the <a href="' + TERMS_URL + '" target="_blank" rel="noopener">terms</a>.</span></label>' +
+      '<button type="button" id="tm-go">Accept</button> <span id="tm-msg"></span></div>';
+  }
+  function loyaltySoonHtml(d) {
+    if (d.loyalty_program_on) return '';
+    return '<div class="card"><h2>Loyalty points</h2><p>Points on every paid turnover are launching soon. See how they would add up: <a href="pm-earn.html?org=two-hour-maids">the points calculator</a>.</p></div>';
+  }
+
   function render(d) {
     data = d;
     var byB = {};
     (d.buildings || []).forEach(function (b) { byB[b.id] = b.label; });
     var rows = (d.requests || []).map(function (r) {
       return '<div class="row"><div><div class="unit">Unit ' + esc(r.unit) + (byB[r.building_id] ? ' &middot; ' + esc(byB[r.building_id]) : '') + '</div>' +
-        '<div class="sub">' + esc(pretty(r.date)) + (r.size ? ' &middot; ' + esc(r.size) : '') + (r.est_cents != null ? ' &middot; est. ' + esc(money(r.est_cents)) : '') + '</div></div>' +
+        '<div class="sub">' + esc(pretty(r.date)) + (r.size ? ' &middot; ' + esc(r.size) : '') + (r.est_cents != null ? ' &middot; est. ' + esc(money(r.est_cents)) : '') +
+        (r.report_token ? ' &middot; <a href="report.html?t=' + encodeURIComponent(r.report_token) + '">View the report</a>' : '') + '</div></div>' +
         '<span class="tag ' + esc(r.state) + '">' + esc(LABEL[r.state] || r.state) + '</span></div>';
     }).join('');
+    var who = d.viewer && d.viewer.name ? ' &middot; ' + esc(d.viewer.name) : '';
     root.innerHTML =
-      '<div class="card"><h1>' + esc(d.account.name) + '</h1><p>Your cleaning with ' + esc(d.org.name) + '</p>' +
+      '<div class="card"><h1>' + esc(d.account.name) + '</h1><p>Your cleaning with ' + esc(d.org.name) + who + '</p>' +
       '<div class="stats"><div class="stat"><b>' + d.totals.upcoming + '</b>Upcoming</div><div class="stat"><b>' + d.totals.waiting + '</b>Waiting for a yes</div><div class="stat"><b>' + d.totals.cleaned + '</b>Cleaned</div></div></div>' +
+      requestHtml(d) +
+      '<div class="card"><h2>Recent turnovers</h2>' + (rows || '<p>Nothing in the last 4 months.</p>') + '</div>' +
       hostHtml(d.host, byB) +
+      buildingsHtml(d) +
       loyaltyHtml(d.loyalty) +
+      loyaltySoonHtml(d) +
+      statementsHtml(d) +
       statsHtml(d.stats) +
-      '<div class="card"><h2>Recent turnover requests</h2>' + (rows || '<p>Nothing in the last 4 months.</p>') + '</div>' +
-      '<div class="card"><h2>Need a turnover?</h2><p>Text us the unit and size, like "Unit 4B 2/2", from your phone on file. We reply with a quote and book when you say YES.</p></div>';
+      hoursHtml(d) +
+      termsHtml(d) +
+      '<div class="card"><h2>Prefer to text?</h2><p>Text us the unit and size, like "Unit 4B 2/2", from your phone on file, at ' + TEXT_NUMBER + '. We reply with a quote and book when you say YES.</p></div>';
   }
 
   document.addEventListener('click', function (e) {
@@ -202,7 +379,18 @@
   }
 
   if (!/^[0-9a-f]{32}$/.test(token)) {
-    root.innerHTML = '<div class="card"><p class="err">This link is not valid. Ask us for a new one.</p></div>';
+    // No link: sign in by email. We send the link to the address we hold for that manager; the page never says whether an email is known.
+    root.innerHTML = '<div class="card"><h1>Property manager portal</h1><p>Type your email and we will send your portal link: your buildings, your turnovers, your statements and your points, and a way to request a clean.</p>' +
+      '<input id="li-email" type="email" autocomplete="email" placeholder="you@company.com" aria-label="Email"><button type="button" id="li-go">Send my link</button> <span id="li-msg"></span>' +
+      '<p class="small">No email on file, or not sure? Text or call ' + TEXT_NUMBER + ' and we will set you up.</p></div>';
+    document.getElementById('li-go').onclick = function () {
+      var go = this, m = document.getElementById('li-msg'), em = document.getElementById('li-email').value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { m.className = 'err'; m.textContent = 'Enter a valid email.'; return; }
+      go.disabled = true; m.className = ''; m.textContent = 'Sending...';
+      fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'login_link', email: em }) })
+        .then(function () { m.className = 'ok'; m.textContent = 'If that email is on a property account, your link is on its way. It can take a minute.'; })
+        .catch(function () { go.disabled = false; m.className = 'err'; m.textContent = 'That did not go through. Please try again.'; });
+    };
   } else {
     load();
   }
