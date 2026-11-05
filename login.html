@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<title>Sign in</title>
+<!--
+  Customer sign in. No passwords.
+  Phone (0930, decision 228): the customer types their phone, we text a 6-digit code to the number on file, the code opens account.html?t=...
+  Email (0594): the customer types the email we have for them; customer-portal emails them their own account link.
+  Both are off per franchise until organizations.customer_login_enabled, and both answer the same whether or not we know the phone or email.
+  Host next to account.html. ?demo=1 answers every call here (code 123456) for walkthroughs.
+-->
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #f6f5fb; color: #15121f; margin: 0; padding: 18px 16px 56px; line-height: 1.5; }
+  .card { background: #fff; border-radius: 20px; padding: 22px 18px; max-width: 460px; margin: 40px auto 0; box-shadow: 0 1px 3px rgba(20, 16, 40, .06); }
+  h1 { font-size: 25px; margin: 0 0 6px; }
+  p { color: #6b6880; margin: 0 0 14px; }
+  label { display: block; font-size: 14px; color: #6b6880; margin: 0 0 4px; }
+  input { width: 100%; font: inherit; font-size: 17px; border: 1px solid #ddd9ea; border-radius: 12px; padding: 12px; margin: 0 0 12px; }
+  button { width: 100%; font: inherit; font-weight: 700; background: #004aad; color: #fff; border: 0; border-radius: 12px; padding: 13px; cursor: pointer; }
+  button[disabled] { opacity: .5; }
+  .link { background: none; color: #004aad; padding: 10px 0 0; font-weight: 600; width: auto; }
+  .ok { color: #157347; }
+  .err { color: #b42318; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>Your account</h1>
+  <form id="fphone">
+    <p>Type the phone number you booked with. We will text you a code to open your account: your cleanings, your team, house notes and more.</p>
+    <label for="phone">Phone number</label>
+    <input id="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="(612) 555-0100">
+    <button id="gophone" type="submit">Text me a code</button>
+  </form>
+  <form id="fcode" hidden>
+    <p id="codehint">If that number is on file with us, a 6-digit code is on its way. It works for 10 minutes.</p>
+    <label for="code">Code</label>
+    <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="123456">
+    <button id="gocode" type="submit">Open my account</button>
+    <button class="link" id="again" type="button">Use a different number</button>
+  </form>
+  <form id="femail" hidden>
+    <p>Type the email you booked with. We will email you a link to your account.</p>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="email" required placeholder="you@example.com">
+    <button id="go" type="submit">Email me my link</button>
+  </form>
+  <p id="note" role="status" style="margin-top:12px"></p>
+  <button class="link" id="swap" type="button">Use my email instead</button>
+</div>
+<script>
+  var FN = 'https://isbhlmihbibdnajvicrj.supabase.co/functions/v1';
+  var DEMO = new URLSearchParams(location.search).get('demo') === '1';
+  var $ = function (id) { return document.getElementById(id); };
+  var phone = '';
+  function post(body) {
+    if (DEMO) return Promise.resolve(body.action === 'login_code_check' ? (body.code === '123456' ? { ok: true, j: { ok: true, t: 'demo' } } : { ok: false, j: { error: 'bad_code' } }) : { ok: true, j: { ok: true } });
+    return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); });
+  }
+  function say(cls, text) { var n = $('note'); n.className = cls; n.textContent = text; }
+  function show(which) { ['fphone', 'fcode', 'femail'].forEach(function (f) { $(f).hidden = f !== which; }); $('swap').textContent = which === 'femail' ? 'Use my phone instead' : 'Use my email instead'; say('', ''); }
+  $('swap').onclick = function () { show($('femail').hidden ? 'femail' : 'fphone'); };
+  $('again').onclick = function () { show('fphone'); $('phone').focus(); };
+  $('fphone').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var digits = $('phone').value.replace(/\D/g, '');
+    if (digits.length === 11 && digits[0] === '1') digits = digits.slice(1);
+    if (!/^[2-9]\d{9}$/.test(digits)) { say('err', 'Please type a 10-digit US phone number.'); return; }
+    phone = digits; $('gophone').disabled = true; say('', 'Sending...');
+    post({ action: 'login_code_send', phone: phone }).then(function (r) {
+      $('gophone').disabled = false;
+      if (!r.ok) { say('err', 'Something went wrong. Please try again.'); return; }
+      show('fcode'); $('code').focus();
+    }).catch(function () { $('gophone').disabled = false; say('err', 'Something went wrong. Please try again.'); });
+  });
+  $('fcode').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var code = $('code').value.replace(/\D/g, '');
+    if (code.length !== 6) { say('err', 'The code has 6 digits.'); return; }
+    $('gocode').disabled = true; say('', 'Checking...');
+    post({ action: 'login_code_check', phone: phone, code: code }).then(function (r) {
+      $('gocode').disabled = false;
+      if (r.ok && r.j.t) { say('ok', 'Opening your account...'); location.href = DEMO ? 'account.html?demo=1' : 'account.html?t=' + encodeURIComponent(r.j.t); return; }
+      say('err', r.j && r.j.error === 'slow_down' ? 'Too many tries. Please wait an hour or use your email.' : 'That code did not work. Check it, or ask for a new one.');
+    }).catch(function () { $('gocode').disabled = false; say('err', 'Something went wrong. Please try again.'); });
+  });
+  $('femail').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var v = $('email').value.trim();
+    $('go').disabled = true; say('', 'Sending...');
+    post({ action: 'login_link', email: v }).then(function (r) {
+      $('go').disabled = false;
+      if (r.ok) say('ok', 'If that email is on file with us, your link is on its way. Check your inbox (and spam) in a minute.');
+      else say('err', r.j && r.j.error === 'bad_email' ? 'That does not look like an email address.' : 'Something went wrong. Please try again.');
+    }).catch(function () { $('go').disabled = false; say('err', 'Something went wrong. Please try again.'); });
+  });
+</script>
+</body>
+</html>

@@ -37,6 +37,9 @@
   @media (max-width: 460px) { .photos { grid-template-columns: repeat(2, 1fr); } }
   textarea, select { width: 100%; font: inherit; border: 1px solid #ddd9ea; border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; background: #fff; }
   textarea { min-height: 90px; }
+  #details-slot label { display: block; margin: 4px 0 4px; }
+  #details-slot input { width: 100%; font: inherit; border: 1px solid #ddd9ea; border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; background: #fff; }
+  #details-slot textarea { min-height: 54px; }
   .msg { padding: 10px 12px; border-radius: 14px; margin: 0 0 8px; max-width: 88%; font-size: 15px; }
   .msg.customer { background: #eef2fb; margin-left: auto; } .msg.staff { background: #f6f5fb; }
   .msg .sub { display: block; margin-top: 2px; }
@@ -61,11 +64,41 @@
 <body>
 <div class="wrap" id="root"><div class="card"><p>Loading your account...</p></div></div>
 <script>
+  // Demo mode (?demo=1, for walkthroughs and screenshots): fake data, every call answered here, nothing reaches the server.
+  if (new URLSearchParams(location.search).get('demo') === '1') (function () {
+    var d0 = new Date(), ymd = d0.getFullYear() + '-' + ('0' + (d0.getMonth() + 1)).slice(-2) + '-' + ('0' + d0.getDate()).slice(-2);
+    var phase = new URLSearchParams(location.search).get('trip') || 'on_the_way';
+    var DETAILS = { full_name: 'Jane Demo', phone: '(•••) •••-0199', email: 'j•••@example.com', address: '123 Lake St, Minneapolis', zip: '55408', entry_method: 'lockbox', access_notes: 'Side door, lockbox on the fence', key_location: '', parking_notes: 'Driveway is fine', alarm_notes: '', gate_code_saved: true, alarm_code_saved: false, language: 'en' };
+    var PORTAL = {
+      extras: { loyalty: { dots: 3, of: 6 }, referrals: [], free_clean_credit: false, notify: { reminders: true, on_the_way: true, reports: true, offers: false }, pets: [{ id: 'p1', name: 'Biscuit', kind: 'dog', where_during: 'Backyard', temperament: 'friendly' }], key_tags: [], free_skips: { left: 1, total: 1 }, tips: ['Pick up clutter and dishes', 'Put pets in a crate or a closed room', 'Leave entry info (key, code or lockbox)'] },
+      ready: { team: [{ first_name: 'Tatiana', fun_facts: ['Loves gardening', 'Has two cats', 'Makes great tamales'], video_url: null, cleans: 212, avg_rating: 4.9, background_checked: true, insured: true }, { first_name: 'Maria', fun_facts: [], video_url: null, cleans: 87, avg_rating: null, background_checked: true, insured: true }], next_clean: { date: ymd, service: 'Two Hour Clean', two_hour: true }, plan: [{ room: 'Kitchen', items: ['Counters', 'Sink', 'Outside of appliances'] }], video_url: null, notes: [] },
+      cleaning_plans: [], org: { name: 'Two Hour Maids' },
+      customer: { first_name: 'Jane', texts_on: false, contact_pref: 'text', photos_opt_out: false }, has_card: true, saved_card: null,
+      current: [{ id: 'j1', can_move: false, date: ymd, time: '09:00:00', status: phase === 'arrived' ? 'in_progress' : 'on_the_way', service: 'Two Hour Clean', two_hour: true, crew: ['Tatiana', 'Maria'], progress: { done: 3, total: 7 }, report_token: null, tip_options_cents: null }],
+      past: [], two_hour: true, max_requests: 2, photos: [], documents: [], balance: { owed_cents: 0, due_now_cents: 0 }, plans: [], invoices: [], messages: []
+    };
+    var TRIP = phase === 'arrived' ? { phase: 'arrived', rooms_done: 3, rooms_total: 7 } : phase === 'leaving' ? { phase: 'on_the_way', driver: 'Tatiana', eta_min: null, position: null, dest: { lat: 44.948, lng: -93.29 }, waiting: 'leaving' }
+      : { phase: 'on_the_way', driver: 'Tatiana', eta_min: 12, position: { lat: 44.975, lng: -93.262 }, dest: { lat: 44.948, lng: -93.29 }, waiting: null };
+    var real = window.fetch.bind(window);
+    window.fetch = function (url, opt) {
+      if (String(url).indexOf('/functions/v1/') < 0) return real(url, opt);
+      var body = {}; try { body = JSON.parse((opt && opt.body) || '{}'); } catch (e) { /* GET */ }
+      var out = !opt || !opt.method || opt.method === 'GET' ? PORTAL
+        : body.action === 'trip' ? TRIP
+        : body.action === 'details_get' ? { ok: true, details: DETAILS }
+        : body.action === 'details_save' ? { ok: true, details: Object.assign(DETAILS, { full_name: body.full_name || DETAILS.full_name, entry_method: body.entry_method || null, access_notes: body.access_notes || '', gate_code_saved: DETAILS.gate_code_saved || !!body.gate_code, alarm_code_saved: DETAILS.alarm_code_saved || !!body.alarm_code, language: body.language === 'es' ? 'es' : 'en' }), requested: !!(body.phone || body.email || body.address) }
+        : { ok: true, items: [], extra_time: [], choices: [], openings: [], options: [] };
+      return Promise.resolve(new Response(JSON.stringify(out), { status: 200, headers: { 'content-type': 'application/json' } }));
+    };
+    window.DEMO_TOKEN = '0123456789abcdef0123456789abcdef';
+  })();
+</script>
+<script>
   // Same project as report.html (the project URL is not a secret).
   var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
   var SAVED = null; // the saved card for one-tap tips (brand, last4), set on each render
   var FN = SUPABASE_URL + '/functions/v1';
-  var token = new URLSearchParams(location.search).get('t') || '';
+  var token = window.DEMO_TOKEN || new URLSearchParams(location.search).get('t') || '';
   // "Add a card" (Jack, 2026-10-25): opens Stripe's own card page (setup mode). Nothing is charged; we never see the card number.
   window.addCardClick = function (btn) {
     btn.disabled = true; btn.textContent = 'Opening...';
@@ -79,6 +112,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function money(c) { var d = c / 100; return '$' + d.toLocaleString('en-US', { minimumFractionDigits: c % 100 === 0 ? 0 : 2, maximumFractionDigits: 2 }); }
   function day(d) { return d ? new Date(d.length > 10 ? d : d + 'T12:00:00').toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : ''; }
+  function todayYmd() { var n = new Date(); return n.getFullYear() + '-' + ('0' + (n.getMonth() + 1)).slice(-2) + '-' + ('0' + n.getDate()).slice(-2); }
   function time(t) { if (!t) return ''; var p = t.split(':'); var h = +p[0]; return (h % 12 || 12) + ':' + p[1] + (h >= 12 ? ' PM' : ' AM'); }
   var STATUS = { scheduled: ['Scheduled', 'blue'], on_the_way: ['On the way', 'warn'], in_progress: ['Cleaning now', 'good'], completed: ['Done', 'good'] };
   var REQ = { book_again: 'Book again', reschedule: 'Change a date', add_service: 'Add a service', question: 'A question', problem: 'Something is not right', other: 'Something else' };
@@ -113,15 +147,24 @@
       fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: token, action: 'trip' }) })
         .then(function (r) { return r.json(); })
         .then(function (t) {
-          var txt = document.getElementById('livetxt'), box = document.getElementById('livemap');
+          var txt = document.getElementById('livetxt'), box = document.getElementById('livemap'), head = document.getElementById('livehead');
           if (!txt) return;
-          if (!t || !t.open) { txt.textContent = 'Your team has arrived or is about to.'; if (box) box.style.display = 'none'; clearInterval(LIVE.timer); return; }
-          if (!t.position) { txt.textContent = (t.driver || 'Your team') + ' is on the way. The map shows up once their phone shares a location.'; return; }
+          // Older function (before 0931): { open, driver, position, dest }. Read it the same way until the new one is deployed.
+          if (t && !t.phase) t = t.open ? { phase: 'on_the_way', driver: t.driver, position: t.position, dest: t.dest, eta_min: t.position && t.dest && t.dest.lat != null ? Math.max(1, Math.round(km(t.position, t.dest) * 1.35 / 40 * 60)) : null, waiting: t.position ? null : 'location' } : { phase: 'none' };
+          if (!t || t.phase === 'none') { txt.textContent = LIVE.arrived ? 'Your clean is done. The report comes next.' : 'Your team has arrived or is about to.'; if (box) box.style.display = 'none'; clearInterval(LIVE.timer); return; }
+          if (t.phase === 'arrived') {
+            LIVE.arrived = true;
+            if (head) head.textContent = 'Your team is here';
+            txt.textContent = t.rooms_total ? t.rooms_done + ' of ' + t.rooms_total + ' rooms done.' : 'Your team has arrived and is cleaning.';
+            if (box) box.style.display = 'none';
+            return;
+          }
+          var who = t.driver || 'Your team';
+          if (!t.position) { txt.textContent = who + ' is on the way.' + (t.waiting === 'location' ? ' The map shows up once their phone shares a location.' : ' The map shows up once they are on the road.'); if (box) box.style.display = 'none'; return; }
           var p = { lat: t.position.lat, lng: t.position.lng };
           var dest = t.dest && t.dest.lat != null ? { lat: t.dest.lat, lng: t.dest.lng } : null;
-          // Same numbers as the app (tripEta.ts): straight line x 1.35 at 40 km/h, at least 1 minute.
-          var mins = dest ? Math.max(1, Math.round(km(p, dest) * 1.35 / 40 * 60)) : null;
-          txt.textContent = (t.driver || 'Your team') + (mins ? ' is about ' + mins + ' minute' + (mins === 1 ? '' : 's') + ' away.' : ' is on the way.');
+          var mins = t.eta_min;
+          txt.textContent = who + (mins ? ' is about ' + mins + ' minute' + (mins === 1 ? '' : 's') + ' away.' : ' is on the way.') + ' The dot is approximate.';
           box.style.display = 'block';
           loadLeaflet(function () {
             if (!LIVE.map) {
@@ -268,11 +311,16 @@
       '</p><button id="cpref" data-pref="' + (d.customer.contact_pref === 'call' ? 'text' : 'call') + '">' + (d.customer.contact_pref === 'call' ? 'Switch back to texts' : 'Call me instead') + '</button> <span id="cprefnote"></span></div>';
     if (new URLSearchParams(location.search).get('tip') === 'thanks') h = '<div class="card"><p class="ok">Thank you! Your tip goes to your team.</p></div>' + h;
     h = h.replace('<div class="card" id="billing">', '<div class="card" id="upload"><h2>Send us a file</h2><p>A floor plan, a lease, a photo of a spot that needs care. PDF or photo, up to 8 MB. It is kept with your documents.</p><input type="file" id="ufile" accept="application/pdf,image/jpeg,image/png,image/heic,image/webp"> <button id="usend">Send</button> <span id="unote"></span></div><div class="card" id="billing">');
-    // Crew on the way (0593): a live map while the team drives to you, first name and ETA only, gone once they arrive.
-    var coming = (d.current || []).some(function (j) { return j.status === 'on_the_way'; });
-    if (coming) h = h.replace('</nav>', '</nav><div class="card" id="live"><h2>Your team is on the way</h2><p id="livetxt">Finding them...</p><div id="livemap" style="height:240px;border-radius:12px;display:none"></div></div>');
+    // Crew on the way (0593/0931): a live map while the team drives to you (first name, ETA, no dot until they have left where they
+    // started), then "arrived" and rooms done while they clean. Today only.
+    var coming = (d.current || []).some(function (j) { return j.status === 'on_the_way' || (j.status === 'in_progress' && j.date === todayYmd()); });
+    if (coming) h = h.replace('</nav>', '</nav><div class="card" id="live"><h2 id="livehead">Your team is on the way</h2><p id="livetxt" aria-live="polite">Finding them...</p><div id="livemap" role="img" aria-label="Map of your team on the way" style="height:240px;border-radius:12px;display:none"></div></div>');
+    // Your details (CUSTOMER-APP-ANALYSIS.md): filled in by loadDetails below.
+    h = h.replace('<div class="card" id="home">', '<div class="card" id="details"><h2>Your details</h2><div id="details-slot"><p class="sub">Loading...</p></div></div><div class="card" id="home">');
+    h = h.replace('<nav><a href="#home">', '<nav><a href="#details">Your details</a><a href="#home">');
     root.innerHTML = h;
     if (coming) startLive();
+    if (window.loadDetails) window.loadDetails();
     if (window.loadDocs) window.loadDocs();
     if (window.loadAsks) window.loadAsks();
     (function () {
@@ -732,6 +780,57 @@
       cp({ action: 'house_note_edit', id: id, body: v.trim() }).then(function (r) { if (r.ok && box) box.firstChild.textContent = v.trim(); });
     });
     if (document.getElementById('extra-slot')) window.loadAsks();
+  })();
+</script>
+<script>
+  // Your details (CUSTOMER-APP-ANALYSIS.md, customer-portal details_get / details_save). Phone and email are shown masked; codes are
+  // written here and never shown again. Entry, notes, codes, name and language save at once; phone, email and address go to the office.
+  (function () {
+    var ENTRY = [['', 'Choose one'], ['key', 'A key we hold or you leave'], ['lockbox', 'Lockbox'], ['code', 'Door or garage code'], ['home', 'Someone is home'], ['concierge', 'Front desk or concierge']];
+    function cp(body) { body.t = token; return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }); }
+    function field(id, label, value, attrs) { return '<label class="sub" for="' + id + '">' + label + '</label><input id="' + id + '" value="' + esc(value || '') + '" ' + (attrs || '') + '>'; }
+    function area(id, label, value) { return '<label class="sub" for="' + id + '">' + label + '</label><textarea id="' + id + '" maxlength="500" rows="2">' + esc(value || '') + '</textarea>'; }
+    var ERR = { bad_name: 'Please type your full name.', bad_phone: 'That phone number does not look right.', bad_email: 'That email does not look right.', bad_code: 'Codes can use numbers, letters, # and *.', bad_entry: 'Please choose how we get in.', slow_down: 'Too many changes for now. Try again in an hour.' };
+    function draw(dt) {
+      var el = document.getElementById('details-slot'); if (!el) return;
+      el.innerHTML = '<p class="sub">Keep these up to date so your team gets in and we reach you. Changes to your phone, email or address go to our office, and we confirm them by message.</p>' +
+        field('dname', 'Name', dt.full_name, 'maxlength="120" autocomplete="name"') +
+        field('dphone', 'Phone' + (dt.phone ? ' (on file: ' + esc(dt.phone) + ')' : ''), '', 'type="tel" maxlength="20" autocomplete="tel" placeholder="Only to change it"') +
+        field('demail', 'Email' + (dt.email ? ' (on file: ' + esc(dt.email) + ')' : ''), '', 'type="email" maxlength="200" autocomplete="email" placeholder="Only to change it"') +
+        field('daddr', 'Address', dt.address, 'maxlength="200" autocomplete="street-address"') +
+        '<h3>Getting in</h3><label class="sub" for="dentry">How we get in</label><select id="dentry">' + ENTRY.map(function (o) { return '<option value="' + o[0] + '"' + ((dt.entry_method || '') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
+        area('daccess', 'Access notes (which door, lockbox spot)', dt.access_notes) + area('dkey', 'Where the key is', dt.key_location) + area('dpark', 'Parking', dt.parking_notes) + area('dalarmn', 'Alarm notes', dt.alarm_notes) +
+        field('dgate', 'Gate, door or garage code: ' + (dt.gate_code_saved ? 'saved, hidden' : 'none saved'), '', 'maxlength="20" autocomplete="off" placeholder="Type a new code to replace it"') +
+        field('dalarm', 'Alarm code: ' + (dt.alarm_code_saved ? 'saved, hidden' : 'none saved'), '', 'maxlength="20" autocomplete="off" placeholder="Type a new code to replace it"') +
+        '<p class="sub">Codes are kept hidden. Only the team on your clean sees them, from the night before until the day after.</p>' +
+        '<label class="sub" for="dlang">Language for texts and your team</label><select id="dlang"><option value="en"' + (dt.language === 'es' ? '' : ' selected') + '>English</option><option value="es"' + (dt.language === 'es' ? ' selected' : '') + '>Español</option></select>' +
+        '<button id="dsave">Save my details</button> <span id="dnote" role="status"></span>';
+      document.getElementById('dsave').onclick = function () {
+        var b = this, n = document.getElementById('dnote');
+        var body = { action: 'details_save', full_name: v('dname'), entry_method: v('dentry'), access_notes: v('daccess'), key_location: v('dkey'), parking_notes: v('dpark'), alarm_notes: v('dalarmn'), language: v('dlang') };
+        if (v('dphone')) body.phone = v('dphone');
+        if (v('demail')) body.email = v('demail');
+        if (v('daddr') !== (dt.address || '')) body.address = v('daddr');
+        if (v('dgate')) body.gate_code = v('dgate');
+        if (v('dalarm')) body.alarm_code = v('dalarm');
+        b.disabled = true; n.className = ''; n.textContent = 'Saving...';
+        cp(body).then(function (r) {
+          b.disabled = false;
+          if (!r.ok) { n.className = 'err'; n.textContent = ERR[r.j && r.j.error] || 'Something went wrong. Please try again.'; return; }
+          draw(r.j.details);
+          var m = document.getElementById('dnote'); m.className = 'ok';
+          m.textContent = r.j.requested ? 'Saved. We will confirm your new contact details or address by message.' : 'Saved.';
+        }).catch(function () { b.disabled = false; n.className = 'err'; n.textContent = 'Something went wrong. Please try again.'; });
+      };
+    }
+    function v(id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; }
+    window.loadDetails = function () {
+      cp({ action: 'details_get' }).then(function (r) {
+        var el = document.getElementById('details-slot'); if (!el) return;
+        if (r.ok && r.j.details) draw(r.j.details); else el.innerHTML = '<p class="sub">Your details are not available right now. Send us a message to change them.</p>';
+      }).catch(function () {});
+    };
+    if (document.getElementById('details-slot')) window.loadDetails();
   })();
 </script>
 </body>
