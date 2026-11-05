@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<title>Work with us as a contractor</title>
+<!--
+  Independent CONTRACTOR onboarding for Facilities by Two Hour Maids (Jack, 2026-11-04; PEOPLE-ONBOARDING.md). English and Spanish: a language choice for the whole page (never side by side), saved as the
+  contractor's language so their offers and texts come in it. A contractor tells us about their business, services, areas and days, uploads a W-9 and a certificate of insurance (files only: a tax ID is never typed
+  into a field here except the last four digits, to print a truncated ID on the January 1099 statement), consents (or not) to electronic delivery of their 1099, takes a headshot, and accepts the agreement.
+  At the end the contractor-onboarding function makes a PENDING contractor record (never an employee): a person approves it after the W-9, an unexpired certificate and the background check are in order.
+  THE DESIGN RULE shown on the page: work is OFFERED, never assigned; you may decline any offer; your own tools, your own schedule. Every piece of text from the server is put on the page as text, never as HTML.
+  It does nothing until the owner approves the wording and switches it on in the app, and the owner's employment attorney must approve the 1099 program first.
+  Link it as contractor-onboarding.html?org=two-hour-maids. Goes to the separate public web repo with the other pages.
+-->
+<style>
+  :root { --bg: #f4f6fb; --card: #fff; --ink: #10151e; --muted: #5e6776; --line: #dde1e7; --brand: #0a47a8; --brand-ink: #fff; --ok: #157347; --err: #b42318; --soft: #eaf0fb; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0e1118; --card: #181c26; --ink: #eef1f7; --muted: #a2a9b8; --line: #2a3040; --brand: #6ea3ff; --brand-ink: #0e1118; --ok: #6ee7a0; --err: #fca5a5; --soft: #1f2636; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px 16px 56px; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif; line-height: 1.5; }
+  .wrap { max-width: 600px; margin: 0 auto; }
+  .card { background: var(--card); border-radius: 20px; padding: 22px; margin: 0 0 14px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.4px; } h2 { font-size: 19px; margin: 0 0 6px; }
+  p { color: var(--muted); margin: 0 0 10px; }
+  .brand { color: var(--brand); font-weight: 800; font-size: 13px; letter-spacing: .4px; text-transform: uppercase; }
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .lang button { width: auto; margin: 0 0 0 6px; padding: 6px 12px; font-size: 13px; background: transparent; color: var(--brand); border: 1px solid var(--line); border-radius: 999px; }
+  .lang button.on { background: var(--brand); color: var(--brand-ink); }
+  .bar { height: 8px; background: var(--soft); border-radius: 999px; overflow: hidden; margin: 12px 0 4px; } .bar i { display: block; height: 100%; background: var(--brand); transition: width .2s; }
+  .steps { font-size: 12px; color: var(--muted); }
+  label.f { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin: 14px 0 0; } label.f small { font-weight: 400; }
+  input[type=text], input[type=tel], input[type=email], input[type=date], select, textarea { width: 100%; font: inherit; font-size: 17px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; margin: 5px 0 0; }
+  textarea { min-height: 70px; }
+  input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10em), 1fr)); gap: 10px; }
+  .chk { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; color: var(--ink); margin: 12px 0; cursor: pointer; }
+  .chk input { width: 22px; height: 22px; margin: 1px 0 0; flex: none; }
+  .days { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+  .days label { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font-weight: 700; font-size: 14px; cursor: pointer; background: var(--bg); }
+  .days input { display: none; } .days label:has(input:checked) { border-color: var(--brand); background: var(--soft); color: var(--brand); }
+  button { width: 100%; background: var(--brand); color: var(--brand-ink); border: 0; border-radius: 999px; padding: 14px; font: inherit; font-size: 17px; font-weight: 800; margin-top: 14px; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--brand); border: 1px solid var(--line); }
+  button.small { width: auto; padding: 8px 14px; font-size: 14px; margin: 6px 6px 0 0; }
+  button[disabled] { opacity: .5; cursor: default; }
+  .nav { display: flex; gap: 10px; } .nav button { margin-top: 18px; } .nav .ghost { flex: 0 0 34%; }
+  .err { color: var(--err); font-size: 13px; font-weight: 600; margin: 6px 0 0; } .ok { color: var(--ok); font-weight: 700; }
+  .note { background: var(--soft); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--muted); margin: 10px 0; white-space: pre-wrap; }
+  .legal { white-space: pre-wrap; font-size: 14px; color: var(--muted); max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin: 10px 0; }
+  .shot { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .shot canvas { width: 100%; max-width: 300px; aspect-ratio: 1; border-radius: 18px; background: var(--soft); touch-action: none; cursor: grab; }
+  .shot input[type=range] { width: 100%; max-width: 300px; }
+  .slot { border: 1px dashed var(--line); border-radius: 14px; padding: 12px; margin: 10px 0; } .slot b { display: block; }
+  .hp { position: absolute; left: -5000px; }
+  ul.rules { color: var(--muted); padding-left: 20px; margin: 6px 0 10px; } ul.rules li { margin: 3px 0; }
+</style>
+</head>
+<body>
+<div class="wrap"><div id="app"><div class="card"><p>…</p></div></div></div>
+<script>
+(function () {
+  "use strict";
+  var FN = "https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/contractor-onboarding";
+  var ORG = (new URLSearchParams(location.search).get("org") || "two-hour-maids").toLowerCase();
+  var LS = "pcob_" + ORG, LSL = "pcob_lang";
+  var app = document.getElementById("app");
+  var cfg = null, token = null, step = 0, d = blank(), uploads = [], errors = {}, crop = null, doneInfo = null, startErr = "";
+  var lang = "en";
+  try { lang = localStorage.getItem(LSL) || (/^es/i.test(navigator.language || "") ? "es" : "en"); } catch (e) { /* private window */ }
+  var DAYS = ["mon", "tue", "wed", "thu", "fri", "sat"];
+  var SERVICE_ES = { unit_turnover: "Limpieza de apartamentos entre inquilinos", common_areas: "Áreas comunes y baños compartidos", office_cleaning: "Oficinas y espacios compartidos", floor_care: "Cuidado de pisos", windows: "Ventanas" };
+
+  // ---------- English and Spanish: one language at a time ----------
+  var T = {
+    en: {
+      steps: ["Start", "Your business", "What you do", "Insurance", "Taxes and 1099", "Your photo", "Agreement", "Review"],
+      title: "Work with us as a contractor", intro: "Facilities by Two Hour Maids offers cleaning work to independent contractors: apartment turnovers, common areas and more. This takes about ten minutes. You can stop and come back on this device; nothing you enter is lost.",
+      r1: "Work is offered to you. You can decline any offer for any reason.", r2: "You bring your own tools and set your own schedule inside the job's window.", r3: "Each offer states a flat price before you accept.", r4: "You will need a W-9, a certificate of insurance (general liability) and a photo.",
+      resume: "Pick up where you left off", start: "Start", back: "Back", next: "Next", saving: "Saving…", working: "Working…", send: "Send",
+      biz_h: "Your business", biz_name: "Business name", biz_hint: "(your own name if you work as an individual)", your_name: "Your name", mobile: "Mobile phone", email: "Email", street: "Street address", city: "City", zip: "ZIP code",
+      work_h: "What you do", work_p: "Tick everything you are willing to be offered.", days_h: "Days you can usually work", areas: "Areas you cover", areas_ph: "Cities or ZIP codes, separated by commas", rate: "Your usual rate (optional, for our information)", own_tools: "I bring my own tools and supplies.", tools_note: "Anything else about your tools or equipment? (optional)",
+      mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat",
+      ins_h: "Insurance", ins_p: "We need a certificate of insurance showing general liability coverage of at least {gl}. It must be current: we do not offer work while it has lapsed, and we will remind you before it expires.", coi_slot: "Certificate of insurance (PDF or photo)", coi_exp: "Certificate expires on", gl_ok: "My general liability coverage is at least {gl}.",
+      tax_h: "Taxes and your 1099", w9_slot: "Signed Form W-9 (PDF or photo)", w9_hint: "Fill in the W-9 yourself and upload it here. Never type your full tax ID anywhere else on this page.", tin: "Last four digits of your Social Security or employer ID number", tin_hint: "(only four digits; used to print a truncated ID on your 1099)",
+      deliver_h: "How should we deliver your 1099?", deliver_e: "Yes, I agree to receive my 1099 electronically.", deliver_p: "No, mail me a paper copy.", deliver_missing: "The delivery wording has not been published yet. Please check back.", how_link: "How working with us works",
+      photo_h: "Your photo", photo_p: "Property managers and customers may see this photo on jobs you take. Plain background, your face clear, no sunglasses or hat.", take: "Take a photo", choose: "Choose a photo", other: "Use a different photo", saved_photo: "Photo saved", use_photo: "Use this photo", drag: "Drag the photo to center your face.", zoom: "Zoom",
+      photo_consent_default: "I agree that my photo may be shown to customers and property managers on jobs I take.",
+      agr_h: "The contractor agreement", agr_missing: "The agreement has not been published yet. Please check back.", agr_pdf: "Open the agreement as a PDF", offer_chk: "I understand that work is offered, never assigned, and that I may decline any offer.", agr_chk: "I have read and I accept the contractor agreement.", sign: "Type your full name as your signature",
+      rev_h: "Review and send", r_biz: "Business", r_contact: "Contact", r_services: "Services", r_days: "Days", r_ins: "Insurance expires", r_1099: "1099 delivery", r_elec: "Electronic", r_paper: "Paper copy",
+      after: "After you send this, a person reviews it. Approval needs your W-9, a current certificate of insurance and a background check. We will contact you. Sending this does not guarantee any work, and you are under no obligation to accept any offer.",
+      done_h: "Thank you", done_ok: "We have everything.", done_p: "A person will review your information. Approval needs your W-9, a current certificate of insurance and a background check. We will contact you.",
+      closed_h: "This page is not open yet", closed_p: "Please check back soon.", e_fail: "That did not work. Please try again.", e_resume: "We could not find your saved form. Start again.",
+      added: "Added", replace: "Replace the file", add: "Add a file", remove: "Remove", file_big: "That file is over 6 MB. Use a PDF or a smaller photo.", file_bad: "That file could not be added. Use a PDF, JPG or PNG under 6 MB.", file_try: "That file could not be added. Try again.", photo_err: "That photo could not be used. Try another one.",
+      v_biz: "Add a business name.", v_name: "Add your name.", v_phone: "Enter a 10-digit mobile number.", v_email: "Enter an email address.", v_zip: "ZIP codes are 5 digits.", v_services: "Tick at least one service.", v_days: "Pick at least one day.",
+      v_coi: "Add your certificate of insurance.", v_coi_exp: "Enter the date your certificate expires (it must be in the future).", v_gl: "Please confirm your coverage.", v_w9: "Add your signed W-9.", v_tin: "Enter the last four digits.", v_delivery: "Choose how we should deliver your 1099.",
+      v_photo: "Add your photo.", v_photo_consent: "Please tick the photo agreement.", v_offer: "Please tick to confirm.", v_agree: "Tick the box and type your full name.", v_agree_missing: "The agreement is not available yet.", check: "Please check this.",
+      e_exists: "A contractor with this phone number is already signed up. We will be in touch.", e_conflict: "We cannot sign you up with this phone number here. Please contact us."
+    },
+    es: {
+      steps: ["Inicio", "Tu negocio", "Qué haces", "Seguro", "Impuestos y 1099", "Tu foto", "Acuerdo", "Revisión"],
+      title: "Trabaja con nosotros como contratista", intro: "Facilities by Two Hour Maids ofrece trabajo de limpieza a contratistas independientes: apartamentos entre inquilinos, áreas comunes y más. Toma unos diez minutos. Puedes parar y volver en este dispositivo; no se pierde nada de lo que escribiste.",
+      r1: "El trabajo se te ofrece. Puedes rechazar cualquier oferta por cualquier motivo.", r2: "Traes tus propias herramientas y decides tu horario dentro de la ventana del trabajo.", r3: "Cada oferta indica un precio fijo antes de que aceptes.", r4: "Necesitarás un W-9, un certificado de seguro (responsabilidad civil general) y una foto.",
+      resume: "Continuar donde lo dejaste", start: "Empezar", back: "Atrás", next: "Siguiente", saving: "Guardando…", working: "Trabajando…", send: "Enviar",
+      biz_h: "Tu negocio", biz_name: "Nombre del negocio", biz_hint: "(tu propio nombre si trabajas como persona individual)", your_name: "Tu nombre", mobile: "Teléfono móvil", email: "Correo electrónico", street: "Dirección", city: "Ciudad", zip: "Código postal",
+      work_h: "Qué haces", work_p: "Marca todo lo que estás dispuesto o dispuesta a que se te ofrezca.", days_h: "Días en que normalmente puedes trabajar", areas: "Áreas que cubres", areas_ph: "Ciudades o códigos postales, separados por comas", rate: "Tu tarifa habitual (opcional, solo para nuestra información)", own_tools: "Traigo mis propias herramientas y suministros.", tools_note: "¿Algo más sobre tus herramientas o equipo? (opcional)",
+      mon: "Lun", tue: "Mar", wed: "Mié", thu: "Jue", fri: "Vie", sat: "Sáb",
+      ins_h: "Seguro", ins_p: "Necesitamos un certificado de seguro que muestre una cobertura de responsabilidad civil general de al menos {gl}. Debe estar vigente: no ofrecemos trabajo mientras haya vencido, y te recordaremos antes de que venza.", coi_slot: "Certificado de seguro (PDF o foto)", coi_exp: "El certificado vence el", gl_ok: "Mi cobertura de responsabilidad civil general es de al menos {gl}.",
+      tax_h: "Impuestos y tu 1099", w9_slot: "Formulario W-9 firmado (PDF o foto)", w9_hint: "Llena el W-9 tú mismo o misma y súbelo aquí. Nunca escribas tu número de identificación fiscal completo en ningún otro lugar de esta página.", tin: "Últimos cuatro dígitos de tu número de Seguro Social o de identificación de empleador", tin_hint: "(solo cuatro dígitos; sirven para imprimir un número parcial en tu 1099)",
+      deliver_h: "¿Cómo debemos entregarte tu 1099?", deliver_e: "Sí, acepto recibir mi 1099 por medios electrónicos.", deliver_p: "No, envíenme una copia en papel.", deliver_missing: "El texto sobre la entrega todavía no se ha publicado. Vuelve pronto.", how_link: "Cómo funciona trabajar con nosotros",
+      photo_h: "Tu foto", photo_p: "Los administradores de propiedades y los clientes pueden ver esta foto en los trabajos que aceptes. Fondo liso, tu cara bien visible, sin lentes de sol ni gorra.", take: "Tomar una foto", choose: "Elegir una foto", other: "Usar otra foto", saved_photo: "Foto guardada", use_photo: "Usar esta foto", drag: "Arrastra la foto para centrar tu cara.", zoom: "Zoom",
+      photo_consent_default: "Acepto que mi foto se muestre a clientes y administradores de propiedades en los trabajos que acepte.",
+      agr_h: "El acuerdo de contratista", agr_missing: "El acuerdo todavía no se ha publicado. Vuelve pronto.", agr_pdf: "Abrir el acuerdo en PDF", offer_chk: "Entiendo que el trabajo se ofrece, nunca se asigna, y que puedo rechazar cualquier oferta.", agr_chk: "He leído y acepto el acuerdo de contratista.", sign: "Escribe tu nombre completo como firma",
+      rev_h: "Revisa y envía", r_biz: "Negocio", r_contact: "Contacto", r_services: "Servicios", r_days: "Días", r_ins: "El seguro vence", r_1099: "Entrega del 1099", r_elec: "Electrónica", r_paper: "Copia en papel",
+      after: "Después de enviar esto, una persona lo revisa. La aprobación necesita tu W-9, un certificado de seguro vigente y una verificación de antecedentes. Nos pondremos en contacto contigo. Enviar esto no garantiza ningún trabajo, y no tienes obligación de aceptar ninguna oferta.",
+      done_h: "Gracias", done_ok: "Tenemos todo.", done_p: "Una persona revisará tu información. La aprobación necesita tu W-9, un certificado de seguro vigente y una verificación de antecedentes. Nos pondremos en contacto contigo.",
+      closed_h: "Esta página todavía no está abierta", closed_p: "Vuelve pronto.", e_fail: "No funcionó. Inténtalo de nuevo.", e_resume: "No encontramos tu formulario guardado. Empieza de nuevo.",
+      added: "Agregado", replace: "Reemplazar el archivo", add: "Agregar un archivo", remove: "Quitar", file_big: "Ese archivo pesa más de 6 MB. Usa un PDF o una foto más pequeña.", file_bad: "No se pudo agregar ese archivo. Usa un PDF, JPG o PNG de menos de 6 MB.", file_try: "No se pudo agregar ese archivo. Inténtalo de nuevo.", photo_err: "No se pudo usar esa foto. Prueba con otra.",
+      v_biz: "Agrega el nombre del negocio.", v_name: "Agrega tu nombre.", v_phone: "Escribe un número móvil de 10 dígitos.", v_email: "Escribe un correo electrónico.", v_zip: "Los códigos postales tienen 5 dígitos.", v_services: "Marca al menos un servicio.", v_days: "Elige al menos un día.",
+      v_coi: "Agrega tu certificado de seguro.", v_coi_exp: "Escribe la fecha en que vence tu certificado (debe ser una fecha futura).", v_gl: "Confirma tu cobertura.", v_w9: "Agrega tu W-9 firmado.", v_tin: "Escribe los últimos cuatro dígitos.", v_delivery: "Elige cómo debemos entregarte tu 1099.",
+      v_photo: "Agrega tu foto.", v_photo_consent: "Marca el acuerdo de la foto.", v_offer: "Marca para confirmar.", v_agree: "Marca la casilla y escribe tu nombre completo.", v_agree_missing: "El acuerdo todavía no está disponible.", check: "Revisa esto.",
+      e_exists: "Ya hay un contratista registrado con este número de teléfono. Nos pondremos en contacto.", e_conflict: "No podemos registrarte con este número de teléfono aquí. Por favor contáctanos."
+    }
+  };
+  function t(k, o) { var s = (T[lang] && T[lang][k]) || T.en[k] || k; if (o) s = s.replace(/\{(\w+)\}/g, function (m, x) { return o[x] === undefined ? m : o[x]; }); return s; }
+  function steps() { return T[lang].steps; }
+  function service(s) { return lang === "es" && SERVICE_ES[s.key] ? SERVICE_ES[s.key] : s.label; }
+  function body(w) { return w ? (lang === "es" && w.body_es ? w.body_es : w.body) : ""; }
+
+  function blank() { return { business_name: "", contact_name: "", phone: "", email: "", address_line: "", city: "", zip: "", services: [], areas: [], days: [], own_rate_note: "", own_tools: true, tools_note: "", coi_expires_on: "", gl_confirmed: false, tin_last4: "", e_delivery_consent: false, paper_copy: false, agree_name: "", agree_checked: false, offer_rule_checked: false, photo_consent: false, language: "en" }; }
+
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    attrs = attrs || {};
+    Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === "class") el.className = v; else if (k === "text") el.textContent = v; else if (k.indexOf("on") === 0) el.addEventListener(k.slice(2), v); else if (k === "value") el.value = v; else if (k === "checked") el.checked = true; else el.setAttribute(k, v === true ? "" : v);
+    });
+    for (var i = 2; i < arguments.length; i++) add(el, arguments[i]);
+    return el;
+  }
+  function add(el, c) {
+    if (c === null || c === undefined || c === false) return;
+    if (Array.isArray(c)) { c.forEach(function (x) { add(el, x); }); return; }
+    el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  }
+  function post(b) {
+    b.org = ORG;
+    return fetch(FN, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(b) }).then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); });
+  }
+  function err(k) { return errors[k] ? h("p", { class: "err", role: "alert", text: errors[k] }) : null; }
+  function field(label, input, k, hint) { return h("label", { class: "f" }, label, hint ? h("small", { text: " " + hint }) : null, input, err(k)); }
+  function txt(key, type) { return h("input", { type: type || "text", value: d[key] || "", autocomplete: "off", oninput: function (e) { d[key] = e.target.value; } }); }
+  function chk(label, on, set) { return h("label", { class: "chk" }, h("input", { type: "checkbox", checked: on, onchange: function (e) { set(e.target.checked); } }), h("span", { text: label })); }
+  function digits(s) { return String(s || "").replace(/\D/g, ""); }
+  function emailOk(s) { return /^[^@\s]{1,64}@[^@\s]{1,120}\.[^@\s]{2,}$/.test(s); }
+  function top() { window.scrollTo(0, 0); }
+  function money(c) { return "$" + (c / 100).toLocaleString("en-US", { maximumFractionDigits: 0 }); }
+  function upl(kind) { for (var i = 0; i < uploads.length; i++) if (uploads[i].kind === kind) return uploads[i]; return null; }
+  function persist() { d.language = lang; return post({ action: "save", token: token, step: step, data: d }); }
+  function setLang(l) { lang = l; d.language = l; try { localStorage.setItem(LSL, l); } catch (e) { /* private window */ } render(); }
+
+  function header() {
+    var S = steps(), pct = Math.round((Math.max(0, step) / (S.length - 1)) * 100);
+    return [h("div", { class: "top" }, h("div", { class: "brand", text: (cfg && cfg.brand) || "Facilities by Two Hour Maids" }),
+        h("div", { class: "lang" }, h("button", { class: lang === "en" ? "on" : "", "aria-pressed": lang === "en" ? "true" : "false", onclick: function () { setLang("en"); }, text: "English" }), h("button", { class: lang === "es" ? "on" : "", "aria-pressed": lang === "es" ? "true" : "false", onclick: function () { setLang("es"); }, text: "Español" }))),
+      step > 0 && step < S.length ? h("div", null, h("div", { class: "bar", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(pct) }, h("i", { style: "width:" + pct + "%" })), h("div", { class: "steps", text: S[step] + " (" + step + "/" + (S.length - 1) + ")" })) : null];
+  }
+  function nav(valid) {
+    return h("div", { class: "nav" },
+      step > 1 ? h("button", { class: "ghost", onclick: function () { step--; render(); top(); }, text: t("back") }) : null,
+      h("button", { id: "nx", onclick: function () {
+        errors = {};
+        if (valid && valid()) { render(); return; }
+        var b = document.getElementById("nx"); b.disabled = true; b.textContent = t("saving");
+        step++;
+        persist().then(function () { render(); top(); }).catch(function () { render(); top(); });
+      }, text: t("next") }));
+  }
+
+  function stepStart() {
+    var has = null; try { has = localStorage.getItem(LS); } catch (e) { /* private window */ }
+    var msg = h("p", { class: "err", role: "alert", text: startErr });
+    return h("div", { class: "card" }, header(), h("h1", { text: t("title") }), h("p", { text: t("intro") }),
+      h("ul", { class: "rules" }, h("li", { text: t("r1") }), h("li", { text: t("r2") }), h("li", { text: t("r3") }), h("li", { text: t("r4") })),
+      has ? h("button", { class: "ghost", onclick: function () { token = has; resumeNow(); }, text: t("resume") }) : null, msg,
+      h("button", { id: "go", onclick: function () {
+        var b = document.getElementById("go"); b.disabled = true;
+        post({ action: "start" }).then(function (r) {
+          b.disabled = false;
+          if (r.ok) { token = r.token; try { localStorage.setItem(LS, token); } catch (e) { /* private window */ } d = blank(); d.language = lang; uploads = []; step = 1; render(); }
+          else { msg.textContent = t("e_fail"); }
+        }).catch(function () { b.disabled = false; msg.textContent = t("e_fail"); });
+      }, text: t("start") }));
+  }
+  function resumeNow() {
+    post({ action: "load", token: token }).then(function (r) {
+      if (r.ok) { d = Object.assign(blank(), r.data || {}); uploads = r.uploads || []; step = Math.max(1, r.step || 1); render(); }
+      else { try { localStorage.removeItem(LS); } catch (e) { /* private window */ } token = null; startErr = t("e_resume"); render(); }
+    }).catch(function () { startErr = t("e_fail"); render(); });
+  }
+
+  function stepBusiness() {
+    return h("div", { class: "card" }, header(), h("h2", { text: t("biz_h") }),
+      field(t("biz_name"), txt("business_name"), "business_name", t("biz_hint")), field(t("your_name"), txt("contact_name"), "contact_name"),
+      h("div", { class: "two" }, field(t("mobile"), txt("phone", "tel"), "phone"), field(t("email"), txt("email", "email"), "email")),
+      field(t("street"), txt("address_line")), h("div", { class: "two" }, field(t("city"), txt("city")), field(t("zip"), txt("zip"), "zip")),
+      nav(function () {
+        if (d.business_name.trim().length < 2) { errors.business_name = t("v_biz"); return true; }
+        if (d.contact_name.trim().length < 2) { errors.contact_name = t("v_name"); return true; }
+        if (digits(d.phone).length < 10) { errors.phone = t("v_phone"); return true; }
+        if (!emailOk(d.email)) { errors.email = t("v_email"); return true; }
+        if (digits(d.zip).length !== 5) { errors.zip = t("v_zip"); return true; }
+        return null;
+      }));
+  }
+  function stepWork() {
+    var svc = (cfg.services || []).map(function (s) { return chk(service(s), d.services.indexOf(s.key) !== -1, function (v) { var i = d.services.indexOf(s.key); if (v && i === -1) d.services.push(s.key); if (!v && i !== -1) d.services.splice(i, 1); }); });
+    var days = h("div", { class: "days" }, DAYS.map(function (k) { return h("label", null, h("input", { type: "checkbox", checked: d.days.indexOf(k) !== -1, onchange: function (e) { var i = d.days.indexOf(k); if (e.target.checked && i === -1) d.days.push(k); if (!e.target.checked && i !== -1) d.days.splice(i, 1); render(); } }), h("span", { text: t(k) })); }));
+    return h("div", { class: "card" }, header(), h("h2", { text: t("work_h") }), h("p", { text: t("work_p") }), svc, err("services"),
+      h("label", { class: "f" }, t("days_h"), days, err("days")),
+      field(t("areas"), h("input", { type: "text", value: d.areas.join(", "), placeholder: t("areas_ph"), oninput: function (e) { d.areas = e.target.value.split(",").map(function (x) { return x.trim(); }).filter(Boolean); } })),
+      field(t("rate"), txt("own_rate_note")),
+      chk(t("own_tools"), d.own_tools, function (v) { d.own_tools = v; }),
+      field(t("tools_note"), txt("tools_note")),
+      nav(function () {
+        if (!d.services.length) { errors.services = t("v_services"); return true; }
+        if (!d.days.length) { errors.days = t("v_days"); return true; }
+        return null;
+      }));
+  }
+
+  // ---------- file uploads (W-9, certificate of insurance): files only ----------
+  function b64(blob) { return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(",")[1] || ""); }; fr.onerror = function () { rej(new Error("read")); }; fr.readAsDataURL(blob); }); }
+  function uploadSlot(kind, title, hint) {
+    var cur = upl(kind);
+    var inp = h("input", { type: "file", accept: "application/pdf,image/*", style: "display:none", onchange: function (e) {
+      var f = e.target.files && e.target.files[0]; if (!f) return;
+      if (f.size > 6 * 1024 * 1024) { errors[kind] = t("file_big"); render(); return; }
+      b64(f).then(function (data) { return post({ action: "upload", token: token, kind: kind, file_name: f.name, data_base64: data }); }).then(function (r) {
+        if (r.ok) { uploads = r.uploads || []; errors = {}; } else { errors[kind] = t("file_bad"); }
+        render();
+      }).catch(function () { errors[kind] = t("file_try"); render(); });
+    } });
+    return h("div", { class: "slot" }, h("b", { text: title }), hint ? h("p", { text: hint }) : null,
+      cur ? h("p", { class: "ok", text: "✓ " + t("added") + ": " + cur.name }) : null, inp,
+      h("button", { class: "small", onclick: function () { inp.click(); }, text: cur ? t("replace") : t("add") }),
+      cur ? h("button", { class: "small ghost", onclick: function () { post({ action: "remove_upload", token: token, kind: kind }).then(function (r) { uploads = r.uploads || []; render(); }); }, text: t("remove") }) : null, err(kind));
+  }
+  function stepInsurance() {
+    var gl = cfg.gl_cents ? money(cfg.gl_cents) : "$1,000,000";
+    return h("div", { class: "card" }, header(), h("h2", { text: t("ins_h") }), h("p", { text: t("ins_p", { gl: gl }) }),
+      uploadSlot("coi", t("coi_slot")), err("coi"),
+      field(t("coi_exp"), txt("coi_expires_on", "date"), "coi_expiry"),
+      chk(t("gl_ok", { gl: gl }), d.gl_confirmed, function (v) { d.gl_confirmed = v; }), err("gl"),
+      nav(function () {
+        if (!upl("coi")) { errors.coi = t("v_coi"); return true; }
+        var today = new Date().toISOString().slice(0, 10);
+        if (!d.coi_expires_on || d.coi_expires_on < today) { errors.coi_expiry = t("v_coi_exp"); return true; }
+        if (!d.gl_confirmed) { errors.gl = t("v_gl"); return true; }
+        return null;
+      }));
+  }
+  function stepTax() {
+    var w9 = cfg.wording && cfg.wording.w9_note, el = cfg.wording && cfg.wording.e_delivery;
+    return h("div", { class: "card" }, header(), h("h2", { text: t("tax_h") }),
+      w9 ? h("div", { class: "note", text: body(w9) }) : null,
+      cfg.documents && cfg.documents.contractor_how_it_works ? h("p", null, h("a", { href: cfg.documents.contractor_how_it_works.url, target: "_blank", rel: "noopener", text: t("how_link") })) : null,
+      uploadSlot("w9", t("w9_slot"), t("w9_hint")), err("w9"),
+      field(t("tin"), h("input", { type: "text", inputmode: "numeric", maxlength: "4", value: d.tin_last4, autocomplete: "off", oninput: function (e) { d.tin_last4 = digits(e.target.value).slice(0, 4); e.target.value = d.tin_last4; } }), "tin_last4", t("tin_hint")),
+      h("h2", { text: t("deliver_h") }),
+      el ? h("div", { class: "legal", text: body(el) }) : h("p", { class: "err", text: t("deliver_missing") }),
+      h("label", { class: "chk" }, h("input", { type: "radio", name: "dl", checked: d.e_delivery_consent, onchange: function () { d.e_delivery_consent = true; d.paper_copy = false; } }), h("span", { text: t("deliver_e") })),
+      h("label", { class: "chk" }, h("input", { type: "radio", name: "dl", checked: d.paper_copy, onchange: function () { d.e_delivery_consent = false; d.paper_copy = true; } }), h("span", { text: t("deliver_p") })), err("delivery"),
+      nav(function () {
+        if (!upl("w9")) { errors.w9 = t("v_w9"); return true; }
+        if (d.tin_last4.length !== 4) { errors.tin_last4 = t("v_tin"); return true; }
+        if (!d.e_delivery_consent && !d.paper_copy) { errors.delivery = t("v_delivery"); return true; }
+        return null;
+      }));
+  }
+
+  // ---------- headshot ----------
+  var OUT = 600, MAXB = 600 * 1024 - 2048;
+  function loadImage(file) {
+    function viaImg() { return new Promise(function (res, rej) { var u = URL.createObjectURL(file), im = new Image(); im.onload = function () { URL.revokeObjectURL(u); res(im); }; im.onerror = function () { URL.revokeObjectURL(u); rej(new Error("img")); }; im.src = u; }); }
+    if (window.createImageBitmap) return createImageBitmap(file, { imageOrientation: "from-image" }).catch(viaImg);
+    return viaImg();
+  }
+  function drawCrop(cv) {
+    var c = crop, ctx = cv.getContext("2d"), size = cv.width, w = c.img.width || c.img.naturalWidth, hh = c.img.height || c.img.naturalHeight;
+    var side = Math.min(w, hh) / c.zoom;
+    var sx = Math.min(w - side, Math.max(0, (w - side) / 2 + c.ox)), sy = Math.min(hh - side, Math.max(0, (hh - side) / 2 + c.oy));
+    c.sx = sx; c.sy = sy; c.side = side; c.ox = sx - (w - side) / 2; c.oy = sy - (hh - side) / 2; // keep the pan inside the picture
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, size, size); ctx.drawImage(c.img, sx, sy, side, side, 0, 0, size, size);
+  }
+  function exportJpeg() {
+    var cv = document.createElement("canvas"); cv.width = OUT; cv.height = OUT;
+    var c = crop, ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, OUT, OUT); ctx.drawImage(c.img, c.sx, c.sy, c.side, c.side, 0, 0, OUT, OUT);
+    return new Promise(function (resolve, reject) {
+      var q = 0.88;
+      (function tryOnce() { cv.toBlob(function (blob) { if (!blob) { reject(new Error("blob")); return; } if (blob.size <= MAXB || q <= 0.4) { resolve(blob); return; } q -= 0.1; tryOnce(); }, "image/jpeg", q); })();
+    });
+  }
+  function cropper() {
+    var cv = h("canvas", { width: "600", height: "600", "aria-label": t("drag") }), drag = null;
+    cv.addEventListener("pointerdown", function (e) { drag = { x: e.clientX, y: e.clientY, ox: crop.ox, oy: crop.oy }; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener("pointermove", function (e) { if (!drag) return; var rect = cv.getBoundingClientRect(), s = crop.side / rect.width; crop.ox = drag.ox - (e.clientX - drag.x) * s; crop.oy = drag.oy - (e.clientY - drag.y) * s; drawCrop(cv); });
+    cv.addEventListener("pointerup", function () { drag = null; });
+    setTimeout(function () { drawCrop(cv); }, 0);
+    return h("div", { class: "shot" }, cv, h("p", { text: t("drag") }),
+      h("input", { type: "range", min: "1", max: "3", step: "0.05", value: String(crop.zoom), "aria-label": t("zoom"), oninput: function (e) { crop.zoom = parseFloat(e.target.value); drawCrop(cv); } }),
+      h("button", { id: "usep", onclick: function () {
+        var b = document.getElementById("usep"); b.disabled = true; b.textContent = t("working");
+        exportJpeg().then(b64).then(function (data) { return post({ action: "upload", token: token, kind: "headshot", file_name: "headshot.jpg", data_base64: data }); }).then(function (r) {
+          if (r.ok) { uploads = r.uploads || []; crop = null; errors = {}; } else { errors.photo = t("photo_err"); }
+          render();
+        }).catch(function () { errors.photo = t("photo_err"); render(); });
+      }, text: t("use_photo") }), h("button", { class: "ghost", onclick: function () { crop = null; render(); }, text: t("other") }));
+  }
+  function picker(label, capture) {
+    var inp = h("input", { type: "file", accept: "image/*", style: "display:none", onchange: function (e) {
+      var f = e.target.files && e.target.files[0]; if (!f) return;
+      loadImage(f).then(function (img) { crop = { img: img, zoom: 1, ox: 0, oy: 0 }; errors = {}; render(); }).catch(function () { errors.photo = t("photo_err"); render(); });
+    } });
+    if (capture) inp.setAttribute("capture", "user");
+    return h("span", null, inp, h("button", { class: "small", onclick: function () { inp.click(); }, text: label }));
+  }
+  function stepPhoto() {
+    var w = cfg.wording && cfg.wording.photo_consent, has = !!upl("headshot");
+    return h("div", { class: "card" }, header(), h("h2", { text: t("photo_h") }), h("p", { text: t("photo_p") }),
+      crop ? cropper() : h("div", { class: "shot" }, has ? h("p", { class: "ok", text: "✓ " + t("saved_photo") }) : null, h("div", null, picker(t("take"), true), picker(has ? t("other") : t("choose"), false))), err("photo"),
+      chk(w ? body(w) : t("photo_consent_default"), d.photo_consent, function (v) { d.photo_consent = v; }), err("photo_consent"),
+      nav(function () {
+        if (cfg.photo_required && !has) { errors.photo = t("v_photo"); return true; }
+        if (has && !d.photo_consent) { errors.photo_consent = t("v_photo_consent"); return true; }
+        return null;
+      }));
+  }
+
+  function stepAgreement() {
+    var a = cfg.wording && cfg.wording.agreement, r = cfg.wording && cfg.wording.offer_rule;
+    return h("div", { class: "card" }, header(), h("h2", { text: t("agr_h") }),
+      a ? [h("div", { class: "legal", text: body(a) })] : h("p", { class: "err", text: t("agr_missing") }),
+      cfg.documents && cfg.documents.contractor_agreement_pdf ? h("p", null, h("a", { href: cfg.documents.contractor_agreement_pdf.url, target: "_blank", rel: "noopener", text: t("agr_pdf") })) : null,
+      r ? h("div", { class: "note", text: body(r) }) : null,
+      chk(t("offer_chk"), d.offer_rule_checked, function (v) { d.offer_rule_checked = v; }), err("offer_rule"),
+      chk(t("agr_chk"), d.agree_checked, function (v) { d.agree_checked = v; }),
+      field(t("sign"), txt("agree_name"), "agreement"),
+      nav(function () {
+        if (!cfg.wording || !cfg.wording.agreement) { errors.agreement = t("v_agree_missing"); return true; }
+        if (!d.offer_rule_checked) { errors.offer_rule = t("v_offer"); return true; }
+        if (!d.agree_checked || d.agree_name.trim().length < 2) { errors.agreement = t("v_agree"); return true; }
+        return null;
+      }));
+  }
+
+  function stepReview() {
+    var hp = h("input", { class: "hp", id: "wb", tabindex: "-1", autocomplete: "off", "aria-hidden": "true" });
+    var msg = h("p", { class: "err", id: "fe", role: "alert" });
+    function row(k, v) { return h("p", null, h("b", { text: k + ": " }), v); }
+    return h("div", { class: "card" }, header(), h("h2", { text: t("rev_h") }),
+      row(t("r_biz"), d.business_name), row(t("r_contact"), d.contact_name + ", " + d.phone + ", " + d.email), row(t("r_services"), (cfg.services || []).filter(function (s) { return d.services.indexOf(s.key) !== -1; }).map(service).join(", ")),
+      row(t("r_days"), d.days.map(function (k) { return t(k); }).join(", ")), row(t("r_ins"), d.coi_expires_on), row(t("r_1099"), d.e_delivery_consent ? t("r_elec") : t("r_paper")),
+      h("div", { class: "note", text: t("after") }),
+      hp, msg,
+      h("div", { class: "nav" }, h("button", { class: "ghost", onclick: function () { step--; render(); top(); }, text: t("back") }),
+        h("button", { id: "fin", onclick: function () {
+          msg.textContent = "";
+          var b = document.getElementById("fin"); b.disabled = true; b.textContent = t("working");
+          persist().then(function () { return post({ action: "complete", token: token, website: hp.value }); }).then(function (r) {
+            if (r.ok) { try { localStorage.removeItem(LS); } catch (e) { /* private window */ } doneInfo = r; step = 99; render(); top(); return; }
+            b.disabled = false; b.textContent = t("send");
+            if (r.error === "exists") msg.textContent = t("e_exists");
+            else if (r.error === "conflict") msg.textContent = t("e_conflict");
+            else if (r.error === "incomplete") {
+              var f = r.fields || [], first = f[0];
+              var go = { business_name: 1, contact_name: 1, phone: 1, email: 1, zip: 1, services: 2, days: 2, coi: 3, coi_expiry: 3, gl: 3, w9: 4, tin_last4: 4, delivery: 4, delivery_both: 4, photo: 5, photo_consent: 5, agreement: 6, offer_rule: 6 };
+              errors = {}; f.forEach(function (c) { errors[c] = t("check"); });
+              step = go[first] || 1; render(); top();
+            } else msg.textContent = t("e_fail");
+          }).catch(function () { b.disabled = false; b.textContent = t("send"); msg.textContent = t("e_fail"); });
+        }, text: t("send") })));
+  }
+  function stepDone() {
+    var w = doneInfo && doneInfo.welcome;
+    return h("div", { class: "card" }, header(), h("h1", { text: t("done_h") }), h("p", { class: "ok", text: "✓ " + t("done_ok") }), h("p", { text: t("done_p") }), w ? h("div", { class: "note", text: body(w) }) : null);
+  }
+
+  function render() {
+    var el;
+    if (!cfg || !cfg.open) el = h("div", { class: "card" }, header(), h("h1", { text: t("closed_h") }), h("p", { text: t("closed_p") }));
+    else if (step === 99) el = stepDone();
+    else el = [stepStart, stepBusiness, stepWork, stepInsurance, stepTax, stepPhoto, stepAgreement, stepReview][token ? step : 0]();
+    app.replaceChildren(el);
+  }
+  fetch(FN + "?config=1&org=" + encodeURIComponent(ORG)).then(function (r) { return r.json(); }).then(function (c) { cfg = c; render(); }).catch(function () { cfg = { open: false }; render(); });
+})();
+</script>
+</body>
+</html>

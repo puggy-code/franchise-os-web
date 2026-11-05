@@ -1,0 +1,690 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<title>Join the team</title>
+<!--
+  The ONE employee application journey (Jack, 2026-11-04; PEOPLE-ONBOARDING.md). It replaces the old join flow: a new team member types their phone number and the setup key, then in one resumable sitting:
+  about them, the application questions, emergency contact, the days and times they can work, a HEADSHOT (cropped square and compressed here), an INTRO VIDEO (recorded in the browser or uploaded, 30 to 60 seconds)
+  with FUN FACTS, shirt and shoe size, the W-4 and state form, I-9 documents and direct deposit (all into the encrypted HR vault: files, or typed bank numbers), the first training lessons and onboarding videos,
+  the company policies, and a 4-digit PIN. At the end the staff-onboarding function makes the login AND the employee profile with all of it, so a manager sees the new person in Staff with everything.
+  Half-done forms are kept (a draft token in this browser) and resume. English and Spanish; the choice is the whole page, never side by side. Every piece of text from the server is put on the page as text,
+  never as HTML; a video link is only used when it starts with http or https. It does nothing until the owner approves the wording and switches it on in the app.
+  Link it as staff-onboarding.html?org=two-hour-maids. Goes to the separate public web repo with the other pages.
+-->
+<style>
+  :root { --bg: #f4f6fb; --card: #fff; --ink: #10151e; --muted: #5e6776; --line: #dde1e7; --brand: #0a47a8; --brand-ink: #fff; --ok: #157347; --err: #b42318; --soft: #eaf0fb; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0e1118; --card: #181c26; --ink: #eef1f7; --muted: #a2a9b8; --line: #2a3040; --brand: #6ea3ff; --brand-ink: #0e1118; --ok: #6ee7a0; --err: #fca5a5; --soft: #1f2636; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px 16px 56px; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif; line-height: 1.5; }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  .card { background: var(--card); border-radius: 20px; padding: 22px; margin: 0 0 14px; }
+  h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -.4px; } h2 { font-size: 19px; margin: 0 0 6px; } h3 { font-size: 15px; margin: 16px 0 4px; }
+  p { color: var(--muted); margin: 0 0 10px; }
+  .brand { color: var(--brand); font-weight: 800; font-size: 13px; letter-spacing: .4px; text-transform: uppercase; }
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .lang button { width: auto; margin: 0 0 0 6px; padding: 6px 12px; font-size: 13px; background: transparent; color: var(--brand); border: 1px solid var(--line); border-radius: 999px; }
+  .lang button.on { background: var(--brand); color: var(--brand-ink); }
+  .bar { height: 8px; background: var(--soft); border-radius: 999px; overflow: hidden; margin: 12px 0 4px; } .bar i { display: block; height: 100%; background: var(--brand); transition: width .2s; }
+  .steps { font-size: 12px; color: var(--muted); }
+  label.f { display: block; font-size: 13px; font-weight: 700; color: var(--muted); margin: 14px 0 0; }
+  input[type=text], input[type=tel], input[type=email], input[type=password], input[type=number], select, textarea { width: 100%; font: inherit; font-size: 17px; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; margin: 5px 0 0; }
+  textarea { min-height: 70px; }
+  input:focus, select:focus, textarea:focus, button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10em), 1fr)); gap: 10px; }
+  .chk { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; color: var(--ink); margin: 12px 0; cursor: pointer; }
+  .chk input { width: 22px; height: 22px; margin: 1px 0 0; flex: none; }
+  button { width: 100%; background: var(--brand); color: var(--brand-ink); border: 0; border-radius: 999px; padding: 14px; font: inherit; font-size: 17px; font-weight: 800; margin-top: 14px; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--brand); border: 1px solid var(--line); }
+  button.small { width: auto; padding: 8px 14px; font-size: 14px; margin: 6px 6px 0 0; }
+  button[disabled] { opacity: .5; cursor: default; }
+  a.btn { display: inline-block; text-decoration: none; color: var(--brand); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 700; margin: 6px 6px 0 0; }
+  .nav { display: flex; gap: 10px; } .nav button { margin-top: 18px; } .nav .ghost { flex: 0 0 34%; }
+  .err { color: var(--err); font-size: 13px; font-weight: 600; margin: 6px 0 0; } .ok { color: var(--ok); font-weight: 700; }
+  .note { background: var(--soft); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--muted); margin: 10px 0; white-space: pre-wrap; }
+  .grid { display: grid; grid-template-columns: 4.2em repeat(3, 1fr); gap: 6px; align-items: center; margin: 10px 0; font-size: 14px; }
+  .grid .h { font-size: 12px; color: var(--muted); text-align: center; }
+  .grid button.cell { margin: 0; padding: 12px 0; border-radius: 10px; background: var(--bg); color: var(--muted); border: 1px solid var(--line); font-size: 14px; }
+  .grid button.cell.on { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); }
+  .shot { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .shot canvas { width: 100%; max-width: 300px; aspect-ratio: 1; border-radius: 18px; background: var(--soft); touch-action: none; cursor: grab; }
+  .shot input[type=range] { width: 100%; max-width: 300px; }
+  .shot video { width: 100%; max-width: 300px; aspect-ratio: 3 / 4; border-radius: 18px; background: #000; object-fit: cover; transform: scaleX(-1); }
+  details.sop { border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; margin: 10px 0; }
+  details.sop summary { cursor: pointer; font-weight: 700; } details.sop .body { white-space: pre-wrap; font-size: 14px; color: var(--muted); max-height: 260px; overflow: auto; margin-top: 8px; }
+  .slot { border: 1px dashed var(--line); border-radius: 14px; padding: 12px; margin: 10px 0; }
+  .slot b { display: block; } .slot small { color: var(--muted); }
+  .lesson { border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin: 10px 0; } .lesson.done { border-color: var(--ok); }
+  .lesson video { width: 100%; border-radius: 12px; margin-top: 8px; }
+  ul.tips { color: var(--muted); padding-left: 20px; margin: 6px 0 10px; } ul.tips li { margin: 3px 0; }
+  .radio { display: flex; gap: 10px; align-items: flex-start; margin: 10px 0; font-size: 15px; cursor: pointer; } .radio input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; }
+  .hp { position: absolute; left: -5000px; }
+  .pin { letter-spacing: .5em; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap"><div id="app"><div class="card"><p>…</p></div></div></div>
+<script>
+(function () {
+  "use strict";
+  var FN = "https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/staff-onboarding";
+  var ORG = (new URLSearchParams(location.search).get("org") || "two-hour-maids").toLowerCase();
+  var LS = "psob_" + ORG, LSL = "psob_lang";
+  var app = document.getElementById("app");
+  var cfg = null, token = null, step = 0, d = blank(), hasShot = false, hasIntro = false, files = [], errors = {}, crop = null, doneInfo = null, startErr = "";
+  var content = null, contentLoading = false, vidBusy = false, vidMsg = "", live = null, recorder = null, recSecs = 0, recTimer = null, bankSaved = null, bankMsg = "", busy = false;
+  var lang = "en";
+  try { lang = localStorage.getItem(LSL) || (/^es/i.test(navigator.language || "") ? "es" : "en"); } catch (e) { /* private window */ }
+
+  // ---------- English and Spanish: one language at a time ----------
+  var T = {
+    en: {
+      join: "Join the team", intro: "One application, on your phone, about 15 minutes. You can stop at any point and come back to this page on this phone: nothing you enter is lost.",
+      phone: "Your mobile phone", key: "Setup key", keyHint: "The setup key your manager gave you.", begin: "Start", resume: "Pick up where you left off",
+      names: { about: "About you", application: "Your application", emergency: "Emergency contact", avail: "When you can work", photo: "Your photo", intro: "Intro video", uniform: "Uniform sizes", tax: "Tax forms", i9: "I-9 documents", bank: "Direct deposit", training: "Training", agree: "Agreements", finish: "Finish" },
+      full_name: "Full name", preferred: "What should we call you? (optional)", email: "Email (optional)", address: "Street address", city: "City", zip: "ZIP code", language: "Language for your app", english: "English", spanish: "Español",
+      app_p: "A few quick questions we ask everyone.", jobs_h: "Three jobs you have had (optional)", job_ph: "Where, and what you did", school: "School", school_hs: "High school", school_col: "College", school_none: "Neither",
+      authorized: "Are you authorized to work in the United States?", adult: "Are you 18 or older?", lift: "Can you lift 25 pounds and be on your feet for hours?", how_heard: "How did you hear about us? (optional)",
+      emerg_name: "Emergency contact name", emerg_phone: "Emergency contact phone", emerg_rel: "How are they related to you?", car: "Do you have a car you can use for work?", yes: "Yes", no: "No", choose: "Choose", transport: "Anything else about getting to jobs?",
+      avail_h: "When can you work?", avail_p: "Tap the times you can usually work. Monday to Saturday. A manager confirms your schedule; this is your starting pattern.", mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat",
+      t1: "9:00", t2: "11:40", t3: "2:40", avail_note: "Anything we should know? (optional)", open_days: "That is about {n} open days in the next 90.",
+      photo_h: "Your photo", photo_p: "This is the photo customers and property managers may see on jobs you clean. Plain background, your face clear, no sunglasses or hat.", take: "Take a photo", upload: "Choose a photo", retake: "Use a different photo", zoom: "Zoom", saved_photo: "Photo saved", use_photo: "Use this photo", drag: "Drag the photo to center your face.",
+      consent_default: "I agree that my photo may be shown to customers and property managers on jobs I clean.",
+      intro_h: "Introduce yourself", intro_p: "A short video of you, 30 to 60 seconds. Customers and property managers may see it before a visit, after a manager looks at it.",
+      tip1: "Good light: face a window, with no bright lamp behind you.", tip2: "Wear a collared shirt.", tip3: "Say your name and one fun fact about you.", tip4: "Hold the phone at eye level and keep it steady.",
+      rec_here: "Record on this phone", rec_file: "Use my camera app or choose a video", rec_start: "Start recording", rec_stop: "Stop and use this video", rec_cancel: "Cancel", rec_limit: "Recording stops by itself at 60 seconds.", rec_time: "Recording: {s} s",
+      vid_saved: "Video saved", vid_again: "Record again", vid_remove: "Remove my video", vid_up: "Uploading your video… this can take a minute.", vid_long: "That video is over 90 seconds. Please use a shorter one.", vid_big: "That video is too big (40 MB at most). Record it here instead, or use a shorter clip.",
+      vid_type: "That file is not a video we can use.", vid_fail: "The video did not upload. Please try again.", cam_denied: "We could not use the camera. Check that this page may use it, or choose a video instead.", vid_later: "You can also add your intro later in the app (Me > My intro).",
+      facts_h: "Fun facts", facts_p: "Three short ones. They show on your meet-your-team card.", fact_music: "Favorite music", fact_hobby: "A hobby you love", fact_secret: "Something people do not know about you",
+      intro_consent_default: "I agree that my intro video and fun facts may be shown to customers and property managers.",
+      sizes_h: "Uniform sizes", sizes_p: "The company gives you 2 shirts and a pair of house Crocs. Tell us your sizes so they are ready.", shirt: "T-shirt size", shoe: "Shoe size", shoe_hint: "For example 8, 8.5 or W9", sizes_later: "You can also add these later in the app (Me > My sizes).",
+      prep_h: "Type your information, we fill in the forms", prep_p: "We fill in the official W-4 for you, right up to the signature. A manager prints it and you sign it by hand. Your Social Security number is used only to fill in the form: it is not saved anywhere except inside the encrypted form.", prep_name1: "First name", prep_name2: "Last name", prep_state: "State (2 letters)", ssn: "Social Security number", filing: "Filing status (W-4, step 1)", f_single: "Single or married filing separately", f_married: "Married filing jointly", f_head: "Head of household", step2c: "Step 2(c): there are only two jobs in total (mine and my spouse's, or two of mine) and they pay about the same", kids: "Step 3: qualifying children under 17 (how many)", others: "Step 3: other dependents (how many)", other_income: "Step 4(a): other income not from jobs, per year ($)", deductions: "Step 4(b): deductions beyond the standard, per year ($)", extra: "Step 4(c): extra tax to withhold each pay period ($)", prep_btn: "Prepare my forms", prep_done: "✓ Your W-4 is ready. A manager prints it for you to sign.", prep_later: "The Minnesota W-4MN and the I-9 Section 1 will be prepared for you by your manager.", prep_lib: "Our blank forms are not loaded yet. Your manager will give you the forms.", prep_bad: "Please check your name, address and Social Security number.", prep_fail: "We could not prepare the forms. Your manager will give you the forms.", or_upload: "Or add your own signed forms:",
+      tax_h: "Tax forms", tax_p: "Download the forms, fill them in and sign, then add a photo or PDF of each. They go straight into a private, encrypted vault.", w4_dl: "Download the federal W-4", w4s_dl: "Download the Minnesota W-4MN", w4: "W-4 (federal tax withholding form)", w4s: "Minnesota W-4MN (state form)",
+      forms_default: "Add these now, or bring them to your manager.", add: "Add a file", added: "Added", remove: "Remove", vault_note_default: "These are stored encrypted. Only the owner and the HR managers they name can open them, and every time one is opened it is recorded.",
+      i9_h: "I-9 identity documents", i9_p: "Add clear photos of the documents you will use to show who you are and that you can work in the US (for example a passport, or a driver's license with a Social Security card). Your manager may still ask to see the originals.", i9_dl: "Download the I-9 form", i9: "Photos of my documents", add_more: "Add another file",
+      bank_h: "Direct deposit", bank_default: "Add a photo of a voided check, or type your bank routing and account numbers. They are encrypted before they are saved and are never shown in the app.", bank_how: "How would you like to add it?", bank_check: "A photo of a voided check", bank_type: "Type my bank numbers", bank_later: "Later, with my manager",
+      check_slot: "Voided check", routing: "Routing number (9 digits)", account: "Account number", acct_type: "Account type", checking: "Checking", savings: "Savings", bank_save: "Save my bank details", bank_saved: "Saved: account ending {n}. Only the last four digits are ever shown.", bank_change: "Change it",
+      b_routing: "That routing number does not look right. It is the 9 digits at the bottom left of a check.", b_account: "The account number should be 4 to 17 digits.", b_type: "Choose checking or savings.",
+      training_h: "Training", training_p: "Your first lessons start here and carry on in the Learn screen of the app.", course_line: "{name}: {n} lessons, about {m} minutes in all", mark_done: "I did this", done_mark: "Done", open_lesson: "Open the lesson", videos_h: "Onboarding videos", watch: "Watch the video", watched: "I watched it",
+      videos_soon: "More videos are on their way.", training_none: "Your training will be waiting for you in the app.", training_prog: "{a} started", loading: "Loading…",
+      agree_h: "Agreements", agree_p: "Read each one and tick that you agree. Each is saved with the date.", read: "I have read this and I agree",
+      pin_h: "Choose your 4-digit PIN", pin_p: "You sign in to the app with your phone number and this PIN. Do not share it.", pin1: "PIN", pin2: "Type it again", pin_mismatch: "The two PINs do not match.", pin_bad: "Use 4 digits.", weak: "That PIN is too easy to guess. Pick a different one.",
+      forms_bring: "Bring your W-4, I-9 documents and a voided check to your manager: uploads are not open yet.", finish: "Finish and create my profile", next: "Next", back: "Back", saving: "Saving…", working: "Working…",
+      done_h: "Everything is set to go", done_p: "Your profile is saved with all of your information. Open the app and sign in with your phone number and the PIN you just made.",
+      closed_h: "This page is not open yet", closed_p: "Please check back soon, or ask your manager.",
+      e_conflict: "We cannot set this number up here. Please ask your manager.", e_key: "That setup key does not match. Check it with your manager.", e_exists: "This phone number already has an account. Open the app and sign in.", e_many: "Too many tries. Please wait a while and try again.", e_phone: "Enter a 10-digit mobile number.", e_fail: "That did not work. Please try again.",
+      f_name: "Add your full name.", f_email: "That email does not look right.", f_zip: "ZIP codes are 5 digits.", f_emergency: "Add an emergency contact name and phone.", f_weekly: "Tap at least one time you can work.", f_photo: "Add your photo.", f_photo_consent: "Please tick the photo agreement.", f_sop: "Please read and agree to every agreement.", f_intro_consent: "Please tick the intro video agreement.",
+      photo_err: "That photo could not be used. Try another one.", file_err: "That file could not be added. Use a PDF or a photo under 6 MB."
+    },
+    es: {
+      join: "Únete al equipo", intro: "Una solicitud, desde tu teléfono, unos 15 minutos. Puedes parar en cualquier momento y volver a esta página en este teléfono: no se pierde nada de lo que escribiste.",
+      phone: "Tu teléfono móvil", key: "Clave de inicio", keyHint: "La clave de inicio que te dio tu gerente.", begin: "Empezar", resume: "Continuar donde lo dejaste",
+      names: { about: "Sobre ti", application: "Tu solicitud", emergency: "Contacto de emergencia", avail: "Cuándo puedes trabajar", photo: "Tu foto", intro: "Video de presentación", uniform: "Tallas del uniforme", tax: "Formularios de impuestos", i9: "Documentos del I-9", bank: "Depósito directo", training: "Capacitación", agree: "Acuerdos", finish: "Terminar" },
+      full_name: "Nombre completo", preferred: "¿Cómo quieres que te llamemos? (opcional)", email: "Correo electrónico (opcional)", address: "Dirección", city: "Ciudad", zip: "Código postal", language: "Idioma de tu aplicación", english: "English", spanish: "Español",
+      app_p: "Unas preguntas rápidas que le hacemos a todas las personas.", jobs_h: "Tres trabajos que has tenido (opcional)", job_ph: "Dónde y qué hacías", school: "Escuela", school_hs: "Preparatoria", school_col: "Universidad", school_none: "Ninguna",
+      authorized: "¿Tienes autorización para trabajar en los Estados Unidos?", adult: "¿Tienes 18 años o más?", lift: "¿Puedes levantar 25 libras y estar de pie por horas?", how_heard: "¿Cómo supiste de nosotros? (opcional)",
+      emerg_name: "Nombre del contacto de emergencia", emerg_phone: "Teléfono del contacto de emergencia", emerg_rel: "¿Qué parentesco tiene contigo?", car: "¿Tienes un carro que puedas usar para trabajar?", yes: "Sí", no: "No", choose: "Elige", transport: "¿Algo más sobre cómo llegar a los trabajos?",
+      avail_h: "¿Cuándo puedes trabajar?", avail_p: "Toca los horarios en que normalmente puedes trabajar. De lunes a sábado. Un gerente confirma tu horario; este es tu patrón inicial.", mon: "Lun", tue: "Mar", wed: "Mié", thu: "Jue", fri: "Vie", sat: "Sáb",
+      t1: "9:00", t2: "11:40", t3: "2:40", avail_note: "¿Algo que debamos saber? (opcional)", open_days: "Son unos {n} días disponibles en los próximos 90.",
+      photo_h: "Tu foto", photo_p: "Esta es la foto que pueden ver los clientes y administradores de propiedades en los trabajos que limpias. Fondo liso, tu cara bien visible, sin lentes de sol ni gorra.", take: "Tomar una foto", upload: "Elegir una foto", retake: "Usar otra foto", zoom: "Zoom", saved_photo: "Foto guardada", use_photo: "Usar esta foto", drag: "Arrastra la foto para centrar tu cara.",
+      consent_default: "Acepto que mi foto se muestre a clientes y administradores de propiedades en los trabajos que limpio.",
+      intro_h: "Preséntate", intro_p: "Un video corto tuyo, de 30 a 60 segundos. Los clientes y administradores de propiedades pueden verlo antes de una visita, después de que alguien de la gerencia lo revise.",
+      tip1: "Buena luz: mira hacia una ventana, sin una lámpara fuerte detrás de ti.", tip2: "Usa una camisa con cuello.", tip3: "Di tu nombre y un dato divertido sobre ti.", tip4: "Sostén el teléfono a la altura de los ojos y mantenlo quieto.",
+      rec_here: "Grabar en este teléfono", rec_file: "Usar la cámara de mi teléfono o elegir un video", rec_start: "Empezar a grabar", rec_stop: "Parar y usar este video", rec_cancel: "Cancelar", rec_limit: "La grabación se detiene sola a los 60 segundos.", rec_time: "Grabando: {s} s",
+      vid_saved: "Video guardado", vid_again: "Grabar de nuevo", vid_remove: "Quitar mi video", vid_up: "Subiendo tu video… puede tardar un minuto.", vid_long: "Ese video dura más de 90 segundos. Usa uno más corto.", vid_big: "Ese video es muy grande (40 MB como máximo). Grábalo aquí o usa un clip más corto.",
+      vid_type: "Ese archivo no es un video que podamos usar.", vid_fail: "El video no se subió. Inténtalo de nuevo.", cam_denied: "No pudimos usar la cámara. Revisa que esta página tenga permiso, o elige un video.", vid_later: "También puedes agregar tu presentación después en la app (Yo > Mi presentación).",
+      facts_h: "Datos divertidos", facts_p: "Tres cortos. Se muestran en tu tarjeta de conoce a tu equipo.", fact_music: "Música favorita", fact_hobby: "Un pasatiempo que te encanta", fact_secret: "Algo que la gente no sabe de ti",
+      intro_consent_default: "Acepto que mi video de presentación y mis datos divertidos se muestren a clientes y administradores de propiedades.",
+      sizes_h: "Tallas del uniforme", sizes_p: "La empresa te da 2 camisas y un par de Crocs de la casa. Dinos tus tallas para tenerlas listas.", shirt: "Talla de camiseta", shoe: "Talla de zapato", shoe_hint: "Por ejemplo 8, 8.5 o W9", sizes_later: "También puedes agregarlas después en la app (Yo > Mis tallas).",
+      prep_h: "Escribe tu información y llenamos los formularios", prep_p: "Llenamos el W-4 oficial por ti, hasta la firma. Una persona de la gerencia lo imprime y tú lo firmas a mano. Tu número de Seguro Social se usa solo para llenar el formulario: no se guarda en ningún lugar excepto dentro del formulario cifrado.", prep_name1: "Nombre", prep_name2: "Apellido", prep_state: "Estado (2 letras)", ssn: "Número de Seguro Social", filing: "Estado civil para impuestos (W-4, paso 1)", f_single: "Soltero o casado que presenta por separado", f_married: "Casado que presenta en conjunto", f_head: "Jefe de familia", step2c: "Paso 2(c): hay solo dos trabajos en total (el mío y el de mi cónyuge, o dos míos) y pagan más o menos lo mismo", kids: "Paso 3: hijos calificados menores de 17 (cuántos)", others: "Paso 3: otros dependientes (cuántos)", other_income: "Paso 4(a): otros ingresos que no son de empleos, por año ($)", deductions: "Paso 4(b): deducciones además de la estándar, por año ($)", extra: "Paso 4(c): impuesto adicional a retener en cada pago ($)", prep_btn: "Preparar mis formularios", prep_done: "✓ Tu W-4 está listo. Alguien de la gerencia lo imprime para que lo firmes.", prep_later: "El W-4MN de Minnesota y la Sección 1 del I-9 te los prepara tu gerente.", prep_lib: "Nuestros formularios en blanco todavía no están cargados. Tu gerente te dará los formularios.", prep_bad: "Revisa tu nombre, dirección y número de Seguro Social.", prep_fail: "No pudimos preparar los formularios. Tu gerente te dará los formularios.", or_upload: "O agrega tus propios formularios firmados:",
+      tax_h: "Formularios de impuestos", tax_p: "Descarga los formularios, llénalos y fírmalos, y agrega una foto o PDF de cada uno. Van directo a una bóveda privada y cifrada.", w4_dl: "Descargar el W-4 federal", w4s_dl: "Descargar el W-4MN de Minnesota", w4: "W-4 (formulario federal de retención de impuestos)", w4s: "W-4MN de Minnesota (formulario estatal)",
+      forms_default: "Agrégalos ahora o llévaselos a tu gerente.", add: "Agregar un archivo", added: "Agregado", remove: "Quitar", vault_note_default: "Se guardan cifrados. Solo la persona propietaria y las personas de recursos humanos que designe pueden abrirlos, y cada vez que se abre uno queda registrado.",
+      i9_h: "Documentos de identidad para el I-9", i9_p: "Agrega fotos claras de los documentos que usarás para mostrar quién eres y que puedes trabajar en EE. UU. (por ejemplo un pasaporte, o una licencia de conducir con una tarjeta de Seguro Social). Tu gerente todavía puede pedir ver los originales.", i9_dl: "Descargar el formulario I-9", i9: "Fotos de mis documentos", add_more: "Agregar otro archivo",
+      bank_h: "Depósito directo", bank_default: "Agrega una foto de un cheque anulado o escribe los números de ruta y de cuenta de tu banco. Se cifran antes de guardarse y nunca se muestran en la app.", bank_how: "¿Cómo quieres agregarlo?", bank_check: "Una foto de un cheque anulado", bank_type: "Escribir mis números del banco", bank_later: "Después, con mi gerente",
+      check_slot: "Cheque anulado", routing: "Número de ruta (9 dígitos)", account: "Número de cuenta", acct_type: "Tipo de cuenta", checking: "Cuenta de cheques", savings: "Cuenta de ahorros", bank_save: "Guardar mis datos bancarios", bank_saved: "Guardado: cuenta que termina en {n}. Solo se muestran los últimos cuatro dígitos.", bank_change: "Cambiarlo",
+      b_routing: "Ese número de ruta no parece correcto. Son los 9 dígitos abajo a la izquierda de un cheque.", b_account: "El número de cuenta debe tener de 4 a 17 dígitos.", b_type: "Elige cuenta de cheques o de ahorros.",
+      training_h: "Capacitación", training_p: "Tus primeras lecciones empiezan aquí y siguen en la pantalla Aprender de la app.", course_line: "{name}: {n} lecciones, unos {m} minutos en total", mark_done: "Ya lo hice", done_mark: "Listo", open_lesson: "Abrir la lección", videos_h: "Videos de bienvenida", watch: "Ver el video", watched: "Ya lo vi",
+      videos_soon: "Vienen más videos en camino.", training_none: "Tu capacitación te estará esperando en la app.", training_prog: "{a} iniciadas", loading: "Cargando…",
+      agree_h: "Acuerdos", agree_p: "Lee cada uno y marca que estás de acuerdo. Cada uno se guarda con la fecha.", read: "Lo leí y estoy de acuerdo",
+      pin_h: "Elige tu PIN de 4 dígitos", pin_p: "Entras a la aplicación con tu número de teléfono y este PIN. No lo compartas.", pin1: "PIN", pin2: "Escríbelo otra vez", pin_mismatch: "Los dos PIN no coinciden.", pin_bad: "Usa 4 dígitos.", weak: "Ese PIN es muy fácil de adivinar. Elige otro.",
+      forms_bring: "Lleva tu W-4, tus documentos del I-9 y un cheque anulado a tu gerente: todavía no se pueden subir aquí.", finish: "Terminar y crear mi perfil", next: "Siguiente", back: "Atrás", saving: "Guardando…", working: "Trabajando…",
+      done_h: "Todo está listo", done_p: "Tu perfil quedó guardado con toda tu información. Abre la aplicación e inicia sesión con tu número de teléfono y el PIN que acabas de crear.",
+      closed_h: "Esta página todavía no está abierta", closed_p: "Vuelve pronto o pregúntale a tu gerente.",
+      e_conflict: "No podemos configurar este número aquí. Pregúntale a tu gerente.", e_key: "Esa clave de inicio no coincide. Revísala con tu gerente.", e_exists: "Este número de teléfono ya tiene una cuenta. Abre la aplicación e inicia sesión.", e_many: "Demasiados intentos. Espera un rato e inténtalo de nuevo.", e_phone: "Escribe un número móvil de 10 dígitos.", e_fail: "No funcionó. Inténtalo de nuevo.",
+      f_name: "Agrega tu nombre completo.", f_email: "Ese correo no se ve bien.", f_zip: "Los códigos postales tienen 5 dígitos.", f_emergency: "Agrega el nombre y teléfono de un contacto de emergencia.", f_weekly: "Toca al menos un horario en que puedes trabajar.", f_photo: "Agrega tu foto.", f_photo_consent: "Marca el acuerdo de la foto.", f_sop: "Lee y acepta todos los acuerdos.", f_intro_consent: "Marca el acuerdo del video de presentación.",
+      photo_err: "No se pudo usar esa foto. Prueba con otra.", file_err: "No se pudo agregar ese archivo. Usa un PDF o una foto de menos de 6 MB."
+    }
+  };
+  function t(k) { return (T[lang] && T[lang][k]) || T.en[k] || k; }
+  function nm(id) { return (T[lang].names && T[lang].names[id]) || T.en.names[id]; }
+  var DAYS = ["mon", "tue", "wed", "thu", "fri", "sat"];
+  var SHIRTS = ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
+
+  function blank() {
+    return { full_name: "", preferred_name: "", email: "", address_line: "", city: "", zip: "", language: "en", emergency_name: "", emergency_phone: "", emergency_relation: "", has_car: null, transport_note: "", availability_note: "", weekly: {}, photo_consent: false, sop_acks: [], vault_ack: false,
+      application: { jobs: ["", "", ""], school: "", authorized: null, adult: null, lift: null, how_heard: "" }, shirt: "", shoe: "", facts: { music: "", hobby: "", secret: "" }, intro_consent: false, training_done: [], videos_done: [], bank_method: "" };
+  }
+  function fill(data) { var b = blank(); var o = data || {}; Object.keys(b).forEach(function (k) { if (o[k] !== undefined && o[k] !== null) b[k] = o[k]; }); b.application = Object.assign(blank().application, o.application || {}); b.facts = Object.assign(blank().facts, o.facts || {}); return b; }
+
+  // the steps depend on what the owner has switched on: the intro needs its consent wording, the three hiring steps need the vault
+  function STEPS() {
+    var s = ["about", "application", "emergency", "avail", "photo"];
+    if (cfg && cfg.intro && cfg.intro.enabled) s.push("intro");
+    s.push("uniform");
+    if (cfg && cfg.vault && cfg.vault.enabled) s.push("tax", "i9", "bank");
+    s.push("training", "agree", "finish");
+    return s;
+  }
+
+  // ---------- small helpers (text only: nothing from the server is ever HTML) ----------
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    attrs = attrs || {};
+    Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === "class") el.className = v; else if (k === "text") el.textContent = v; else if (k.indexOf("on") === 0) el.addEventListener(k.slice(2), v); else if (k === "value") el.value = v; else if (k === "checked") el.checked = true; else el.setAttribute(k, v === true ? "" : v);
+    });
+    for (var i = 2; i < arguments.length; i++) add(el, arguments[i]);
+    return el;
+  }
+  function add(el, c) {
+    if (c === null || c === undefined || c === false) return;
+    if (Array.isArray(c)) { c.forEach(function (x) { add(el, x); }); return; }
+    el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  }
+  function post(body) {
+    body.org = ORG;
+    return fetch(FN, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); });
+  }
+  function err(k) { return errors[k] ? h("p", { class: "err", role: "alert", text: errors[k] }) : null; }
+  function field(label, input, k) { return h("label", { class: "f" }, label, input, err(k)); }
+  function txt(key, type, ph) { return h("input", { type: type || "text", value: d[key] || "", autocomplete: "off", oninput: function (e) { d[key] = e.target.value; }, placeholder: ph || "" }); }
+  function chk(label, on, set) { return h("label", { class: "chk" }, h("input", { type: "checkbox", checked: on, onchange: function (e) { set(e.target.checked); } }), h("span", { text: label })); }
+  function yesNo(label, key) {
+    var cur = d.application[key];
+    return h("label", { class: "f" }, label, h("select", { onchange: function (e) { d.application[key] = e.target.value === "yes" ? true : e.target.value === "no" ? false : null; } },
+      h("option", { value: "", text: t("choose") }), h("option", { value: "yes", selected: cur === true ? true : null, text: t("yes") }), h("option", { value: "no", selected: cur === false ? true : null, text: t("no") })));
+  }
+  function digits(s) { return String(s || "").replace(/\D/g, ""); }
+  function emailOk(s) { return /^[^@\s]{1,64}@[^@\s]{1,120}\.[^@\s]{2,}$/.test(s); }
+  function top() { window.scrollTo(0, 0); }
+  function wtext(w, fallback) { return w ? (lang === "es" && w.es ? w.es : w.en) : fallback; }
+  function fmt(s, o) { return String(s).replace(/\{(\w+)\}/g, function (m, k) { return o[k] === undefined ? m : o[k]; }); }
+  function b64(blob) { return new Promise(function (res, rej) { var fr = new FileReader(); fr.onload = function () { res(String(fr.result).split(",")[1] || ""); }; fr.onerror = function () { rej(new Error("read")); }; fr.readAsDataURL(blob); }); }
+  function httpUrl(u) { return typeof u === "string" && /^https?:\/\//i.test(u) ? u : null; }
+
+  // ---------- saving and resuming ----------
+  function persist() { return post({ action: "save", token: token, step: step, data: d }); }
+  function setLang(l) { lang = l; try { localStorage.setItem(LSL, l); } catch (e) { /* private window */ } if (token && !d.language_touched) { d.language = l; } render(); }
+  function ensureContent() {
+    if (content || contentLoading || !token) return;
+    contentLoading = true;
+    post({ action: "content", token: token }).then(function (r) { contentLoading = false; if (r.ok) { content = r; render(); } }).catch(function () { contentLoading = false; });
+  }
+
+  function header() {
+    var s = STEPS();
+    var pct = Math.round((Math.max(0, step) / (s.length - 1)) * 100);
+    return [
+      h("div", { class: "top" }, h("div", { class: "brand", text: (cfg && cfg.brand) || "Two Hour Maids" }),
+        h("div", { class: "lang" }, h("button", { class: lang === "en" ? "on" : "", "aria-pressed": lang === "en" ? "true" : "false", onclick: function () { setLang("en"); }, text: "English" }), h("button", { class: lang === "es" ? "on" : "", "aria-pressed": lang === "es" ? "true" : "false", onclick: function () { setLang("es"); }, text: "Español" }))),
+      step >= 0 && token && step < s.length ? h("div", null, h("div", { class: "bar", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": "100", "aria-valuenow": String(pct) }, h("i", { style: "width:" + pct + "%" })), h("div", { class: "steps", text: nm(s[step]) + " (" + (step + 1) + "/" + s.length + ")" })) : null
+    ];
+  }
+
+  // ---------- start ----------
+  function stepStart() {
+    var phone = h("input", { type: "tel", inputmode: "tel", autocomplete: "tel", id: "ph" });
+    var key = h("input", { type: "text", autocomplete: "off", id: "ky" });
+    var has = null; try { has = localStorage.getItem(LS); } catch (e) { /* private window */ }
+    var msg = h("p", { class: "err", id: "se", role: "alert", text: startErr });
+    return h("div", { class: "card" }, header(), h("h1", { text: t("join") }), h("p", { text: t("intro") }),
+      has ? h("button", { class: "ghost", onclick: function () { token = has; resumeNow(); }, text: t("resume") }) : null,
+      h("label", { class: "f" }, t("phone"), phone), h("label", { class: "f" }, t("key"), key, h("small", { text: t("keyHint") })), msg,
+      h("button", { id: "go", onclick: function () {
+        if (digits(phone.value).length < 10) { msg.textContent = t("e_phone"); return; }
+        var b = document.getElementById("go"); b.disabled = true; msg.textContent = "";
+        post({ action: "start", key: key.value, phone: phone.value }).then(function (r) {
+          b.disabled = false;
+          if (r.ok) { token = r.token; try { localStorage.setItem(LS, token); } catch (e) { /* private window */ } d = blank(); d.language = lang; files = []; hasShot = false; hasIntro = false; content = null; step = 0; render(); return; }
+          msg.textContent = r.error === "key" ? t("e_key") : r.error === "exists" ? t("e_exists") : r.error === "conflict" ? t("e_conflict") : r.error === "too_many" ? t("e_many") : r.error === "phone" ? t("e_phone") : t("e_fail");
+        }).catch(function () { b.disabled = false; msg.textContent = t("e_fail"); });
+      }, text: t("begin") }));
+  }
+  function resumeNow() {
+    post({ action: "load", token: token }).then(function (r) {
+      if (r.ok) { d = fill(r.data); step = Math.min(Math.max(0, r.step || 0), STEPS().length - 1); hasShot = !!r.has_headshot; hasIntro = !!r.has_intro; files = r.files || []; if (d.language) { lang = d.language; } render(); }
+      else { try { localStorage.removeItem(LS); } catch (e) { /* private window */ } token = null; startErr = t("e_fail"); render(); }
+    }).catch(function () { startErr = t("e_fail"); render(); });
+  }
+
+  function nav(valid, last) {
+    return h("div", { class: "nav" },
+      step > 0 ? h("button", { class: "ghost", onclick: function () { stopCamera(); step--; render(); top(); }, text: t("back") }) : null,
+      h("button", { id: "nx", onclick: function () {
+        errors = {};
+        var bad = valid ? valid() : null;
+        if (bad) { render(); return; }
+        stopCamera();
+        var b = document.getElementById("nx"); b.disabled = true; b.textContent = t("saving");
+        step++;
+        persist().then(function () { render(); top(); }).catch(function () { render(); top(); });
+      }, text: t("next") }));
+  }
+
+  // ---------- about you, application, emergency contact, times ----------
+  function stepAbout() {
+    return h("div", { class: "card" }, header(), h("h2", { text: nm("about") }),
+      field(t("full_name"), txt("full_name"), "full_name"), field(t("preferred"), txt("preferred_name")), field(t("email"), txt("email", "email"), "email"),
+      field(t("address"), txt("address_line")), h("div", { class: "two" }, field(t("city"), txt("city")), field(t("zip"), txt("zip", "text"), "zip")),
+      h("label", { class: "f" }, t("language"), h("select", { onchange: function (e) { d.language = e.target.value; lang = d.language; d.language_touched = true; render(); } },
+        h("option", { value: "en", selected: d.language === "en" ? true : null, text: T.en.english }), h("option", { value: "es", selected: d.language === "es" ? true : null, text: T.es.spanish }))),
+      nav(function () {
+        if (d.full_name.trim().length < 2) { errors.full_name = t("f_name"); return true; }
+        if (d.email && !emailOk(d.email)) { errors.email = t("f_email"); return true; }
+        if (d.zip && digits(d.zip).length !== 5) { errors.zip = t("f_zip"); return true; }
+        return null;
+      }));
+  }
+  function stepApplication() {
+    var a = d.application;
+    return h("div", { class: "card" }, header(), h("h2", { text: nm("application") }), h("p", { text: t("app_p") }),
+      h("h3", { text: t("jobs_h") }),
+      [0, 1, 2].map(function (i) { return h("input", { type: "text", value: a.jobs[i] || "", placeholder: t("job_ph"), "aria-label": t("jobs_h") + " " + (i + 1), autocomplete: "off", oninput: function (e) { a.jobs[i] = e.target.value; } }); }),
+      h("label", { class: "f" }, t("school"), h("select", { onchange: function (e) { a.school = e.target.value; } }, h("option", { value: "", text: t("choose") }),
+        [["high_school", "school_hs"], ["college", "school_col"], ["neither", "school_none"]].map(function (o) { return h("option", { value: o[0], selected: a.school === o[0] ? true : null, text: t(o[1]) }); }))),
+      yesNo(t("authorized"), "authorized"), yesNo(t("adult"), "adult"), yesNo(t("lift"), "lift"),
+      h("label", { class: "f" }, t("how_heard"), h("input", { type: "text", value: a.how_heard || "", autocomplete: "off", oninput: function (e) { a.how_heard = e.target.value; } })),
+      nav(null));
+  }
+  function stepEmergency() {
+    return h("div", { class: "card" }, header(), h("h2", { text: nm("emergency") }),
+      field(t("emerg_name"), txt("emergency_name"), "emergency"), field(t("emerg_phone"), txt("emergency_phone", "tel")), field(t("emerg_rel"), txt("emergency_relation")),
+      h("label", { class: "f" }, t("car"), h("select", { onchange: function (e) { d.has_car = e.target.value === "yes" ? true : e.target.value === "no" ? false : null; } },
+        h("option", { value: "", text: t("choose") }), h("option", { value: "yes", selected: d.has_car === true ? true : null, text: t("yes") }), h("option", { value: "no", selected: d.has_car === false ? true : null, text: t("no") }))),
+      field(t("transport"), txt("transport_note")),
+      nav(function () {
+        if (d.emergency_name.trim().length < 2 || digits(d.emergency_phone).length < 10) { errors.emergency = t("f_emergency"); return true; }
+        return null;
+      }));
+  }
+  function openDays() {
+    var keys = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"], n = 0, now = Date.now();
+    for (var i = 1; i <= 90; i++) { var k = keys[new Date(now + i * 86400000).getUTCDay()]; if (k !== "sun" && d.weekly[k] && d.weekly[k].length) n++; }
+    return n;
+  }
+  function stepAvail() {
+    var grid = h("div", { class: "grid" }, h("span"), [1, 2, 3].map(function (s) { return h("span", { class: "h", text: t("t" + s) }); }));
+    DAYS.forEach(function (day) {
+      add(grid, h("b", { text: t(day) }));
+      [1, 2, 3].forEach(function (s) {
+        var on = (d.weekly[day] || []).indexOf(s) !== -1;
+        add(grid, h("button", { class: "cell" + (on ? " on" : ""), "aria-pressed": on ? "true" : "false", "aria-label": t(day) + " " + t("t" + s), onclick: function () {
+          var arr = (d.weekly[day] || []).slice(); var i = arr.indexOf(s); if (i === -1) arr.push(s); else arr.splice(i, 1); arr.sort();
+          if (arr.length) d.weekly[day] = arr; else delete d.weekly[day]; render();
+        }, text: on ? "✓" : "–" }));
+      });
+    });
+    return h("div", { class: "card" }, header(), h("h2", { text: t("avail_h") }), h("p", { text: t("avail_p") }), grid, err("weekly"),
+      h("div", { class: "note", text: t("open_days").replace("{n}", String(openDays())) }), field(t("avail_note"), txt("availability_note")),
+      nav(function () { if (!Object.keys(d.weekly).length) { errors.weekly = t("f_weekly"); return true; } return null; }));
+  }
+
+  // ---------- the headshot: camera or upload, cropped square and compressed here ----------
+  var OUT = 600, MAXB = 600 * 1024 - 2048;
+  function loadImage(file) {
+    function viaImg() { return new Promise(function (res, rej) { var u = URL.createObjectURL(file), im = new Image(); im.onload = function () { URL.revokeObjectURL(u); res(im); }; im.onerror = function () { URL.revokeObjectURL(u); rej(new Error("img")); }; im.src = u; }); }
+    if (window.createImageBitmap) return createImageBitmap(file, { imageOrientation: "from-image" }).catch(viaImg);
+    return viaImg();
+  }
+  function drawCrop(cv) {
+    var c = crop, ctx = cv.getContext("2d"), size = cv.width, w = c.img.width || c.img.naturalWidth, hh = c.img.height || c.img.naturalHeight;
+    var side = Math.min(w, hh) / c.zoom;
+    var sx = Math.min(w - side, Math.max(0, (w - side) / 2 + c.ox)), sy = Math.min(hh - side, Math.max(0, (hh - side) / 2 + c.oy));
+    c.sx = sx; c.sy = sy; c.side = side; c.ox = sx - (w - side) / 2; c.oy = sy - (hh - side) / 2; // keep the pan inside the picture
+    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, size, size); ctx.drawImage(c.img, sx, sy, side, side, 0, 0, size, size);
+  }
+  function exportJpeg() {
+    var cv = document.createElement("canvas"); cv.width = OUT; cv.height = OUT;
+    var c = crop, ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, OUT, OUT); ctx.drawImage(c.img, c.sx, c.sy, c.side, c.side, 0, 0, OUT, OUT);
+    return new Promise(function (resolve, reject) {
+      var q = 0.88;
+      (function tryOnce() { cv.toBlob(function (blob) {
+        if (!blob) { reject(new Error("blob")); return; }
+        if (blob.size <= MAXB || q <= 0.4) { resolve(blob); return; }
+        q -= 0.1; tryOnce();
+      }, "image/jpeg", q); })();
+    });
+  }
+  function cropper() {
+    var cv = h("canvas", { width: "600", height: "600", "aria-label": t("drag") });
+    var drag = null;
+    cv.addEventListener("pointerdown", function (e) { drag = { x: e.clientX, y: e.clientY, ox: crop.ox, oy: crop.oy }; cv.setPointerCapture(e.pointerId); });
+    cv.addEventListener("pointermove", function (e) {
+      if (!drag) return;
+      var rect = cv.getBoundingClientRect(), scale = crop.side / rect.width;
+      crop.ox = drag.ox - (e.clientX - drag.x) * scale; crop.oy = drag.oy - (e.clientY - drag.y) * scale; drawCrop(cv);
+    });
+    cv.addEventListener("pointerup", function () { drag = null; });
+    var zoom = h("input", { type: "range", min: "1", max: "3", step: "0.05", value: String(crop.zoom), "aria-label": t("zoom"), oninput: function (e) { crop.zoom = parseFloat(e.target.value); drawCrop(cv); } });
+    setTimeout(function () { drawCrop(cv); }, 0);
+    return h("div", { class: "shot" }, cv, h("p", { text: t("drag") }), zoom,
+      h("button", { id: "usep", onclick: function () {
+        var b = document.getElementById("usep"); b.disabled = true; b.textContent = t("working");
+        exportJpeg().then(b64).then(function (data) { return post({ action: "headshot", token: token, data_base64: data }); }).then(function (r) {
+          if (r.ok) { hasShot = true; crop = null; errors = {}; } else { errors.photo = t("photo_err"); }
+          render();
+        }).catch(function () { errors.photo = t("photo_err"); render(); });
+      }, text: t("use_photo") }));
+  }
+  function picker(label, capture) {
+    var inp = h("input", { type: "file", accept: "image/*", style: "display:none", onchange: function (e) {
+      var f = e.target.files && e.target.files[0]; if (!f) return;
+      loadImage(f).then(function (img) { crop = { img: img, zoom: 1, ox: 0, oy: 0 }; errors = {}; render(); }).catch(function () { errors.photo = t("photo_err"); render(); });
+    } });
+    if (capture) inp.setAttribute("capture", "user");
+    return h("span", null, inp, h("button", { class: "small", onclick: function () { inp.click(); }, text: label }));
+  }
+  function stepPhoto() {
+    var w = cfg.wording && cfg.wording.photo_consent;
+    return h("div", { class: "card" }, header(), h("h2", { text: t("photo_h") }), h("p", { text: t("photo_p") }),
+      crop ? cropper() : h("div", { class: "shot" }, hasShot ? h("p", { class: "ok", text: "✓ " + t("saved_photo") }) : null, h("div", null, picker(t("take"), true), picker(hasShot ? t("retake") : t("upload"), false))),
+      err("photo"),
+      chk(wtext(w, t("consent_default")), d.photo_consent, function (v) { d.photo_consent = v; }), err("photo_consent"),
+      nav(function () {
+        if (cfg.photo_required && !hasShot) { errors.photo = t("f_photo"); return true; }
+        if (hasShot && !d.photo_consent) { errors.photo_consent = t("f_photo_consent"); return true; }
+        return null;
+      }));
+  }
+
+  // ---------- the intro video: recorded here (MediaRecorder) or chosen from the phone; then three fun facts ----------
+  var MAX_REC = 60, MAX_FILE_SEC = 90;
+  function stopCamera() {
+    if (recTimer) { clearInterval(recTimer); recTimer = null; }
+    if (recorder && recorder.state === "recording") { try { recorder.ondataavailable = null; recorder.onstop = null; recorder.stop(); } catch (e) { /* already stopped */ } }
+    recorder = null;
+    if (live) { live.getTracks().forEach(function (tr) { tr.stop(); }); live = null; }
+  }
+  function uploadVideo(blob) {
+    stopCamera(); vidBusy = true; vidMsg = ""; render();
+    var type = blob.type && blob.type.indexOf("video/") === 0 ? blob.type.split(";")[0] : "video/mp4";
+    fetch(FN, { method: "POST", headers: { "content-type": type, "x-org": ORG, "x-draft-token": token }, body: blob })
+      .then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); })
+      .then(function (r) {
+        vidBusy = false;
+        if (r.ok) { hasIntro = true; vidMsg = ""; } else vidMsg = r.error === "size" ? t("vid_big") : r.error === "type" ? t("vid_type") : t("vid_fail");
+        render();
+      }).catch(function () { vidBusy = false; vidMsg = t("vid_fail"); render(); });
+  }
+  function videoSeconds(file) {
+    return new Promise(function (res) {
+      var v = document.createElement("video"), u = URL.createObjectURL(file);
+      v.preload = "metadata";
+      v.onloadedmetadata = function () { URL.revokeObjectURL(u); res(isFinite(v.duration) ? v.duration : null); };
+      v.onerror = function () { URL.revokeObjectURL(u); res(null); };
+      v.src = u;
+    });
+  }
+  function startCamera() {
+    vidMsg = "";
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 } }, audio: true }).then(function (s) { live = s; render(); })
+      .catch(function () { vidMsg = t("cam_denied"); render(); });
+  }
+  function startRecording() {
+    if (!live) return;
+    var types = ["video/mp4;codecs=avc1,mp4a.40.2", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"], mt = "";
+    for (var i = 0; i < types.length; i++) { if (window.MediaRecorder.isTypeSupported && window.MediaRecorder.isTypeSupported(types[i])) { mt = types[i]; break; } }
+    var chunks = [];
+    try { recorder = new MediaRecorder(live, mt ? { mimeType: mt, videoBitsPerSecond: 1500000 } : { videoBitsPerSecond: 1500000 }); } catch (e) { vidMsg = t("cam_denied"); render(); return; }
+    recorder.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+    var rec = recorder;
+    recorder.onstop = function () { var blob = new Blob(chunks, { type: (rec.mimeType || mt || "video/webm").split(";")[0] }); uploadVideo(blob); };
+    recSecs = 0; recorder.start(1000);
+    recTimer = setInterval(function () {
+      recSecs++; var el = document.getElementById("rt"); if (el) el.textContent = fmt(t("rec_time"), { s: recSecs });
+      if (recSecs >= MAX_REC && recorder && recorder.state === "recording") recorder.stop();
+    }, 1000);
+    render();
+  }
+  function videoBox() {
+    if (vidBusy) return h("p", { text: t("vid_up"), role: "status" });
+    if (live) {
+      var v = h("video", { autoplay: true, muted: true, playsinline: true, "aria-label": t("intro_h") });
+      v.muted = true; v.srcObject = live;
+      var recording = recorder && recorder.state === "recording";
+      return h("div", { class: "shot" }, v,
+        recording ? h("p", { id: "rt", role: "status", text: fmt(t("rec_time"), { s: recSecs }) }) : h("p", { text: t("rec_limit") }),
+        recording ? h("button", { onclick: function () { if (recorder && recorder.state === "recording") recorder.stop(); }, text: t("rec_stop") }) : h("button", { onclick: startRecording, text: t("rec_start") }),
+        h("button", { class: "ghost", onclick: function () { stopCamera(); render(); }, text: t("rec_cancel") }));
+    }
+    var canRecord = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+    var inp = h("input", { type: "file", accept: "video/*", style: "display:none", onchange: function (e) {
+      var f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+      if (f.size > (cfg.intro.max_mb || 40) * 1048576) { vidMsg = t("vid_big"); render(); return; }
+      videoSeconds(f).then(function (sec) { if (sec && sec > MAX_FILE_SEC) { vidMsg = t("vid_long"); render(); return; } uploadVideo(f); });
+    } });
+    return h("div", { class: "shot" },
+      hasIntro ? h("p", { class: "ok", text: "✓ " + t("vid_saved") }) : null,
+      h("div", null, canRecord ? h("button", { class: "small", onclick: startCamera, text: hasIntro ? t("vid_again") : t("rec_here") }) : null, inp, h("button", { class: "small", onclick: function () { inp.click(); }, text: t("rec_file") }),
+        hasIntro ? h("button", { class: "small ghost", onclick: function () { post({ action: "intro_remove", token: token }).then(function () { hasIntro = false; d.intro_consent = false; render(); }); }, text: t("vid_remove") }) : null));
+  }
+  function stepIntro() {
+    var w = cfg.wording && cfg.wording.intro_consent, f = d.facts;
+    function fact(label, key) { return h("label", { class: "f" }, label, h("input", { type: "text", maxlength: "90", value: f[key] || "", autocomplete: "off", oninput: function (e) { f[key] = e.target.value; } })); }
+    return h("div", { class: "card" }, header(), h("h2", { text: t("intro_h") }), h("p", { text: t("intro_p") }),
+      h("ul", { class: "tips" }, [1, 2, 3, 4].map(function (i) { return h("li", { text: t("tip" + i) }); })),
+      videoBox(), vidMsg ? h("p", { class: "err", role: "alert", text: vidMsg }) : null, h("p", { text: t("vid_later") }),
+      h("h3", { text: t("facts_h") }), h("p", { text: t("facts_p") }), fact(t("fact_music"), "music"), fact(t("fact_hobby"), "hobby"), fact(t("fact_secret"), "secret"),
+      chk(wtext(w, t("intro_consent_default")), d.intro_consent, function (v) { d.intro_consent = v; }), err("intro_consent"),
+      nav(function () {
+        if (hasIntro && !d.intro_consent) { errors.intro_consent = t("f_intro_consent"); return true; }
+        return null;
+      }));
+  }
+
+  // ---------- uniform sizes ----------
+  function stepUniform() {
+    return h("div", { class: "card" }, header(), h("h2", { text: t("sizes_h") }), h("p", { text: t("sizes_p") }),
+      h("label", { class: "f" }, t("shirt"), h("select", { onchange: function (e) { d.shirt = e.target.value; } }, h("option", { value: "", text: t("choose") }), SHIRTS.map(function (s) { return h("option", { value: s, selected: d.shirt === s ? true : null, text: s }); }))),
+      h("label", { class: "f" }, t("shoe"), h("input", { type: "text", maxlength: "8", value: d.shoe || "", placeholder: t("shoe_hint"), autocomplete: "off", oninput: function (e) { d.shoe = e.target.value; } })),
+      h("p", { text: t("sizes_later") }), nav(null));
+  }
+
+  // ---------- the vault steps: tax forms, I-9 documents, direct deposit ----------
+  function vaultNote() { return h("div", { class: "note", text: wtext(cfg.wording && cfg.wording.vault_note, t("vault_note_default")) }); }
+  function kindFiles(kind) { return files.filter(function (f) { return f.kind === kind; }); }
+  function fileSlot(kind, title, multiple) {
+    var mine = kindFiles(kind);
+    var inp = h("input", { type: "file", accept: "application/pdf,image/*", style: "display:none", onchange: function (e) {
+      var f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+      if (f.size > 6 * 1024 * 1024) { errors["f_" + kind] = t("file_err"); render(); return; }
+      b64(f).then(function (data) { return post({ action: "vault_upload", token: token, kind: kind, file_name: f.name, data_base64: data }); }).then(function (r) {
+        if (r.ok) { files.push({ id: r.id, kind: kind, name: r.name || f.name }); d.vault_ack = true; errors = {}; } else { errors["f_" + kind] = t("file_err"); }
+        render();
+      }).catch(function () { errors["f_" + kind] = t("file_err"); render(); });
+    } });
+    return h("div", { class: "slot" }, h("b", { text: title }),
+      mine.map(function (f) { return h("div", null, h("small", { text: "✓ " + t("added") + ": " + (f.name || "") + " " }), h("button", { class: "small ghost", onclick: function () {
+        post({ action: "vault_remove", token: token, id: f.id }).then(function () { files = files.filter(function (x) { return x.id !== f.id; }); render(); });
+      }, text: t("remove") })); }),
+      inp, (multiple || !mine.length) ? h("button", { class: "small", onclick: function () { inp.click(); }, text: mine.length ? t("add_more") : t("add") }) : null, err("f_" + kind));
+  }
+  function docLink(url, label) { var u = httpUrl(url); return u ? h("a", { class: "btn", href: u, target: "_blank", rel: "noopener", text: label }) : null; }
+  // the typed W-4 information is sent once to be filled in; the Social Security number lives only in this form field and is cleared as soon as it is sent (never in the draft)
+  var prepMsg = "", prepOk = false, prepBusy = false;
+  function prepSection() {
+    var parts = String(d.full_name || "").trim().split(/\s+/), first = parts.slice(0, -1).join(" ") || parts[0] || "", last = parts.length > 1 ? parts[parts.length - 1] : "";
+    var f = {};
+    function inp(id, label, val, mode, max) { f[id] = h("input", { type: "text", id: id, value: val || "", autocomplete: "off", spellcheck: "false", inputmode: mode || "text", maxlength: max || "80" }); return h("label", { class: "f" }, label, f[id]); }
+    var fs = h("select", { id: "w4fil" }, [["single", "f_single"], ["married_joint", "f_married"], ["head", "f_head"]].map(function (o) { return h("option", { value: o[0], text: t(o[1]) }); }));
+    var c2 = h("input", { type: "checkbox", id: "w4c2" });
+    if (prepOk) return h("div", { class: "slot" }, h("p", { class: "ok", text: t("prep_done") }), h("p", { text: t("prep_later") }));
+    return h("div", { class: "slot" }, h("b", { text: t("prep_h") }), h("p", { text: t("prep_p") }),
+      h("div", { class: "two" }, inp("w4f", t("prep_name1"), first), inp("w4l", t("prep_name2"), last)), inp("w4a", t("address"), d.address_line), h("div", { class: "two" }, inp("w4c", t("city"), d.city), inp("w4s", t("prep_state"), "MN", "text", "2")),
+      inp("w4z", t("zip"), d.zip, "numeric", "5"), inp("w4ssn", t("ssn"), "", "numeric", "11"), h("label", { class: "f" }, t("filing"), fs),
+      h("label", { class: "chk" }, c2, h("span", { text: t("step2c") })), inp("w4k", t("kids"), "0", "numeric", "2"), inp("w4o", t("others"), "0", "numeric", "2"), inp("w4i", t("other_income"), "", "numeric", "8"), inp("w4d", t("deductions"), "", "numeric", "8"), inp("w4e", t("extra"), "", "numeric", "6"),
+      prepMsg ? h("p", { class: "err", role: "alert", text: prepMsg }) : null,
+      h("button", { id: "w4go", disabled: prepBusy, onclick: function () {
+        var v = function (id) { return document.getElementById(id).value; };
+        var w4 = { first_name: v("w4f"), last_name: v("w4l"), address: v("w4a"), city: v("w4c"), state: v("w4s"), zip: v("w4z"), ssn: v("w4ssn"), filing: v("w4fil"), step2c: document.getElementById("w4c2").checked, children: v("w4k"), other_dependents: v("w4o"), other_income: v("w4i"), deductions: v("w4d"), extra_withholding: v("w4e") };
+        document.getElementById("w4ssn").value = ""; prepBusy = true; prepMsg = ""; render();
+        post({ action: "prefill_forms", token: token, w4: w4 }).then(function (r) {
+          w4 = null; prepBusy = false;
+          if (r.ok) { prepOk = true; d.vault_ack = true; } else prepMsg = r.error === "invalid" ? t("prep_bad") : r.error === "library_empty" ? t("prep_lib") : t("prep_fail");
+          render();
+        }).catch(function () { prepBusy = false; prepMsg = t("prep_fail"); render(); });
+      }, text: t("prep_btn") }));
+  }
+  function stepTax() {
+    ensureContent();
+    var docs = (content && content.docs) || {};
+    return h("div", { class: "card" }, header(), h("h2", { text: t("tax_h") }), prepSection(), h("p", { text: t("or_upload") }), h("p", { text: t("tax_p") }), vaultNote(),
+      h("p", null, docLink(docs.w4, t("w4_dl")), docLink(docs.w4_state, t("w4s_dl"))),
+      fileSlot("w4", t("w4")), fileSlot("w4_state", t("w4s")),
+      h("p", { text: wtext(cfg.wording && cfg.wording.forms_note, t("forms_default")) }), nav(null));
+  }
+  function stepI9() {
+    ensureContent();
+    var docs = (content && content.docs) || {};
+    return h("div", { class: "card" }, header(), h("h2", { text: t("i9_h") }), h("p", { text: t("i9_p") }), vaultNote(), h("p", null, docLink(docs.i9, t("i9_dl"))), fileSlot("i9_documents", t("i9"), true), nav(null));
+  }
+  function routingOk(s) {
+    s = String(s || "").replace(/[\s-]/g, "");
+    if (!/^\d{9}$/.test(s)) return false;
+    var n = s.split("").map(Number);
+    return (3 * (n[0] + n[3] + n[6]) + 7 * (n[1] + n[4] + n[7]) + (n[2] + n[5] + n[8])) % 10 === 0;
+  }
+  function accountOk(s) { return /^\d{4,17}$/.test(String(s || "").replace(/[\s-]/g, "")); }
+  function stepBank() {
+    var m = d.bank_method;
+    if (!bankSaved && kindFiles("direct_deposit_entry").length && m === "entry") bankSaved = "••••";
+    var radio = function (v, label) { return h("label", { class: "radio" }, h("input", { type: "radio", name: "bm", checked: m === v, onchange: function () { d.bank_method = v; render(); } }), h("span", { text: label })); };
+    var body = null;
+    if (m === "check") body = fileSlot("direct_deposit_check", t("check_slot"));
+    if (m === "entry") {
+      if (bankSaved) body = h("div", { class: "slot" }, h("p", { class: "ok", text: "✓ " + fmt(t("bank_saved"), { n: bankSaved }) }), h("button", { class: "small ghost", onclick: function () { bankSaved = null; render(); }, text: t("bank_change") }));
+      else {
+        var rt = h("input", { type: "text", inputmode: "numeric", maxlength: "11", autocomplete: "off", spellcheck: "false", id: "rt9" });
+        var ac = h("input", { type: "text", inputmode: "numeric", maxlength: "20", autocomplete: "off", spellcheck: "false", id: "acct" });
+        var ty = h("select", { id: "acty" }, h("option", { value: "", text: t("choose") }), h("option", { value: "checking", text: t("checking") }), h("option", { value: "savings", text: t("savings") }));
+        body = h("div", { class: "slot" }, h("label", { class: "f" }, t("routing"), rt), h("label", { class: "f" }, t("account"), ac), h("label", { class: "f" }, t("acct_type"), ty),
+          bankMsg ? h("p", { class: "err", role: "alert", text: bankMsg }) : null,
+          h("button", { id: "bsave", onclick: function () {
+            if (!routingOk(rt.value)) { bankMsg = t("b_routing"); render(); return; }
+            if (!accountOk(ac.value)) { bankMsg = t("b_account"); render(); return; }
+            if (!ty.value) { bankMsg = t("b_type"); render(); return; }
+            var btn = document.getElementById("bsave"); btn.disabled = true; btn.textContent = t("working");
+            post({ action: "bank_entry", token: token, routing: rt.value, account: ac.value, type: ty.value }).then(function (r) {
+              rt.value = ""; ac.value = "";
+              if (r.ok) { bankSaved = r.last4; bankMsg = ""; d.vault_ack = true; files = files.filter(function (f) { return f.kind !== "direct_deposit_entry"; }); files.push({ id: r.id, kind: "direct_deposit_entry", name: null }); }
+              else bankMsg = r.error === "routing" ? t("b_routing") : r.error === "account" ? t("b_account") : r.error === "type" ? t("b_type") : t("e_fail");
+              render();
+            }).catch(function () { bankMsg = t("e_fail"); render(); });
+          }, text: t("bank_save") }));
+      }
+    }
+    return h("div", { class: "card" }, header(), h("h2", { text: t("bank_h") }), h("p", { text: wtext(cfg.wording && cfg.wording.bank_note, t("bank_default")) }), vaultNote(),
+      h("h3", { text: t("bank_how") }), radio("check", t("bank_check")), radio("entry", t("bank_type")), radio("later", t("bank_later")), body, nav(null));
+  }
+
+  // ---------- training started: the first lessons and the onboarding videos ----------
+  function toggle(list, id) { var i = list.indexOf(id); if (i === -1) list.push(id); else list.splice(i, 1); }
+  function stepTraining() {
+    ensureContent();
+    var tr = content && content.training;
+    var kids = [];
+    if (!content) kids.push(h("p", { text: t("loading") }));
+    else if (!tr || (!tr.course && !(tr.videos || []).length)) kids.push(h("p", { text: t("training_none") }));
+    else {
+      if (tr.course) kids.push(h("p", { text: fmt(t("course_line"), { name: (lang === "es" && tr.course.name_es) || tr.course.name, n: tr.course.total, m: tr.course.minutes }) }));
+      (tr.items || []).forEach(function (it) {
+        var done = d.training_done.indexOf(it.id) !== -1, url = httpUrl(it.url), body = (lang === "es" && it.body_es) || it.body;
+        kids.push(h("div", { class: "lesson" + (done ? " done" : "") }, h("b", { text: (done ? "✓ " : "") + ((lang === "es" && it.title_es) || it.title) + (it.minutes ? " (" + it.minutes + " min)" : "") }),
+          body ? h("details", { class: "sop" }, h("summary", { text: t("open_lesson") }), h("div", { class: "body", text: body })) : null,
+          url ? h("p", null, h("a", { class: "btn", href: url, target: "_blank", rel: "noopener", text: t("open_lesson") })) : null,
+          chk(done ? t("done_mark") : t("mark_done"), done, function (v) { toggle(d.training_done, it.id); render(); })));
+      });
+      var vids = tr.videos || [];
+      if (vids.length) kids.push(h("h3", { text: t("videos_h") }));
+      vids.forEach(function (v) {
+        var done = d.videos_done.indexOf(v.id) !== -1, url = httpUrl(v.url), direct = url && /\.(mp4|mov|webm)(\?|$)/i.test(url);
+        kids.push(h("div", { class: "lesson" + (done ? " done" : "") }, h("b", { text: (done ? "✓ " : "") + v.title }), v.description ? h("p", { text: v.description }) : null,
+          direct ? h("video", { src: url, controls: true, playsinline: true, preload: "none" }) : (url ? h("p", null, h("a", { class: "btn", href: url, target: "_blank", rel: "noopener", text: t("watch") })) : null),
+          chk(t("watched"), done, function () { toggle(d.videos_done, v.id); render(); })));
+      });
+      if (tr.videos_pending > 0 && !vids.length) kids.push(h("p", { text: t("videos_soon") }));
+      kids.push(h("div", { class: "note", text: fmt(t("training_prog"), { a: d.training_done.length + d.videos_done.length }) }));
+    }
+    return h("div", { class: "card" }, header(), h("h2", { text: t("training_h") }), h("p", { text: t("training_p") }), kids, nav(null));
+  }
+
+  // ---------- agreements ----------
+  function stepAgree() {
+    ensureContent();
+    var sops = (content && content.sops) || [];
+    return h("div", { class: "card" }, header(), h("h2", { text: t("agree_h") }), h("p", { text: t("agree_p") }),
+      !content ? h("p", { text: t("loading") }) : null,
+      sops.map(function (s) {
+        var title = (lang === "es" && s.title_es) || s.title, body = (lang === "es" && s.body_es) || s.body;
+        var on = d.sop_acks.indexOf(s.id) !== -1;
+        return h("details", { class: "sop" }, h("summary", { text: title }), h("div", { class: "body", text: body }),
+          chk(t("read"), on, function (v) { var i = d.sop_acks.indexOf(s.id); if (v && i === -1) d.sop_acks.push(s.id); if (!v && i !== -1) d.sop_acks.splice(i, 1); }));
+      }), err("sop"),
+      nav(function () { if (!content) return true; var have = d.sop_acks; if (sops.some(function (s) { return have.indexOf(s.id) === -1; })) { errors.sop = t("f_sop"); return true; } return null; }));
+  }
+
+  // ---------- the PIN and finishing ----------
+  function stepFinish() {
+    var p1 = h("input", { type: "password", inputmode: "numeric", maxlength: "4", autocomplete: "new-password", class: "pin", id: "p1" });
+    var p2 = h("input", { type: "password", inputmode: "numeric", maxlength: "4", autocomplete: "new-password", class: "pin", id: "p2" });
+    var hp = h("input", { class: "hp", id: "wb", tabindex: "-1", autocomplete: "off", "aria-hidden": "true" });
+    var msg = h("p", { class: "err", id: "fe", role: "alert" });
+    return h("div", { class: "card" }, header(), h("h2", { text: t("pin_h") }), h("p", { text: t("pin_p") }),
+      cfg.vault && cfg.vault.enabled ? null : h("div", { class: "note", text: t("forms_bring") }),
+      h("label", { class: "f" }, t("pin1"), p1), h("label", { class: "f" }, t("pin2"), p2), hp, msg,
+      h("div", { class: "nav" }, h("button", { class: "ghost", onclick: function () { step--; render(); top(); }, text: t("back") }),
+        h("button", { id: "fin", onclick: function () {
+          msg.textContent = "";
+          if (!/^\d{4}$/.test(p1.value)) { msg.textContent = t("pin_bad"); return; }
+          if (p1.value !== p2.value) { msg.textContent = t("pin_mismatch"); return; }
+          var b = document.getElementById("fin"); b.disabled = true; b.textContent = t("working");
+          persist().then(function () { return post({ action: "finish", token: token, pin: p1.value, website: hp.value }); }).then(function (r) {
+            if (r.ok) { try { localStorage.removeItem(LS); } catch (e) { /* private window */ } doneInfo = r; step = 999; render(); top(); return; }
+            b.disabled = false; b.textContent = t("finish");
+            if (r.error === "weak_pin") msg.textContent = t("weak");
+            else if (r.error === "pin") msg.textContent = t("pin_bad");
+            else if (r.error === "exists") msg.textContent = t("e_exists");
+            else if (r.error === "conflict") msg.textContent = t("e_conflict");
+            else if (r.error === "incomplete") {
+              var f = r.fields || [], first = f[0], s = STEPS();
+              var where = { name: "about", email: "about", zip: "about", emergency: "emergency", weekly: "avail", photo: "photo", photo_consent: "photo", intro_consent: "intro", sop: "agree" };
+              errors = {}; f.forEach(function (c) { errors[c === "name" ? "full_name" : c] = t("f_" + c); });
+              var idx = s.indexOf(where[first]); step = idx >= 0 ? idx : 0; render(); top();
+            } else msg.textContent = t("e_fail");
+          }).catch(function () { b.disabled = false; b.textContent = t("finish"); msg.textContent = t("e_fail"); });
+        }, text: t("finish") })));
+  }
+  function stepDone() {
+    var w = doneInfo && doneInfo.welcome;
+    return h("div", { class: "card" }, header(), h("h1", { text: t("done_h") }), h("p", { class: "ok", text: "✓" }), h("p", { text: t("done_p") }), w ? h("div", { class: "note", text: wtext(w, "") }) : null);
+  }
+
+  var RENDER = { about: stepAbout, application: stepApplication, emergency: stepEmergency, avail: stepAvail, photo: stepPhoto, intro: stepIntro, uniform: stepUniform, tax: stepTax, i9: stepI9, bank: stepBank, training: stepTraining, agree: stepAgree, finish: stepFinish };
+  function render() {
+    var el;
+    if (!cfg || !cfg.open) el = h("div", { class: "card" }, header(), h("h1", { text: t("closed_h") }), h("p", { text: t("closed_p") }));
+    else if (step === 999) el = stepDone();
+    else if (!token) el = stepStart();
+    else el = RENDER[STEPS()[Math.min(step, STEPS().length - 1)]]();
+    app.replaceChildren(el);
+  }
+
+  fetch(FN + "?config=1&org=" + encodeURIComponent(ORG)).then(function (r) { return r.json(); }).then(function (c) { cfg = c; render(); }).catch(function () { cfg = { open: false }; render(); });
+})();
+</script>
+</body>
+</html>

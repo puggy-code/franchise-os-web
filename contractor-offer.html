@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<meta name="referrer" content="no-referrer">
+<title>Your offer</title>
+<!--
+  A contractor's two token links (Jack, 2026-11-04; PEOPLE-ONBOARDING.md), no login, in English or Spanish (the toggle at the top, or &l=es on the link: the offer text a Spanish-speaking contractor
+  gets carries it):
+    contractor-offer.html?o=<token>   one job OFFERED to them: what, when, where (city only), the flat price, when the offer ends. They may accept or decline; nothing is assigned. The first accept in a group wins.
+    contractor-offer.html?s=<token>   their Form 1099-NEC statement for the year: open the PDF, ask for a paper copy, or withdraw consent to electronic delivery (IRS Pub 1179 requires both options).
+  The function contractor-offer answers both. Every piece of text from the server is put on the page as text, never as HTML. Goes to the separate public web repo.
+-->
+<style>
+  :root { --bg: #f4f6fb; --card: #fff; --ink: #10151e; --muted: #5e6776; --line: #dde1e7; --brand: #0a47a8; --brand-ink: #fff; --ok: #157347; --err: #b42318; --soft: #eaf0fb; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0e1118; --card: #181c26; --ink: #eef1f7; --muted: #a2a9b8; --line: #2a3040; --brand: #6ea3ff; --brand-ink: #0e1118; --ok: #6ee7a0; --err: #fca5a5; --soft: #1f2636; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px 16px 56px; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif; line-height: 1.5; }
+  .wrap { max-width: 520px; margin: 0 auto; }
+  .card { background: var(--card); border-radius: 20px; padding: 22px; margin: 0 0 14px; }
+  h1 { font-size: 24px; margin: 6px 0; letter-spacing: -.3px; }
+  p { color: var(--muted); margin: 0 0 10px; }
+  .brand { color: var(--brand); font-weight: 800; font-size: 13px; letter-spacing: .4px; text-transform: uppercase; }
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .lang button { width: auto; margin: 0 0 0 6px; padding: 6px 12px; font-size: 13px; background: transparent; color: var(--brand); border: 1px solid var(--line); border-radius: 999px; }
+  .lang button.on { background: var(--brand); color: var(--brand-ink); }
+  .price { font-size: 38px; font-weight: 800; letter-spacing: -1px; margin: 8px 0 0; } .price small { font-size: 14px; color: var(--muted); font-weight: 600; letter-spacing: 0; }
+  dl { margin: 12px 0; } dt { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 10px; } dd { margin: 2px 0 0; }
+  button { width: 100%; background: var(--brand); color: var(--brand-ink); border: 0; border-radius: 999px; padding: 15px; font: inherit; font-size: 17px; font-weight: 800; margin-top: 12px; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--brand); border: 1px solid var(--line); }
+  button[disabled] { opacity: .5; cursor: default; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .note { background: var(--soft); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--muted); margin: 12px 0; }
+  .ok { color: var(--ok); font-weight: 700; } .err { color: var(--err); font-weight: 700; }
+  a.btn { display: block; text-align: center; text-decoration: none; background: var(--brand); color: var(--brand-ink); border-radius: 999px; padding: 15px; font-weight: 800; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap"><div id="app"><div class="card"><p>…</p></div></div></div>
+<script>
+(function () {
+  "use strict";
+  var FN = "https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/contractor-offer";
+  var q = new URLSearchParams(location.search), O = q.get("o"), S = q.get("s");
+  var app = document.getElementById("app");
+  var lang = q.get("l") === "es" ? "es" : q.get("l") === "en" ? "en" : null;
+  if (!lang) { try { lang = localStorage.getItem("pcoff_lang"); } catch (e) { /* private window */ } }
+  if (lang !== "es" && lang !== "en") lang = /^es/i.test(navigator.language || "") ? "es" : "en";
+  var last = null; // what to draw again when the language changes
+  var SLOT = { en: { "0900": "9:00 a.m.", "1140": "11:40 a.m.", "1440": "2:40 p.m." }, es: { "0900": "9:00 a. m.", "1140": "11:40 a. m.", "1440": "2:40 p. m." } };
+
+  var T = {
+    en: {
+      accepted: "You accepted this job. We will confirm the details with you.", declined: "You declined this offer. No problem, there is nothing more to do.", expired: "This offer has ended.", lost: "This job was taken by someone else. Thank you for answering.", withdrawn: "This offer was withdrawn.", unknown: "This link is not valid.",
+      h_accepted: "Accepted", h_offer: "This offer", offered_h: "a job is offered to you", offered_h_anon: "A job is offered to you", flat: " flat price", job: "Job", when: "When", where: "Where", details: "Details", answer_by: "Answer by", tbd: "Date to be agreed", starting: "starting",
+      note: "This is an offer, not an assignment. You can decline for any reason. You bring your own tools and set your own schedule inside the job's window. The first contractor to accept gets the job.", accept: "Accept this job", decline: "Decline",
+      you_accepted: "You accepted this job", thanks: "✓ Thank you.", confirm_soon: "We will confirm the details with you shortly.", flat_word: "flat", h_declined: "Declined", h_taken: "Already taken", h_ended: "This offer has ended", h_answered: "Already answered", answered_default: "This offer was already answered.",
+      not_eligible: "We cannot take your answer right now: your account is not approved, or your certificate of insurance has expired. Please contact us.", try_again: "That did not work. Please try again.", wrong: "Something went wrong", wrong_p: "Please try again in a moment.",
+      bad_link: "This link is not valid", bad_link_p: "Please use the link in your text or email.",
+      st_h: "Your {y} Form 1099-NEC", st_p: "This is your statement of what we paid you in {y}. Keep it with your tax records.", open_pdf: "Open the PDF", st_note: "This statement is not a government filing and does not replace the copy filed with the IRS. You can ask for a paper copy, or withdraw your consent to electronic delivery, at any time and at no charge. The statement stays available here through October 15 of next year.",
+      st_title: "Your 1099 statement", st_gone: "This statement is no longer available online. Please contact us for a copy.", st_invalid: "This link is not valid, or the statement is not ready.", paper_asked: "✓ You asked for a paper copy.", paper_btn: "Mail me a paper copy", withdraw: "Withdraw my consent to electronic delivery", paper_ok: "Thank you. We will mail you a paper copy.", withdraw_confirm: "Withdraw your consent to electronic delivery? Future statements will be mailed.", withdraw_ok: "Done. Future statements will be mailed to you."
+    },
+    es: {
+      accepted: "Aceptaste este trabajo. Confirmaremos los detalles contigo.", declined: "Rechazaste esta oferta. No hay problema, no tienes que hacer nada más.", expired: "Esta oferta terminó.", lost: "Otra persona tomó este trabajo. Gracias por responder.", withdrawn: "Esta oferta fue retirada.", unknown: "Este enlace no es válido.",
+      h_accepted: "Aceptado", h_offer: "Esta oferta", offered_h: "se te ofrece un trabajo", offered_h_anon: "Se te ofrece un trabajo", flat: " precio fijo", job: "Trabajo", when: "Cuándo", where: "Dónde", details: "Detalles", answer_by: "Responde antes de", tbd: "Fecha por acordar", starting: "a partir de las",
+      note: "Esto es una oferta, no una asignación. Puedes rechazarla por cualquier motivo. Traes tus propias herramientas y decides tu horario dentro de la ventana del trabajo. La primera persona contratista que acepte se queda con el trabajo.", accept: "Aceptar este trabajo", decline: "Rechazar",
+      you_accepted: "Aceptaste este trabajo", thanks: "✓ Gracias.", confirm_soon: "Confirmaremos los detalles contigo en breve.", flat_word: "fijo", h_declined: "Rechazado", h_taken: "Ya fue tomado", h_ended: "Esta oferta terminó", h_answered: "Ya se respondió", answered_default: "Esta oferta ya fue respondida.",
+      not_eligible: "No podemos recibir tu respuesta ahora: tu cuenta no está aprobada, o tu certificado de seguro venció. Por favor contáctanos.", try_again: "No funcionó. Inténtalo de nuevo.", wrong: "Algo salió mal", wrong_p: "Inténtalo de nuevo en un momento.",
+      bad_link: "Este enlace no es válido", bad_link_p: "Usa el enlace de tu mensaje de texto o correo electrónico.",
+      st_h: "Tu Formulario 1099-NEC de {y}", st_p: "Este es tu comprobante de lo que te pagamos en {y}. Guárdalo con tus registros de impuestos.", open_pdf: "Abrir el PDF", st_note: "Este comprobante no es una presentación ante el gobierno y no reemplaza la copia presentada al IRS. Puedes pedir una copia en papel, o retirar tu consentimiento para la entrega electrónica, en cualquier momento y sin costo. El comprobante sigue disponible aquí hasta el 15 de octubre del año siguiente.",
+      st_title: "Tu comprobante 1099", st_gone: "Este comprobante ya no está disponible en línea. Por favor contáctanos para pedir una copia.", st_invalid: "Este enlace no es válido, o el comprobante todavía no está listo.", paper_asked: "✓ Pediste una copia en papel.", paper_btn: "Envíenme una copia en papel", withdraw: "Retirar mi consentimiento para la entrega electrónica", paper_ok: "Gracias. Te enviaremos una copia en papel.", withdraw_confirm: "¿Retirar tu consentimiento para la entrega electrónica? Los próximos comprobantes se enviarán por correo.", withdraw_ok: "Listo. Los próximos comprobantes se te enviarán por correo."
+    }
+  };
+  function t(k, o) { var s = (T[lang] && T[lang][k]) || T.en[k] || k; if (o) s = s.replace(/\{(\w+)\}/g, function (m, x) { return o[x] === undefined ? m : o[x]; }); return s; }
+
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    attrs = attrs || {};
+    Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === "class") el.className = v; else if (k === "text") el.textContent = v; else if (k.indexOf("on") === 0) el.addEventListener(k.slice(2), v); else el.setAttribute(k, v === true ? "" : v);
+    });
+    for (var i = 2; i < arguments.length; i++) add(el, arguments[i]);
+    return el;
+  }
+  function add(el, c) { if (c === null || c === undefined || c === false) return; if (Array.isArray(c)) { c.forEach(function (x) { add(el, x); }); return; } el.appendChild(typeof c === "string" ? document.createTextNode(c) : c); }
+  function langBar() {
+    function pick(l) { lang = l; try { localStorage.setItem("pcoff_lang", l); } catch (e) { /* private window */ } if (last) last(); }
+    return h("div", { class: "top" }, h("div", { class: "brand", text: "Facilities by Two Hour Maids" }),
+      h("div", { class: "lang" }, h("button", { class: lang === "en" ? "on" : "", "aria-pressed": lang === "en" ? "true" : "false", onclick: function () { pick("en"); }, text: "English" }), h("button", { class: lang === "es" ? "on" : "", "aria-pressed": lang === "es" ? "true" : "false", onclick: function () { pick("es"); }, text: "Español" })));
+  }
+  function show() { app.replaceChildren(h("div", { class: "card" }, langBar(), Array.prototype.slice.call(arguments))); }
+  function money(c) { return "$" + (c / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function when(o) {
+    var parts = [];
+    if (o.service_date) { var dt = new Date(o.service_date + "T12:00:00"); parts.push(dt.toLocaleDateString(lang === "es" ? "es-US" : "en-US", { weekday: "long", month: "long", day: "numeric" })); }
+    if (o.slot_key && SLOT[lang][o.slot_key]) parts.push(t("starting") + " " + SLOT[lang][o.slot_key]);
+    return parts.length ? parts.join(", ") : t("tbd");
+  }
+  function getJson(qs) { return fetch(FN + "?" + qs).then(function (r) { return r.json(); }); }
+  function postJson(body) { return fetch(FN, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).then(function (r) { return r.json(); }); }
+
+  // ---------- an offer ----------
+  function offerPage(o) {
+    last = function () { offerPage(o); };
+    if (!o || o.status !== "offered") { var st = (o && o.status) || "unknown"; show(h("h1", { text: st === "accepted" ? t("h_accepted") : t("h_offer") }), h("p", { text: t(T.en[st] ? st : "unknown") })); return; }
+    var msg = h("p", { class: "err", role: "alert" });
+    var a = h("button", { id: "acc", text: t("accept"), onclick: function () { send("accept"); } });
+    var dcl = h("button", { class: "ghost", id: "dec", text: t("decline"), onclick: function () { send("decline"); } });
+    function send(action) {
+      a.disabled = true; dcl.disabled = true; msg.textContent = "";
+      postJson({ o: O, action: action }).then(function (r) {
+        if (r.ok && r.status === "accepted") { last = function () { show(h("h1", { text: t("you_accepted") }), h("p", { class: "ok", text: t("thanks") }), h("p", { text: t("confirm_soon") + " " + o.title + ", " + when(o) + ", " + money(o.offered_cents) + " " + t("flat_word") + "." })); }; last(); return; }
+        if (r.ok && r.status === "declined") { last = function () { show(h("h1", { text: t("h_declined") }), h("p", { text: t("declined") })); }; last(); return; }
+        a.disabled = false; dcl.disabled = false;
+        if (r.error === "taken") show(h("h1", { text: t("h_taken") }), h("p", { text: t("lost") }));
+        else if (r.error === "expired") show(h("h1", { text: t("h_ended") }), h("p", { text: t("expired") }));
+        else if (r.error === "answered") show(h("h1", { text: t("h_answered") }), h("p", { text: T.en[r.status] ? t(r.status) : t("answered_default") }));
+        else if (r.error === "not_eligible") msg.textContent = t("not_eligible");
+        else msg.textContent = t("try_again");
+      }).catch(function () { a.disabled = false; dcl.disabled = false; msg.textContent = t("try_again"); });
+    }
+    var ends = o.expires_at ? new Date(o.expires_at).toLocaleString(lang === "es" ? "es-US" : "en-US", { weekday: "short", hour: "numeric", minute: "2-digit" }) : "";
+    show(h("h1", { text: o.contractor_first ? o.contractor_first + ", " + t("offered_h") : t("offered_h_anon") }),
+      h("div", { class: "price" }, money(o.offered_cents), h("small", { text: t("flat") })),
+      h("dl", null, h("dt", { text: t("job") }), h("dd", { text: o.title }), h("dt", { text: t("when") }), h("dd", { text: when(o) }), o.city ? [h("dt", { text: t("where") }), h("dd", { text: o.city })] : null,
+        o.details ? [h("dt", { text: t("details") }), h("dd", { text: o.details })] : null, ends ? [h("dt", { text: t("answer_by") }), h("dd", { text: ends })] : null),
+      h("div", { class: "note", text: t("note") }),
+      msg, a, dcl);
+  }
+
+  // ---------- a 1099-NEC statement ----------
+  function statementPage(s) {
+    last = function () { statementPage(s); };
+    if (!s || s.available === false) { show(h("h1", { text: t("st_title") }), h("p", { text: s && s.expired ? t("st_gone") : t("st_invalid") })); return; }
+    var msg = h("p", { class: "ok", role: "status" });
+    function ask(action, done) {
+      postJson({ s: S, action: action }).then(function (r) { msg.className = r.ok ? "ok" : "err"; msg.textContent = r.ok ? done : t("try_again"); }).catch(function () { msg.className = "err"; msg.textContent = t("try_again"); });
+    }
+    show(h("h1", { text: t("st_h", { y: s.year }) }),
+      h("p", { text: t("st_p", { y: s.year }) }),
+      h("a", { class: "btn", href: FN + "?s=" + encodeURIComponent(S) + "&pdf=1", text: t("open_pdf") }),
+      h("div", { class: "note", text: t("st_note") }),
+      s.paper_copy_requested ? h("p", { class: "ok", text: t("paper_asked") }) : h("button", { class: "ghost", onclick: function () { ask("request_paper", t("paper_ok")); }, text: t("paper_btn") }),
+      s.consent ? h("button", { class: "ghost", onclick: function () { if (confirm(t("withdraw_confirm"))) ask("withdraw_consent", t("withdraw_ok")); }, text: t("withdraw") }) : null, msg);
+  }
+
+  if (O) getJson("o=" + encodeURIComponent(O)).then(offerPage).catch(function () { last = null; show(h("h1", { text: t("wrong") }), h("p", { text: t("wrong_p") })); });
+  else if (S) getJson("s=" + encodeURIComponent(S) + "&view=1").then(statementPage).catch(function () { last = null; show(h("h1", { text: t("wrong") }), h("p", { text: t("wrong_p") })); });
+  else { last = function () { show(h("h1", { text: t("bad_link") }), h("p", { text: t("bad_link_p") })); }; last(); }
+})();
+</script>
+</body>
+</html>
