@@ -5,9 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Commercial cleaning: instant bid</title>
 <!--
-  Commercial self-serve bid (2026-10-12; COMMERCIAL-BID.md). Link as commercial-bid.html?org=two-hour-maids. A business fills a facility checklist,
-  picks how often, sees three routine-cleaning packages with a monthly price, chooses one and gets a proposal it can accept (quote.html).
-  Data and prices come from the commercial-bid function; the rates never reach this page. Off until switched on in Admin.
+  Commercial self-serve bid (2026-10-12; COMMERCIAL-BID.md), priced by the Facilities rate card (2026-11-04; COMMERCIAL-RATE-CARD.md). Link as
+  commercial-bid.html?org=two-hour-maids. A business fills a facility checklist (with its ZIP), picks how often, sees three routine-cleaning packages
+  with ONE PER-VISIT PRICE each (a minimum visit, and a travel line for far buildings), chooses one and gets a proposal it can accept (quote.html).
+  A building outside the automatic range sees a free walkthrough instead of a price. Data and prices come from the commercial-bid function; the
+  rates, hours and margin never reach this page. Off until switched on in Admin.
 -->
 <style>
   * { box-sizing: border-box; }
@@ -47,18 +49,18 @@
   var FN = SUPABASE_URL + '/functions/v1/commercial-bid';
   var ORG = new URLSearchParams(location.search).get('org') || 'two-hour-maids';
   var root = document.getElementById('root');
-  var meta = null, prices = null, chosen = null;
-  var f = { type: 'office', sqft: '', restrooms: 1, kitchens: 1, offices: 0, conference: 0, entrances: 1, floors: 1, hard_floor_pct: 50 };
+  var meta = null, prices = null, chosen = null, terms = {}, taxNote = '', simple = false;
+  var f = { type: 'office', sqft: '', zip: '', restrooms: 1, kitchens: 1, offices: 0, conference: 0, entrances: 1, floors: 1 };
   var freq = 'weekly';
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function money(c) { return '$' + Math.round(c / 100).toLocaleString('en-US'); }
   function post(body) { body.org = ORG; return fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }); }
 
   function render() {
-    var h = '<div class="card"><h1>Commercial cleaning, priced in a minute</h1><p>Tell us about your space and how often you want it cleaned. You will see three routine-cleaning packages with a monthly price, choose one, and get a written proposal. ' + esc(meta.company) + ' confirms the price at a free walkthrough.</p></div>';
+    var h = '<div class="card"><h1>Commercial cleaning, priced in a minute</h1><p>Tell us about your space and how often you want it cleaned. You will see three routine-cleaning packages with a price per visit, choose one, and get a written proposal. ' + esc(meta.company) + ' confirms the price at a free walkthrough.</p></div>';
     h += '<div class="card"><h2>1. Your facility</h2><label for="ftype">What kind of space?</label><select id="ftype">' + meta.types.map(function (t) { return '<option value="' + esc(t.value) + '"' + (t.value === f.type ? ' selected' : '') + '>' + esc(t.label) + '</option>'; }).join('') + '</select>' +
       '<div class="grid"><div><label for="fsq">About how many square feet?</label><input id="fsq" inputmode="numeric" placeholder="e.g. 5000" value="' + esc(f.sqft) + '"></div>' +
-      '<div><label for="fhard">How much is hard floor (vs carpet)?</label><select id="fhard">' + [0, 25, 50, 75, 100].map(function (v) { return '<option value="' + v + '"' + (v === f.hard_floor_pct ? ' selected' : '') + '>' + v + '% hard floor</option>'; }).join('') + '</select></div></div>' +
+      '<div><label for="fzip">ZIP code of the building</label><input id="fzip" inputmode="numeric" maxlength="5" autocomplete="postal-code" placeholder="e.g. 55401" value="' + esc(f.zip) + '"></div></div>' +
       meta.counts.map(function (c) { return '<div class="count"><span>' + esc(c.label) + '</span><div class="step"><button data-dec="' + c.key + '" aria-label="Fewer">-</button><b id="c-' + c.key + '">' + f[c.key] + '</b><button data-inc="' + c.key + '" aria-label="More">+</button></div></div>'; }).join('') + '</div>';
     h += '<div class="card"><h2>2. How often</h2><div class="chips">' + meta.frequencies.map(function (x) { return '<button class="chip' + (x.value === freq ? ' on' : '') + '" data-freq="' + x.value + '">' + esc(x.label) + '</button>'; }).join('') + '</div></div>';
     h += '<div class="card"><button class="btn" id="see">See my prices</button> <p id="pnote" style="margin-top:8px"></p></div>';
@@ -66,7 +68,7 @@
     root.innerHTML = h;
     document.getElementById('ftype').onchange = function () { f.type = this.value; stale(); };
     document.getElementById('fsq').oninput = function () { f.sqft = this.value.replace(/[^\d]/g, ''); stale(); };
-    document.getElementById('fhard').onchange = function () { f.hard_floor_pct = +this.value; stale(); };
+    document.getElementById('fzip').oninput = function () { f.zip = this.value.replace(/[^d]/g, '').slice(0, 5); stale(); };
     meta.counts.forEach(function (c) {
       root.querySelector('[data-inc="' + c.key + '"]').onclick = function () { f[c.key] = Math.min(c.max, f[c.key] + 1); document.getElementById('c-' + c.key).textContent = f[c.key]; stale(); };
       root.querySelector('[data-dec="' + c.key + '"]').onclick = function () { f[c.key] = Math.max(c.key === 'floors' ? 1 : 0, f[c.key] - 1); document.getElementById('c-' + c.key).textContent = f[c.key]; stale(); };
@@ -81,22 +83,41 @@
   function price() {
     var n = document.getElementById('pnote');
     if ((+f.sqft || 0) < 200) { n.className = 'err'; n.textContent = 'Enter the square footage (a rough number is fine).'; return; }
+    if (f.zip.length !== 5) { n.className = 'err'; n.textContent = 'Enter the 5-digit ZIP code of the building.'; return; }
     n.className = ''; n.textContent = 'Pricing...';
     post({ action: 'price', facility: facility(), frequency: freq }).then(function (r) {
       if (!r.ok) { n.className = 'err'; n.textContent = 'That did not work. Check the numbers and try again.'; return; }
-      n.textContent = ''; prices = r.j.packages; chosen = prices[1] ? prices[1].key : prices[0].key; showPackages();
+      n.textContent = ''; prices = r.j.packages; terms = r.j.terms || {}; taxNote = r.j.tax_note || ''; simple = !!r.j.simple_office;
+      chosen = prices[1] ? prices[1].key : prices[0].key; showPackages();
     });
+  }
+  function allWalkthrough() { return prices.every(function (p) { return p.kind === 'walkthrough'; }); }
+  function priceBlock(p) {
+    if (p.kind === 'walkthrough') return '<p style="margin:6px 0 0"><b>Free walkthrough</b><br>' + esc(p.message) + '</p>';
+    var h = '<div><span class="price">' + money(p.per_visit_cents) + '</span><span class="per"> a visit' + (p.tier === 'simple_office' ? ' plus tax' : '') + '</span></div>';
+    var lines = [];
+    if (p.tier === 'simple_office') lines.push('One flat price for a simple office, however often we come');
+    if (p.drive_fee_cents > 0) lines.push('Includes a ' + money(p.drive_fee_cents) + ' ' + esc((p.drive_label || 'travel fee').toLowerCase()) + ' (' + money(p.cleaning_cents) + ' cleaning)');
+    if (p.minimum_applied && p.tier !== 'simple_office') lines.push('This is our minimum price for a visit');
+    lines.push('About ' + money(p.monthly_estimate_cents) + ' a month at ' + (Math.round(p.visits_per_month * 10) / 10) + ' visits a month; you are billed per visit, on one monthly statement');
+    return h + '<p style="margin:2px 0 0;font-size:13px">' + lines.join('.<br>') + '.</p>';
   }
   function showPackages() {
     var el = document.getElementById('pk');
-    el.innerHTML = '<div class="card"><h2>3. Choose a package</h2><div class="pkgs">' + prices.map(function (p) {
-      return '<div class="pkg' + (p.key === chosen ? ' on' : '') + '" data-pkg="' + p.key + '"><b style="font-size:18px">' + esc(p.label) + '</b>' + (p.key === 'standard' ? '<span class="tag">Most popular</span>' : '') +
-        '<div><span class="price">' + money(p.monthly_cents) + '</span><span class="per"> a month · about ' + money(p.per_visit_cents) + ' a visit</span></div><p style="margin:2px 0 0">' + esc(p.blurb) + '</p><ul>' + p.tasks.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
-    }).join('') + '</div><p style="margin-top:12px">Supplies and equipment included. Paper products, soap and liners are yours unless we agree otherwise. Floor care, carpet extraction and window washing are quoted separately.</p></div>' +
-      '<div class="card"><h2>4. Get your proposal</h2><div class="grid"><div><label for="cb">Business name</label><input id="cb" autocomplete="organization"></div><div><label for="cn">Your name</label><input id="cn" autocomplete="name"></div>' +
+    var termsHtml = '';
+    var tl = [terms.start, terms.twelve_month, terms.price_lock, terms.annual_increase].filter(Boolean);
+    if (tl.length) termsHtml = '<p style="margin-top:8px">' + tl.map(esc).join(' ') + '</p>';
+    var intro = allWalkthrough()
+      ? '<div class="card"><h2>3. Your free walkthrough</h2><p>' + esc(prices[0].message) + '</p><ul style="margin:0;padding-left:18px;color:#3d3a4d;font-size:14px">' + prices[1].tasks.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>'
+      : '<div class="card"><h2>3. ' + (prices.length === 1 ? 'Your price' : 'Choose a package') + '</h2><div class="pkgs">' + prices.map(function (p) {
+        return '<div class="pkg' + (p.key === chosen ? ' on' : '') + '" data-pkg="' + p.key + '"><b style="font-size:18px">' + esc(p.label) + '</b>' + (p.key === 'standard' ? '<span class="tag">Most popular</span>' : '') +
+          priceBlock(p) + '<p style="margin:6px 0 0">' + esc(p.blurb) + '</p><ul>' + p.tasks.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div>';
+      }).join('') + '</div><p style="margin-top:12px">Supplies and equipment included. Paper products, soap and liners are yours unless we agree otherwise. Floor care, carpet extraction and window washing are quoted separately. ' + esc(taxNote) + '</p>' + termsHtml + '</div>';
+    el.innerHTML = intro +
+      '<div class="card"><h2>4. ' + (allWalkthrough() ? 'Book your walkthrough' : 'Get your proposal') + '</h2><div class="grid"><div><label for="cb">Business name</label><input id="cb" autocomplete="organization"></div><div><label for="cn">Your name</label><input id="cn" autocomplete="name"></div>' +
       '<div><label for="cp">Phone</label><input id="cp" type="tel" autocomplete="tel"></div><div><label for="ce">Email</label><input id="ce" type="email" autocomplete="email"></div></div>' +
       '<label for="ca">Address of the space</label><input id="ca" autocomplete="street-address"><input class="hp" id="cw" tabindex="-1" autocomplete="off" aria-hidden="true">' +
-      '<button class="btn" id="go">Get my proposal</button><p id="gnote" style="margin-top:8px">We will call or text you about this proposal and to book a free walkthrough. No other marketing.</p></div>';
+      '<button class="btn" id="go">' + (allWalkthrough() ? 'Book my free walkthrough' : 'Get my proposal') + '</button><p id="gnote" style="margin-top:8px">We will call or text you about this ' + (allWalkthrough() ? 'walkthrough' : 'proposal and to book a free walkthrough') + '. No other marketing.</p></div>';
     var cards = el.querySelectorAll('[data-pkg]');
     for (var i = 0; i < cards.length; i++) cards[i].onclick = function () { chosen = this.getAttribute('data-pkg'); for (var k = 0; k < cards.length; k++) cards[k].className = 'pkg' + (cards[k] === this ? ' on' : ''); };
     document.getElementById('go').onclick = submit;
@@ -106,9 +127,11 @@
     var g = document.getElementById('go'), n = document.getElementById('gnote');
     var c = { business: val('cb'), name: val('cn'), phone: val('cp'), email: val('ce'), address: val('ca') };
     if (c.business.length < 2 || c.name.length < 2 || c.phone.replace(/\D/g, '').length < 10 || c.email.indexOf('@') < 1) { n.className = 'err'; n.textContent = 'Please fill in the business, your name, a phone number and an email.'; return; }
-    g.disabled = true; n.className = ''; n.textContent = 'Writing your proposal...';
+    g.disabled = true; n.className = ''; n.textContent = allWalkthrough() ? 'Sending your request...' : 'Writing your proposal...';
     post({ action: 'submit', facility: facility(), frequency: freq, package: chosen, contact: c, website: val('cw') }).then(function (r) {
       if (!r.ok) { g.disabled = false; n.className = 'err'; n.textContent = r.j.error === 'slow_down' ? 'We already have your request. We will be in touch soon.' : 'That did not go through. Please try again or call us.'; return; }
+      if (window.thmTrack) window.thmTrack('generate_lead', { form: 'commercial_bid' }); // pixel.js; nothing while its IDs are empty
+      if (r.j.walkthrough) { root.innerHTML = '<div class="card"><h1>Thank you!</h1><p class="ok">We will call or text you to book your free walkthrough.</p></div>'; return; }
       if (r.j.quote_url) { location.href = r.j.quote_url; return; }
       root.innerHTML = '<div class="card"><h1>Thank you!</h1><p class="ok">Your proposal is on its way. We will call or text you to book a free walkthrough.</p></div>';
     });

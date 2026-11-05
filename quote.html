@@ -30,11 +30,26 @@
   var root = document.getElementById('root');
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function money(c) { return '$' + Math.round(c / 100).toLocaleString('en-US'); }
+  // Contract structure (Jack, 2026-11-04: "12 month agreement for loyalty rewards and after completing the property elevation plan"). DRAFT wording until he
+  // approves it: start month to month, 30 days' notice, no exit fee; the 12-month agreement is offered after the Property Elevation Plan is complete and
+  // unlocks loyalty rewards, with the price locked and the yearly increase capped. Wording the owner approves in the app (the four keys) replaces each line.
+  var DRAFT_TERMS = {
+    start: "We start month to month. Either of us may end the service with 30 days' written notice, and there is no exit fee.",
+    twelve_month: 'Once your Property Elevation Plan is complete, you can choose a 12-month agreement. It unlocks loyalty rewards.',
+    price_lock: 'With a 12-month agreement, your price per visit is locked for 12 months from its start.',
+    annual_increase: "After that, the price may rise once a year, by no more than 4% and only with 30 days' written notice."
+  };
+  function termItems(approved) {
+    var keys = ['start', 'twelve_month', 'price_lock', 'annual_increase'];
+    return keys.map(function (k) { return approved[k] || DRAFT_TERMS[k]; });
+  }
   function render(d) {
-    var h = '<div class="card"><h1>' + esc(d.business ? 'Proposal for ' + d.business : 'Your proposal') + '</h1><p>From ' + esc(d.company) + '</p><div class="big">' + esc(money(d.monthly_cents)) + '<span class="per"> a month</span></div><p>Supplies and equipment included.</p></div>';
+    var h = '<div class="card"><h1>' + esc(d.business ? 'Proposal for ' + d.business : 'Your proposal') + '</h1><p>From ' + esc(d.company) + '</p>' + (d.per_visit
+      ? '<div class="big">' + esc(money(d.per_visit.per_visit_cents)) + '<span class="per"> a visit</span></div>' + (d.per_visit.drive_fee_cents > 0 ? '<p>Includes a ' + esc(money(d.per_visit.drive_fee_cents)) + ' travel and logistics fee (' + esc(money(d.per_visit.cleaning_cents)) + ' cleaning).</p>' : '') + (d.per_visit.minimum_applied ? '<p>This is our minimum price for a visit.</p>' : '') + '<p>About ' + esc(money(d.monthly_cents)) + ' a month at ' + esc(String(d.per_visit.visits_per_month)) + ' visits a month. You are billed per visit, on one monthly statement, before sales tax.</p><p>Supplies and equipment included.</p></div>'
+      : '<div class="big">' + esc(money(d.monthly_cents)) + '<span class="per"> a month</span></div><p>Supplies and equipment included.</p></div>');
     if (d.scope && d.scope.length) h += '<div class="card"><h2>Your facility and what is included</h2><p><b>' + esc(d.scope[0]) + '</b><br>' + esc(d.scope[1] || '') + '</p><ul>' + d.scope.slice(2).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul><p style="margin-top:10px">The price is confirmed at a free walkthrough of your space.</p></div>';
     else h += '<div class="card"><h2>What we will clean</h2>' + d.areas.map(function (a) { return '<div class="row"><span>' + esc(a.area) + '</span><b>' + esc(a.frequency) + '</b></div>'; }).join('') + '</div>';
-    h += '<div class="card"><h2>Terms</h2><ul><li>Any size building. A 12-month agreement; either side may end it with 60 days written notice.</li><li>We carry general liability insurance of $1,000,000 per occurrence and $2,000,000 in total. A certificate is available on request.</li><li>Payment: net 30 by ACH bank transfer. A card stays on file as a backup.</li><li>We bring all supplies and equipment.</li></ul></div>';
+    h += '<div class="card"><h2>Terms</h2><ul>' + termItems(d.terms_text || {}).map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '<li>We carry general liability insurance of $1,000,000 per occurrence and $2,000,000 in total. A certificate is available on request.</li><li>Payment: net 15 on one monthly statement, by ACH bank transfer. A card stays on file as a backup.</li><li>We bring all supplies and equipment.</li></ul></div>';
     if (d.accepted_at) {
       h += '<div class="card"><p class="ok">Accepted by ' + esc(d.accepted_name) + ' on ' + esc(new Date(d.accepted_at).toLocaleDateString()) + '. Thank you! We will be in touch to set your start date.</p></div>';
     } else if (d.status === 'lost') {

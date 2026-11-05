@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<title>Set up your account</title>
+<!--
+  Property manager onboarding (Jack, 2026-11-04; PM-ONBOARDING.md). A manager fills this in themselves: company and people, buildings, turnovers, common areas, billing,
+  their documents, the agreements. The pm-onboarding function (JSON) keeps the draft as they go (a draft token in this browser lets them come back), makes the account at
+  the end, sends the welcome email with our documents, and gives them their own portal link. Brand: "Facilities by Two Hour Maids" (from the function, never hard-coded
+  here except as the fallback while loading). Common areas are priced like a commercial job (the instant bid) or offered a free walkthrough; turnovers by unit size.
+  It does nothing until the owner switches it on in the app. Link it as pm-onboarding.html?org=two-hour-maids. Goes to the separate public web repo with the other pages.
+-->
+<style>
+  :root { --bg: #f6f5fb; --card: #fff; --ink: #15121f; --muted: #6b6880; --line: #e6e3f0; --brand: #004aad; --brand-ink: #fff; --ok: #166534; --err: #b91c1c; --soft: #f1effa; --gold: #9a6b00; --gold-soft: #fff4d6; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0f0d16; --card: #1a1724; --ink: #f2f0f8; --muted: #a29fb5; --line: #2b2738; --brand: #6ea3ff; --brand-ink: #0f0d16; --ok: #6ee7a0; --err: #fca5a5; --soft: #221f31; --gold: #f1c35a; --gold-soft: #3a2f12; } }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--ink); margin: 0; padding: 20px 16px 56px; line-height: 1.5; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  .card { background: var(--card); border-radius: 18px; padding: 20px; margin: 0 0 14px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 0 0 6px; }
+  h3 { font-size: 13px; margin: 18px 0 6px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+  p { color: var(--muted); margin: 0 0 10px; }
+  .brand { color: var(--brand); font-weight: 800; font-size: 13px; letter-spacing: .4px; text-transform: uppercase; }
+  .bar { height: 8px; background: var(--soft); border-radius: 999px; overflow: hidden; margin: 12px 0 4px; }
+  .bar i { display: block; height: 100%; background: var(--brand); border-radius: 999px; transition: width .2s; }
+  .steps { font-size: 12px; color: var(--muted); }
+  label.f { display: block; font-size: 13px; font-weight: 600; color: var(--muted); margin: 12px 0 0; }
+  label.f small { font-weight: 400; }
+  input[type=text], input[type=tel], input[type=email], input[type=number], select, textarea { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 11px; margin: 5px 0 0; }
+  textarea { min-height: 70px; }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap: 10px; }
+  .mix { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7em), 1fr)); gap: 8px; }
+  .mix label { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .chk { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; color: var(--ink); margin: 8px 0; cursor: pointer; }
+  .chk input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; }
+  .days { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+  .days label { border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font-weight: 700; font-size: 14px; cursor: pointer; background: var(--bg); }
+  .days input { display: none; }
+  .days input:checked + span { color: var(--brand); }
+  .days label:has(input:checked) { border-color: var(--brand); background: var(--soft); }
+  button { background: var(--brand); color: var(--brand-ink); border: 0; border-radius: 12px; padding: 13px 18px; font: inherit; font-weight: 700; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--brand); border: 1px solid var(--line); }
+  button.small { padding: 8px 12px; font-size: 13px; border-radius: 9px; }
+  button[disabled] { opacity: .5; cursor: default; }
+  .nav { display: flex; gap: 10px; justify-content: space-between; margin-top: 18px; }
+  .nav .grow { flex: 1; }
+  .err { color: var(--err); font-size: 13px; margin: 6px 0 0; }
+  .ok { color: var(--ok); font-weight: 700; }
+  .note { background: var(--soft); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--muted); margin: 10px 0; }
+  .bld { border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin: 12px 0; }
+  .bld > .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 8px 0; }
+  td, th { text-align: left; padding: 7px 4px; border-bottom: 1px solid var(--line); color: var(--ink); }
+  th { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  td.r, th.r { text-align: right; }
+  .pkgs { display: grid; gap: 10px; margin: 10px 0; }
+  .pkg { border: 2px solid var(--line); border-radius: 14px; padding: 12px; cursor: pointer; background: var(--bg); text-align: left; color: var(--ink); width: 100%; font-weight: 400; }
+  .pkg.on { border-color: var(--brand); background: var(--soft); }
+  .pkg b { display: block; font-size: 16px; }
+  .pkg .price { float: right; font-size: 20px; font-weight: 800; }
+  .pkg small { color: var(--muted); }
+  .terms { max-height: 220px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13px; color: var(--ink); white-space: pre-wrap; background: var(--bg); }
+  ul.plain { margin: 6px 0 10px; padding-left: 20px; color: var(--ink); font-size: 14px; }
+  .file { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 6px 0; font-size: 14px; border-bottom: 1px solid var(--line); }
+  .cardel { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--bg); margin: 8px 0; }
+  .pay, .acc { margin-top: 14px; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  .done h1 { font-size: 26px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="app"><div class="card"><p id="loading">Loading…</p></div></div>
+</div>
+<script>
+(function () {
+  "use strict";
+  var FN = "https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/pm-onboarding";
+  var FALLBACK_PK = "pk_live_51TYbbiRaCAVm3BP3bgUmPDUL5pQCp8L5Yw632K7HDGSk6uuQ4jYTkupp6zNKx0NfdPdGgOJXJdnprU7ASvsmlIVB000ei0DB5N"; // publishable by design (the same key the booking page uses)
+  var ORG = (new URLSearchParams(location.search).get("org") || "two-hour-maids").toLowerCase();
+  var LS = "pmob_" + ORG;
+  var app = document.getElementById("app");
+  var cfg = null, token = null, step = 1, data = null, uploads = [], card = null, bank = null, bankPending = null, errors = {}, busy = false, saved = "", pricing = {}, stripe = null, stripeState = "idle", stripeFailed = false, cardEl = null, doneInfo = null;
+  var STEPS = ["About you", "Buildings", "Turnovers", "Common areas", "Payment", "Your documents", "Agreements"];
+
+  function blankBuilding() { return { label: "", address: "", zip: "", unit_count: null, unit_mix: { studio: 0, "1": 0, "2": 0, "3": 0 }, common_area_sqft: null, floors: null, common_areas: [], common_bathrooms: null, access_method: "", access: {}, common_service: null }; }
+  function blank() { return { company: { name: "", legal_name: "", billing_email: "", billing_contact_name: "", billing_contact_phone: "", billing_address: "" }, contacts: [{ full_name: "", phone: "", email: "" }], buildings: [blankBuilding()], turnovers: { days: [], send_method: "", auto_book: false }, billing: { backup_card_consent: false, card_name: "", ach_consent: false, ach_name: "", payment_method: "bank" }, agreement: { name: "", accepted: false } }; }
+
+  // ---------- small helpers ----------
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    attrs = attrs || {};
+    Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === "class") el.className = v; else if (k === "text") el.textContent = v; else if (k.indexOf("on") === 0) el.addEventListener(k.slice(2), v); else if (k === "value") el.value = v; else if (k === "checked") el.checked = !!v; else el.setAttribute(k, v === true ? "" : v);
+    });
+    for (var i = 2; i < arguments.length; i++) add(el, arguments[i]);
+    return el;
+  }
+  function put(parent) { for (var i = 1; i < arguments.length; i++) add(parent, arguments[i]); return parent; }
+  // a child can be a string, a node, or a list of them (a map() result); null and false are skipped
+  function add(el, c) {
+    if (c === null || c === undefined || c === false) return;
+    if (Array.isArray(c)) { c.forEach(function (x) { add(el, x); }); return; }
+    el.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  }
+  function money(c) { return "$" + (c / 100).toLocaleString("en-US", { maximumFractionDigits: 0 }); }
+  function hrs(n) { return (Math.round(n * 10) / 10) + " hr"; }
+  function post(body) {
+    body.org = ORG;
+    return fetch(FN, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) }).then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); });
+  }
+  function tok(text) { var co = (data && data.company.name) || "your company"; return String(text || "").replace(/\{\{\s*company\s*\}\}/g, co).replace(/\{\{\s*brand\s*\}\}/g, cfg.brand).replace(/\{\{\s*\w+\s*\}\}/g, "").replace(/ {2,}/g, " "); }
+  function err(field) { return errors[field] ? h("p", { class: "err", role: "alert", text: errors[field] }) : null; }
+  function phoneOk(v) { var d = String(v || "").replace(/\D/g, ""); return d.length === 10 || (d.length === 11 && d.charAt(0) === "1"); }
+  function emailOk(v) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim()); }
+  function zipOk(v) { return /^\d{5}$/.test(String(v || "")) && cfg.zips.indexOf(String(v)) !== -1; }
+  function field(label, input, path, hint) {
+    return h("label", { class: "f" }, label, hint ? h("small", { text: " " + hint }) : null, input, err(path));
+  }
+  function bind(el, get, set, kind) {
+    el.addEventListener(kind === "check" ? "change" : "input", function () { set(kind === "check" ? el.checked : el.value); dirty(); });
+    return el;
+  }
+  function dirty() { saved = ""; }
+  function scrollTop() { try { window.scrollTo({ top: 0 }); } catch (e) { window.scrollTo(0, 0); } }
+
+  // ---------- boot ----------
+  function boot() {
+    fetch(FN + "?config=1&org=" + encodeURIComponent(ORG)).then(function (r) { return r.json(); }).then(function (c) {
+      cfg = c;
+      if (!c || !c.open) { app.replaceChildren(h("div", { class: "card" }, h("div", { class: "brand", text: (c && c.brand) || "Facilities by Two Hour Maids" }), h("h1", { text: "This page is not open yet" }), h("p", { text: "Please check back soon, or contact us and we will set up your account with you." }))); document.title = (c && c.brand) || "Set up your account"; return; }
+      document.title = "Set up your account | " + cfg.brand;
+      data = blank();
+      var t = null; try { t = localStorage.getItem(LS); } catch (e) { /* private window */ }
+      if (!t) return render();
+      post({ action: "load", token: t }).then(function (j) {
+        if (j && j.ok && j.status === "draft") { token = t; data = normalize(j.data); step = Math.max(1, Math.min(7, j.step || 1)); uploads = j.uploads || []; card = j.card || null; bank = j.bank || null; } else { try { localStorage.removeItem(LS); } catch (e) { /* ignore */ } }
+        render();
+      }).catch(render);
+    }).catch(function () { app.replaceChildren(h("div", { class: "card" }, h("p", { text: "We could not load this page. Please try again in a minute." }))); });
+  }
+  function normalize(d) {
+    var b = blank();
+    d = d || {};
+    ["company", "turnovers", "billing", "agreement"].forEach(function (k) { Object.keys(b[k]).forEach(function (f) { if (d[k] && d[k][f] !== undefined) b[k][f] = d[k][f]; }); });
+    if (d.contacts && d.contacts.length) b.contacts = d.contacts;
+    if (d.buildings && d.buildings.length) b.buildings = d.buildings.map(function (x) { var nb = blankBuilding(); Object.keys(nb).forEach(function (f) { if (x[f] !== undefined) nb[f] = x[f]; }); return nb; });
+    b.agreement.accepted = false; // they accept at the end, every time
+    return b;
+  }
+
+  // ---------- chrome ----------
+  function shell(title, intro, body, nav) {
+    var pct = Math.round((step - 1) / STEPS.length * 100);
+    var s = h("div", { class: "card" },
+      h("div", { class: "brand", text: cfg.brand }),
+      h("div", { class: "bar", "aria-hidden": "true" }, h("i", { style: "width:" + Math.max(6, pct) + "%" })),
+      h("div", { class: "steps", text: "Step " + step + " of " + STEPS.length + ": " + STEPS[step - 1] }),
+      h("h2", { text: title }), intro ? h("p", { text: intro }) : null, body, nav);
+    app.replaceChildren(s);
+  }
+  function nav(opts) {
+    opts = opts || {};
+    return h("div", { class: "nav" },
+      step > 1 ? h("button", { class: "ghost", type: "button", onclick: function () { go(step - 1, false); } }, "Back") : h("span"),
+      h("button", { class: "grow", type: "button", disabled: busy, onclick: opts.next || function () { go(step + 1, true); } }, opts.label || "Continue"));
+  }
+  function saveLater() {
+    return h("p", { class: "steps", style: "margin-top:10px" }, saved ? saved : h("a", { href: "#", onclick: function (e) { e.preventDefault(); persist(function (ok) { saved = ok ? "Saved. Come back to this page on this device to pick up where you left off." : "Could not save right now."; render(); }); } }, "Save and finish later"));
+  }
+
+  // ---------- saving ----------
+  function persist(then) {
+    post({ action: "save", token: token, step: step, data: data }).then(function (j) {
+      if (j && j.ok) { token = j.token; try { localStorage.setItem(LS, token); } catch (e) { /* ignore */ } }
+      if (then) then(!!(j && j.ok));
+    }).catch(function () { if (then) then(false); });
+  }
+  function go(n, forward) {
+    if (forward) { errors = validate(step); if (Object.keys(errors).length) { render(); var first = document.querySelector(".err"); if (first && first.scrollIntoView) first.scrollIntoView({ block: "center" }); return; } }
+    errors = {}; saved = "";
+    if (n === 6 && !(cfg.documents || []).length) n = forward ? 7 : 5; // nothing to upload: skip the step
+    step = n; busy = true; render();
+    persist(function () { busy = false; render(); scrollTop(); });
+  }
+
+  // ---------- validation by step (the server checks it all again) ----------
+  function validate(n) {
+    var e = {}, d = data;
+    if (n === 1) {
+      if (d.company.name.trim().length < 2) e["company.name"] = "Enter your company name.";
+      d.contacts.forEach(function (c, i) {
+        var any = c.full_name || c.phone || c.email;
+        if (i > 0 && !any) return;
+        if (c.full_name.trim().length < 2) e["contacts." + i + ".full_name"] = "Enter a name.";
+        if (!phoneOk(c.phone)) e["contacts." + i + ".phone"] = "Enter a 10-digit mobile number.";
+        if (i === 0 && !emailOk(c.email)) e["contacts.0.email"] = "Enter an email address.";
+        else if (c.email && !emailOk(c.email)) e["contacts." + i + ".email"] = "That email does not look right.";
+      });
+      if (!emailOk(d.company.billing_email || d.contacts[0].email)) e["company.billing_email"] = "Enter the email invoices should go to.";
+    }
+    if (n === 2) {
+      d.buildings.forEach(function (b, i) {
+        if (b.address.trim().length < 5) e["buildings." + i + ".address"] = "Enter the street address.";
+        if (!/^\d{5}$/.test(b.zip)) e["buildings." + i + ".zip"] = "Enter the 5-digit ZIP code."; else if (!zipOk(b.zip)) e["buildings." + i + ".zip"] = "That ZIP code is outside the area we clean right now.";
+        var mix = ["studio", "1", "2", "3"].reduce(function (t, k) { return t + (Number(b.unit_mix[k]) || 0); }, 0);
+        var units = b.unit_count || mix;
+        if (!units) e["buildings." + i + ".unit_count"] = "How many units does this building have?"; else if (mix > units) e["buildings." + i + ".unit_mix"] = "The sizes add up to more than the number of units.";
+        var am = cfg.access_methods.filter(function (x) { return x.key === b.access_method; })[0];
+        if (!am) e["buildings." + i + ".access_method"] = "Choose how our crew gets in.";
+        else am.fields.forEach(function (f) { if (f.required && String(b.access[f.key] || "").trim().length < 2) e["buildings." + i + ".access." + f.key] = "Enter: " + lowerFirst(f.label) + "."; });
+      });
+    }
+    if (n === 3 && !d.turnovers.send_method) e["turnovers.send_method"] = "Choose how you will send us units.";
+    if (n === 4) d.buildings.forEach(function (b, i) { if (b.common_service && !b.common_service.frequency) e["buildings." + i + ".common_service.frequency"] = "Choose how often."; });
+    if (n === 5) {
+      var bl = cfg.billing, st = bl.stripe;
+      if (st && !st.ready && (needBank() || bl.backup_card_mode === "capture")) e["billing.bank"] = st.closed_text;
+      else {
+        if (needBank() && !bank) e["billing.bank"] = "Please connect your bank account and authorize bank payments.";
+        if (bl.backup_card_mode !== "off" && (!d.billing.backup_card_consent || String(d.billing.card_name || "").trim().length < 2)) e["billing.backup_card_consent"] = "Type your name and tick the box to confirm the backup card.";
+        if (bl.backup_card_mode === "capture" && !card) e["billing.card"] = "Please add the backup card.";
+      }
+    }
+    if (n === 6) (cfg.documents || []).forEach(function (x) { if (x.required && !uploads.some(function (u) { return u.kind === x.key; })) e["documents." + x.key] = "Please add: " + x.label + "."; });
+    if (n === 7) { if (!d.agreement.accepted || d.agreement.name.trim().length < 2) e["agreement.name"] = "Type your full name and tick the box to accept."; }
+    return e;
+  }
+
+  // ---------- the steps ----------
+  function render() {
+    if (doneInfo) return renderDone();
+    if (!data) return;
+    ({ 1: s1, 2: s2, 3: s3, 4: s4, 5: s5, 6: s6, 7: s7 })[step]();
+  }
+
+  function s1() {
+    var d = data, body = h("div");
+    put(body, 
+      field("Company name", bind(h("input", { type: "text", autocomplete: "organization", maxlength: 120, value: d.company.name }), null, function (v) { d.company.name = v; }), "company.name"),
+      field("Legal name", bind(h("input", { type: "text", maxlength: 120, value: d.company.legal_name }), null, function (v) { d.company.legal_name = v; }), "company.legal_name", "(if different, optional)"),
+      h("h3", { text: "Who should we talk to" }));
+    d.contacts.forEach(function (c, i) {
+      var box = h("div", { class: i ? "bld" : "" });
+      if (i) put(box, h("div", { class: "top" }, h("b", { text: "Another person who books" }), h("button", { class: "ghost small", type: "button", onclick: function () { d.contacts.splice(i, 1); dirty(); render(); } }, "Remove")));
+      put(box, 
+        field("Full name", bind(h("input", { type: "text", autocomplete: i ? "off" : "name", maxlength: 80, value: c.full_name }), null, function (v) { c.full_name = v; }), "contacts." + i + ".full_name"),
+        h("div", { class: "two" },
+          field("Mobile number", bind(h("input", { type: "tel", autocomplete: i ? "off" : "tel", inputmode: "tel", placeholder: "(612) 555-0123", value: c.phone }), null, function (v) { c.phone = v; }), "contacts." + i + ".phone", i ? "" : "(the number you will text us from)"),
+          field("Email", bind(h("input", { type: "email", autocomplete: i ? "off" : "email", value: c.email }), null, function (v) { c.email = v; }), "contacts." + i + ".email", i ? "(optional)" : "")));
+      put(body, box);
+    });
+    if (d.contacts.length < 5) put(body, h("button", { class: "ghost small", type: "button", onclick: function () { d.contacts.push({ full_name: "", phone: "", email: "" }); dirty(); render(); } }, "Add another person who books"));
+    put(body, 
+      h("h3", { text: "Billing" }),
+      field("Send statements to", bind(h("input", { type: "email", placeholder: d.contacts[0].email || "billing@yourcompany.com", value: d.company.billing_email }), null, function (v) { d.company.billing_email = v; }), "company.billing_email", "(leave blank to use the email above)"),
+      h("div", { class: "two" },
+        field("Billing contact", bind(h("input", { type: "text", maxlength: 80, value: d.company.billing_contact_name }), null, function (v) { d.company.billing_contact_name = v; }), "company.billing_contact_name", "(optional)"),
+        field("Billing phone", bind(h("input", { type: "tel", value: d.company.billing_contact_phone }), null, function (v) { d.company.billing_contact_phone = v; }), "company.billing_contact_phone", "(optional)")),
+      field("Billing address", bind(h("input", { type: "text", autocomplete: "street-address", maxlength: 200, value: d.company.billing_address }), null, function (v) { d.company.billing_address = v; }), "company.billing_address", "(optional)"));
+    shell("Tell us about your company", "A few details, then your buildings.", body, h("div", null, nav(), saveLater()));
+  }
+
+  // How our crew gets in: pick one (required), then the exact details that method needs. Private: never shown back on any page.
+  function accessBox(b, i) {
+    var wrap = h("div", { class: "acc" }, h("h3", { text: "How do our people get in" }),
+      h("p", { class: "steps", text: "Pick one, then give us the exact details. They are private: we never show them back on any page, and our crew sees them only from the night before to the day after a visit." }));
+    cfg.access_methods.forEach(function (m) {
+      var r = h("input", { type: "radio", name: "access_" + i, checked: b.access_method === m.key });
+      r.addEventListener("change", function () { b.access_method = m.key; dirty(); render(); });
+      put(wrap, h("label", { class: "chk" }, r, h("span", { text: m.label })));
+    });
+    put(wrap, err("buildings." + i + ".access_method"));
+    var m = cfg.access_methods.filter(function (x) { return x.key === b.access_method; })[0];
+    if (m) m.fields.forEach(function (f) {
+      var long = f.key === "parking" || f.key === "alarm" || f.key === "notes";
+      var el = long ? h("textarea", { maxlength: f.key === "notes" ? 600 : 300, rows: 2, value: b.access[f.key] || "" }) : h("input", { type: "text", autocomplete: "off", maxlength: 300, value: b.access[f.key] || "" });
+      put(wrap, field(f.label, bind(el, null, function (v) { b.access[f.key] = v; }), "buildings." + i + ".access." + f.key, f.required ? "" : "(optional)"));
+    });
+    return wrap;
+  }
+  function s2() {
+    var d = data, body = h("div");
+    d.buildings.forEach(function (b, i) {
+      var box = h("div", { class: "bld" }, h("div", { class: "top" }, h("b", { text: b.label || "Building " + (i + 1) }), d.buildings.length > 1 ? h("button", { class: "ghost small", type: "button", onclick: function () { d.buildings.splice(i, 1); dirty(); render(); } }, "Remove") : null));
+      put(box, 
+        field("Building name", bind(h("input", { type: "text", maxlength: 80, placeholder: "Maple Court", value: b.label }), null, function (v) { b.label = v; }), "buildings." + i + ".label", "(optional)"),
+        h("div", { class: "two" },
+          field("Street address", bind(h("input", { type: "text", autocomplete: "off", maxlength: 160, value: b.address }), null, function (v) { b.address = v; }), "buildings." + i + ".address"),
+          field("ZIP code", bind(h("input", { type: "text", inputmode: "numeric", maxlength: 5, value: b.zip }), null, function (v) { b.zip = v.replace(/\D/g, "").slice(0, 5); }), "buildings." + i + ".zip")),
+        field("How many units", bind(h("input", { type: "number", min: 1, max: 5000, inputmode: "numeric", value: b.unit_count === null ? "" : b.unit_count }), null, function (v) { b.unit_count = v === "" ? null : Number(v); }), "buildings." + i + ".unit_count"),
+        h("label", { class: "f" }, "How many of each size ", h("small", { text: "(optional)" })),
+        h("div", { class: "mix" }, cfg.unit_sizes.map(function (s) { return h("label", null, s.label, bind(h("input", { type: "number", min: 0, max: 5000, inputmode: "numeric", value: b.unit_mix[s.key] || "" }), null, function (v) { b.unit_mix[s.key] = Number(v) || 0; })); })),
+        err("buildings." + i + ".unit_mix"),
+        accessBox(b, i));
+      put(body, box);
+    });
+    if (d.buildings.length < 20) put(body, h("button", { class: "ghost", type: "button", onclick: function () { d.buildings.push(blankBuilding()); dirty(); render(); } }, "Add another building"));
+    shell("Your buildings", "We clean in the Twin Cities. Add each building you manage; you can add more any time in the portal.", body, h("div", null, nav(), saveLater()));
+  }
+
+  function s3() {
+    var d = data, body = h("div");
+    put(body, h("h3", { text: "Which days do you usually need turnovers" }),
+      h("div", { class: "days", role: "group", "aria-label": "Turnover days" }, cfg.days.map(function (x) {
+        var on = d.turnovers.days.indexOf(x.n) !== -1;
+        var cb = h("input", { type: "checkbox", checked: on });
+        cb.addEventListener("change", function () { var i = d.turnovers.days.indexOf(x.n); if (cb.checked && i === -1) d.turnovers.days.push(x.n); if (!cb.checked && i !== -1) d.turnovers.days.splice(i, 1); d.turnovers.days.sort(); dirty(); render(); });
+        return h("label", null, cb, h("span", { text: x.short }));
+      })),
+      h("p", { class: "steps", text: "We offer your usual days first. We work Monday to Saturday and never promise a same-day turnover." }),
+      h("h3", { text: "How will you send us units" }));
+    cfg.send_methods.forEach(function (m) {
+      var r = h("input", { type: "radio", name: "send", checked: d.turnovers.send_method === m.key });
+      r.addEventListener("change", function () { d.turnovers.send_method = m.key; dirty(); render(); });
+      put(body, h("label", { class: "chk" }, r, h("span", { text: m.label })));
+    });
+    put(body, err("turnovers.send_method"));
+    if (cfg.auto_book_allowed) {
+      var ab = h("input", { type: "checkbox", checked: d.turnovers.auto_book });
+      ab.addEventListener("change", function () { d.turnovers.auto_book = ab.checked; dirty(); });
+      put(body, h("h3", { text: "Book automatically" }), h("label", { class: "chk" }, ab, h("span", null, h("b", { text: "Book my turnovers without waiting for a yes." }), h("br"), h("span", { class: "steps", text: "When you text or enter a unit and its size, and a time is open, we book it and confirm. You can turn this off any time in the portal." }))));
+    }
+    put(body, h("h3", { text: "Turnover prices" }), h("p", { text: cfg.turnover.note }),
+      h("table", null, h("tr", null, h("th", { text: "Unit size" }), h("th", { class: "r", text: "Time" }), h("th", { class: "r", text: "Price" })),
+        cfg.turnover.rows.map(function (r) { return h("tr", null, h("td", { text: r.label }), h("td", { class: "r", text: hrs(r.hours) }), h("td", { class: "r", text: money(r.cents) })); })),
+      cfg.turnover.minimum_cents ? h("p", { class: "steps", text: "Every turnover is at least " + money(cfg.turnover.minimum_cents) + " per unit." }) : null);
+    shell("Turnovers", "Tell us how you like to work. You can book your first one when you finish.", body, h("div", null, nav(), saveLater()));
+  }
+
+  function priceKey(b) { return [b.common_area_sqft, b.common_bathrooms, b.floors, JSON.stringify(b.common_service)].join("|"); }
+  function s4() {
+    var d = data, body = h("div");
+    put(body, h("div", { class: "note" }, h("b", { text: "Common areas are priced like a commercial job. " }), "Free walkthrough, one monthly price, and plain terms:", h("ul", { class: "plain" }, cfg.common.terms.map(function (t) { return h("li", { text: t }); }))));
+    d.buildings.forEach(function (b, i) {
+      var box = h("div", { class: "bld" }, h("b", { text: b.label || b.address || "Building " + (i + 1) }));
+      var want = h("input", { type: "checkbox", checked: !!b.common_service });
+      want.addEventListener("change", function () { b.common_service = want.checked ? { frequency: "", package: "", kitchens: 0, entrances: 1, hard_floor_pct: 70 } : null; dirty(); render(); });
+      put(box, h("label", { class: "chk" }, want, h("span", { text: "I want recurring cleaning of the common areas and common bathrooms" })));
+      if (b.common_service) {
+        var cs = b.common_service;
+        put(box, 
+          h("label", { class: "f" }, "Which common areas does it have ", h("small", { text: "(optional)" })),
+          h("div", null, cfg.common_areas.map(function (a) {
+            var cb = h("input", { type: "checkbox", checked: b.common_areas.indexOf(a.key) !== -1 });
+            cb.addEventListener("change", function () { var k = b.common_areas.indexOf(a.key); if (cb.checked && k === -1) b.common_areas.push(a.key); if (!cb.checked && k !== -1) b.common_areas.splice(k, 1); dirty(); });
+            return h("label", { class: "chk" }, cb, h("span", { text: a.label }));
+          })),
+          h("div", { class: "two" },
+            field("Common area size (sq ft)", bind(h("input", { type: "number", min: 200, max: 500000, inputmode: "numeric", value: b.common_area_sqft === null ? "" : b.common_area_sqft }), null, function (v) { b.common_area_sqft = v === "" ? null : Number(v); delete pricing[i]; }), "buildings." + i + ".common_area_sqft", "(a rough number is fine)"),
+            field("Common bathrooms", bind(h("input", { type: "number", min: 0, max: 200, inputmode: "numeric", value: b.common_bathrooms === null ? "" : b.common_bathrooms }), null, function (v) { b.common_bathrooms = v === "" ? null : Number(v); delete pricing[i]; }), "buildings." + i + ".common_bathrooms")),
+          h("div", { class: "two" },
+            field("Floors", bind(h("input", { type: "number", min: 1, max: 100, inputmode: "numeric", value: b.floors === null ? "" : b.floors }), null, function (v) { b.floors = v === "" ? null : Number(v); delete pricing[i]; }), "buildings." + i + ".floors"),
+            field("Entrances and lobbies", bind(h("input", { type: "number", min: 0, max: 20, inputmode: "numeric", value: cs.entrances }), null, function (v) { cs.entrances = Number(v) || 0; delete pricing[i]; }), "buildings." + i + ".entrances")),
+          h("div", { class: "two" },
+            field("Kitchens or community rooms", bind(h("input", { type: "number", min: 0, max: 20, inputmode: "numeric", value: cs.kitchens || "" }), null, function (v) { cs.kitchens = Number(v) || 0; delete pricing[i]; }), "buildings." + i + ".kitchens"),
+            field("Hard floors (percent)", bind(h("input", { type: "number", min: 0, max: 100, inputmode: "numeric", value: cs.hard_floor_pct }), null, function (v) { cs.hard_floor_pct = Number(v) || 0; delete pricing[i]; }), "buildings." + i + ".hard", "(the rest is carpet)")),
+          field("How often", (function () { var sel = h("select", null, h("option", { value: "", text: "Choose how often" }), cfg.common.frequencies.map(function (f) { return h("option", { value: f.value, text: f.label }); })); sel.value = cs.frequency; sel.addEventListener("change", function () { cs.frequency = sel.value; delete pricing[i]; dirty(); render(); }); return sel; })(), "buildings." + i + ".common_service.frequency"));
+        var p = pricing[i];
+        if (cs.frequency && !p) {
+          put(box, h("button", { class: "ghost small", type: "button", onclick: function () { post({ action: "price", building: b }).then(function (j) { pricing[i] = { key: priceKey(b), r: j }; render(); }); } }, cfg.common.bid_on ? "See my prices" : "Continue"));
+        }
+        if (p) {
+          put(box, h("button", { class: "ghost small", type: "button", onclick: function () { post({ action: "price", building: b }).then(function (j) { pricing[i] = { key: priceKey(b), r: j }; render(); }); } }, "Recalculate"));
+          if (p.r.kind === "prices") {
+            put(box, h("div", { class: "pkgs" }, p.r.packages.map(function (k) {
+              var on = cs.package === k.key;
+              return h("button", { class: "pkg" + (on ? " on" : ""), type: "button", "aria-pressed": on ? "true" : "false", onclick: function () { cs.package = k.key; dirty(); render(); } },
+                h("span", { class: "price", text: money(k.monthly_cents) + "/mo" }), h("b", { text: k.label }), h("small", { text: k.blurb }), h("br"), h("small", { text: "About " + money(k.per_visit_cents) + " a visit" }));
+            })), h("p", { class: "steps", text: "These are estimates from what you told us. We confirm your price at a free walkthrough, then send you one plain monthly proposal." }));
+          } else {
+            put(box, h("div", { class: "note" }, h("b", { text: "We will price this at a free walkthrough. " }), "We visit, make your building's checklist, and send you one monthly price. We will be in touch after you finish."));
+          }
+        }
+      }
+      put(body, box);
+    });
+    shell("Common areas and bathrooms", "Optional. Skip it if you only need turnovers.", body, h("div", null, nav(), saveLater()));
+  }
+
+  // ---------- step 5: payment (bank debit with a card on file as the backup) ----------
+  // Nothing is charged or debited here: Stripe only SAVES the bank account and the card, and each person types their name and ticks the box for the exact words they were shown.
+  // Stripe's secret key never reaches this page; the publishable key is public by design. If Stripe cannot load, or the step is closed, the page says so in words: it never skips.
+  function needBank() { var b = cfg.billing; return !!b.bank_offered && (!b.check_offered || data.billing.payment_method !== "invoice"); }
+  function authVersion(t) { return t && t.version; }
+  function lowerFirst(t) { return t.charAt(0).toLowerCase() + t.slice(1); }
+  function setDisabled(id, off) { var el = document.getElementById(id); if (el) el.disabled = !!off; }
+  function syncPay() {
+    var d = data.billing;
+    setDisabled("bank-authorize", !(d.ach_consent && String(d.ach_name || "").trim().length >= 2));
+    setDisabled("card-save", !(d.backup_card_consent && String(d.card_name || "").trim().length >= 2));
+  }
+  var stripeWaiters = [];
+  function flushStripe(ok) { var w = stripeWaiters; stripeWaiters = []; w.forEach(function (f) { f(ok); }); }
+  function loadStripe(cb) {
+    if (stripe) return cb(true);
+    var pk = cfg.billing.stripe && (cfg.billing.stripe.pk || (cfg.billing.stripe.livemode ? FALLBACK_PK : null));
+    if (!pk) return cb(false);
+    stripeWaiters.push(cb);
+    if (stripeState === "loading") return;
+    function ready() { try { stripe = window.Stripe(pk); } catch (e) { stripe = null; } stripeState = stripe ? "ready" : "failed"; flushStripe(!!stripe); }
+    if (window.Stripe) return ready();
+    stripeState = "loading";
+    var done = false, timer = null;
+    var s = document.createElement("script");
+    s.src = "https://js.stripe.com/v3/";
+    s.onload = function () { if (done) return; done = true; clearTimeout(timer); ready(); };
+    s.onerror = function () { if (done) return; done = true; clearTimeout(timer); stripeState = "failed"; flushStripe(false); };
+    timer = setTimeout(function () { if (done) return; done = true; stripeState = "failed"; flushStripe(false); }, 12000);
+    document.head.appendChild(s);
+  }
+  function s5() {
+    var d = data, body = h("div"), b = cfg.billing, st = b.stripe, bankNeeded = needBank();
+    if (cardEl) { try { cardEl.destroy(); } catch (e) { /* already gone with the old page */ } cardEl = null; }
+    put(body, h("div", { class: "note" }, h("b", { text: "Statements: " }), "one statement a month for your account, broken down by building, due " + b.net_days + " days after the statement date. " + (bankNeeded ? "You pay by bank debit, with a card on file as a backup. " : "") + "Nothing is charged or debited when you finish: we send you a statement first."));
+    if (b.terms) put(body, h("h3", { text: b.terms.title }), h("div", { class: "terms", text: tok(b.terms.body) }));
+    if (b.bank_offered && b.check_offered) {
+      put(body, h("h3", { text: "How will you pay statements" }));
+      [["bank", "Bank debit (ACH)"], ["invoice", "Check or bank transfer"]].forEach(function (m) {
+        var r = h("input", { type: "radio", name: "pay", checked: d.billing.payment_method === m[0] });
+        r.addEventListener("change", function () { d.billing.payment_method = m[0]; dirty(); render(); });
+        put(body, h("label", { class: "chk" }, r, h("span", { text: m[1] })));
+      });
+    }
+    var closed = st && !st.ready;
+    if (closed && (bankNeeded || b.backup_card_mode === "capture")) put(body, h("div", { class: "note err", role: "alert", text: st.closed_text }));
+    else {
+      if (bankNeeded) put(body, bankSection(b));
+      if (b.backup_card_mode !== "off") put(body, cardSection(b));
+    }
+    shell("Payment", "How you pay us.", body, h("div", null, nav(), saveLater()));
+    if (!closed && !stripeFailed && st && ((bankNeeded && !bank) || (b.backup_card_mode === "capture" && !card))) {
+      loadStripe(function (ok) { if (!ok) { stripeFailed = true; if (step === 5) render(); } else if (step === 5 && b.backup_card_mode === "capture" && !card) mountCard(); });
+    }
+    syncPay();
+  }
+  function stripeProblem(what) {
+    return h("div", { class: "note err", role: "alert" }, "We could not load our secure " + what + " form (it comes from Stripe). Check your connection or any ad blocker, then try again. Nothing was saved. ",
+      h("button", { class: "ghost small", type: "button", onclick: function () { stripeFailed = false; stripeState = "idle"; render(); } }, "Try again"));
+  }
+  function bankSection(b) {
+    var d = data, box = h("div", { class: "pay" }, h("h3", { text: "Bank debit (ACH)" }));
+    if (b.ach_terms) put(box, h("div", { class: "terms", text: tok(b.ach_terms.body) }));
+    if (bank) {
+      put(box, h("p", { class: "ok", text: "Bank account on file: " + (bank.bank_name || "your bank") + " ending " + bank.last4 }),
+        h("button", { class: "ghost small", type: "button", onclick: function () { bank = null; bankPending = null; d.billing.ach_consent = false; dirty(); render(); } }, "Use a different account"));
+      return box;
+    }
+    if (stripeFailed) return put(box, stripeProblem("bank connection"), err("billing.bank"));
+    var name = bind(h("input", { type: "text", autocomplete: "name", maxlength: 120, id: "ach-name", value: d.billing.ach_name }), null, function (v) { d.billing.ach_name = v; syncPay(); });
+    var tick = h("input", { type: "checkbox", id: "ach-tick", checked: d.billing.ach_consent });
+    tick.addEventListener("change", function () { d.billing.ach_consent = tick.checked; dirty(); syncPay(); });
+    if (!bankPending) {
+      put(box, h("p", { class: "steps", text: "Step 1: connect your bank account (Stripe opens a secure window). Step 2: read the words above and authorize." }),
+        h("button", { class: "ghost", type: "button", id: "bank-connect", disabled: busy, onclick: startBank }, "Connect my bank account"));
+    } else {
+      put(box, h("p", { class: "ok", text: "Your bank is connected. Read the authorization above, type your name, tick the box and authorize." }),
+        h("label", { class: "f" }, "Type your full name", name),
+        h("label", { class: "chk" }, tick, h("span", { text: "I have read this and I authorize bank payments for " + (d.company.name || "my company") + "." })),
+        h("div", { class: "nav" }, h("button", { class: "ghost", type: "button", onclick: function () { bankPending = null; render(); } }, "Cancel"),
+          h("button", { class: "grow", type: "button", id: "bank-authorize", onclick: authorizeBank }, "Authorize bank payments")));
+    }
+    put(box, err("billing.bank"));
+    return box;
+  }
+  function startBank() {
+    errors = {};
+    if (!stripe) return loadStripe(function (ok) { if (ok) startBank(); else { stripeFailed = true; render(); } });
+    var btn = document.getElementById("bank-connect"); if (btn) { btn.disabled = true; btn.textContent = "Opening your bank connection…"; }
+    persist(function () {
+      post({ action: "bank_setup", token: token, auth_version: authVersion(cfg.billing.ach_terms) }).then(function (j) {
+        if (!j || !j.client_secret) { errors["billing.bank"] = (j && j.message) || "We could not start the bank connection. Please try again in a minute."; return render(); }
+        var email = (data.company.billing_email || data.contacts[0].email || undefined);
+        return stripe.collectBankAccountForSetup({ clientSecret: j.client_secret, params: { payment_method_type: "us_bank_account", payment_method_data: { billing_details: { name: data.company.name || data.contacts[0].full_name, email: email } } } }).then(function (r) {
+          if (r.error) {
+            var code = (r.error.code || "") + " " + (r.error.message || "");
+            if (/cancel|clos|dismiss/i.test(code)) { errors["billing.bank"] = "You closed the bank window. Nothing was saved. You can connect again when you are ready."; return render(); }
+            return reportFail("bank", r.error.code || r.error.type);
+          }
+          if (!r.setupIntent || r.setupIntent.status !== "requires_confirmation") return reportFail("bank", "bank_not_ready");
+          bankPending = { secret: j.client_secret }; render();
+        });
+      }).catch(function () { errors["billing.bank"] = "We could not reach the bank connection. Please try again in a minute."; render(); });
+    });
+  }
+  function authorizeBank() {
+    var d = data.billing;
+    if (!bankPending || !stripe || !d.ach_consent || String(d.ach_name || "").trim().length < 2) return;
+    var btn = document.getElementById("bank-authorize"); if (btn) { btn.disabled = true; btn.textContent = "Authorizing…"; }
+    stripe.confirmUsBankAccountSetup(bankPending.secret).then(function (c) {
+      if (c.error || !c.setupIntent || c.setupIntent.status !== "succeeded") return reportFail("bank", (c.error && (c.error.code || c.error.type)) || "bank_not_confirmed");
+      return post({ action: "bank_done", token: token, setup_intent: c.setupIntent.id, typed_name: d.ach_name, consent: true, auth_version: authVersion(cfg.billing.ach_terms) }).then(function (j) {
+        if (j && j.ok) { bank = { bank_name: j.bank_name, last4: j.last4 }; bankPending = null; delete errors["billing.bank"]; persist(function () { render(); }); return; }
+        bankPending = null;
+        errors["billing.bank"] = (j && j.error === "wording_changed") ? "Our wording was just updated. Please reload this page and read it again." : ((j && j.message) || "We could not save that bank account. Please try again.");
+        render();
+      });
+    }).catch(function () { reportFail("bank", "network"); });
+  }
+  // Stripe itself refused: tell the server a short code (it logs it and answers with a retry message; a repeat reaches our team) and show that message.
+  function reportFail(method, code) {
+    bankPending = null;
+    return post({ action: "pay_failed", token: token, method: method, code: String(code || "") }).then(function (j) {
+      errors["billing." + (method === "bank" ? "bank" : "card")] = (j && j.message) || "That did not go through, and nothing was charged. Please try again.";
+      render();
+    }).catch(function () { errors["billing." + (method === "bank" ? "bank" : "card")] = "That did not go through, and nothing was charged. Please try again."; render(); });
+  }
+  function cardSection(b) {
+    var d = data, box = h("div", { class: "pay" }, h("h3", { text: "Backup card" }));
+    if (b.card_terms) put(box, h("div", { class: "terms", text: tok(b.card_terms.body) }));
+    var name = bind(h("input", { type: "text", autocomplete: "name", maxlength: 120, id: "card-name", value: d.billing.card_name }), null, function (v) { d.billing.card_name = v; syncPay(); });
+    var tick = h("input", { type: "checkbox", checked: d.billing.backup_card_consent });
+    tick.addEventListener("change", function () { d.billing.backup_card_consent = tick.checked; dirty(); syncPay(); });
+    put(box, h("label", { class: "f" }, "Type your full name", name), h("label", { class: "chk" }, tick, h("span", { text: "I have read this and I agree." })), err("billing.backup_card_consent"));
+    if (b.backup_card_mode === "capture") {
+      if (card) put(box, h("p", { class: "ok", text: "Card on file: " + (card.brand || "card") + " ending " + card.last4 }));
+      else if (stripeFailed) put(box, stripeProblem("card"));
+      else put(box, h("div", { id: "card-el", class: "cardel" }), h("button", { class: "ghost small", type: "button", id: "card-save", onclick: saveCard }, "Save card"),
+        h("p", { class: "steps", text: "Saving the card does not charge it. It is charged only as the words above say, after we tell you." }), err("billing.card"));
+    }
+    return box;
+  }
+  function mountCard() {
+    var host = document.getElementById("card-el");
+    if (!stripe || !host || cardEl) return;
+    try { var el = stripe.elements().create("card", { hidePostalCode: false }); el.mount("#card-el"); cardEl = el; } catch (e) { stripeFailed = true; render(); }
+  }
+  function saveCard() {
+    var d = data.billing;
+    if (!stripe || !cardEl || !d.backup_card_consent || String(d.card_name || "").trim().length < 2) return;
+    var btn = document.getElementById("card-save"); btn.disabled = true; btn.textContent = "Saving…";
+    var auth = { typed_name: d.card_name, consent: true, auth_version: authVersion(cfg.billing.card_terms) };
+    persist(function () {
+      post({ action: "card_setup", token: token, typed_name: auth.typed_name, consent: true, auth_version: auth.auth_version }).then(function (j) {
+        if (!j || !j.client_secret) { errors["billing.card"] = (j && j.error === "wording_changed") ? "Our wording was just updated. Please reload this page and read it again." : ((j && j.message) || "We could not start saving the card. Please try again."); return render(); }
+        return stripe.confirmCardSetup(j.client_secret, { payment_method: { card: cardEl, billing_details: { name: data.contacts[0].full_name, email: data.contacts[0].email || undefined } } }).then(function (r) {
+          if (r.error) {
+            if (r.error.type === "validation_error") { errors["billing.card"] = r.error.message || "Please check the card details."; return render(); }
+            return reportFail("card", r.error.code || r.error.type);
+          }
+          return post({ action: "card_done", token: token, setup_intent: r.setupIntent.id, typed_name: auth.typed_name, consent: true, auth_version: auth.auth_version }).then(function (k) {
+            if (k && k.ok) { card = { brand: k.brand, last4: k.last4 }; cardEl = null; delete errors["billing.card"]; } else errors["billing.card"] = (k && k.message) || "We could not save that card. Please try again.";
+            render();
+          });
+        });
+      }).catch(function () { errors["billing.card"] = "We could not save that card. Please try again."; render(); });
+    });
+  }
+
+  function s6() {
+    var body = h("div");
+    put(body, h("p", { text: "Add what your company needs us to have. PDFs or photos, up to 5 MB each." }));
+    (cfg.documents || []).forEach(function (x) {
+      var mine = uploads.filter(function (u) { return u.kind === x.key; });
+      var inp = h("input", { type: "file", accept: "application/pdf,image/jpeg,image/png", "aria-label": x.label });
+      inp.addEventListener("change", function () { if (inp.files && inp.files[0]) uploadFile(x.key, inp.files[0]); });
+      put(body, h("h3", { text: x.label + (x.required ? " (required)" : "") }), h("div", null, mine.map(function (u) { return h("div", { class: "file" }, h("span", { text: u.file_name }), h("button", { class: "ghost small", type: "button", onclick: function () { post({ action: "remove_upload", token: token, id: u.id }).then(function () { uploads = uploads.filter(function (z) { return z.id !== u.id; }); render(); }); } }, "Remove")); })), inp, err("documents." + x.key));
+    });
+    shell("Your documents", "", body, h("div", null, nav(), saveLater()));
+  }
+  function uploadFile(kind, file) {
+    if (!/\.(pdf|jpe?g|png)$/i.test(file.name)) { errors["documents." + kind] = "Use a PDF, JPG or PNG."; return render(); }
+    if (file.size > 5 * 1024 * 1024) { errors["documents." + kind] = "That file is over 5 MB."; return render(); }
+    var rd = new FileReader();
+    rd.onload = function () {
+      persist(function () {
+        post({ action: "upload", token: token, kind: kind, file_name: file.name, data_base64: String(rd.result) }).then(function (j) {
+          if (j && j.ok) { uploads.push({ id: j.file.id, kind: j.file.kind, file_name: j.file.file_name }); delete errors["documents." + kind]; } else errors["documents." + kind] = j && j.error === "bad_type" ? "Use a PDF, JPG or PNG." : "We could not add that file.";
+          render();
+        });
+      });
+    };
+    rd.readAsDataURL(file);
+  }
+
+  function s7() {
+    var d = data, body = h("div");
+    put(body, h("p", { text: "Please read and accept. We keep a record of what you accepted and when." }));
+    (cfg.agreements || []).forEach(function (a) { put(body, h("h3", { text: a.title }), h("div", { class: "terms", text: tok(a.body) })); });
+    var cb = h("input", { type: "checkbox", checked: d.agreement.accepted });
+    cb.addEventListener("change", function () { d.agreement.accepted = cb.checked; });
+    put(body, 
+      field("Type your full name", bind(h("input", { type: "text", autocomplete: "name", maxlength: 120, value: d.agreement.name }), null, function (v) { d.agreement.name = v; }), "agreement.name"),
+      h("label", { class: "chk" }, cb, h("span", { text: "I am authorized to accept these for " + (d.company.name || "my company") + ", and I accept them." })),
+      h("input", { class: "hp", type: "text", name: "website", tabindex: "-1", autocomplete: "off", "aria-hidden": "true", id: "hp" }));
+    var finish = h("button", { class: "grow", type: "button", disabled: busy, onclick: complete }, busy ? "Finishing…" : "Finish and get my portal");
+    shell("Agreements", "Last step.", body, h("div", null, h("div", { class: "nav" }, h("button", { class: "ghost", type: "button", onclick: function () { go(6, false); } }, "Back"), finish), saveLater()));
+  }
+
+  function complete() {
+    errors = validate(7);
+    if (Object.keys(errors).length) { render(); return; }
+    busy = true; render();
+    persist(function () {
+      post({ action: "complete", token: token, data: data, website: (document.getElementById("hp") || {}).value || "" }).then(function (j) {
+        busy = false;
+        if (j && j.ok) { doneInfo = j; try { localStorage.removeItem(LS); } catch (e) { /* ignore */ } return render(); }
+        if (j && j.error === "invalid" && j.errors) {
+          errors = {}; var first = 99;
+          j.errors.forEach(function (x) { errors[x.field] = x.message; if (x.step < first) first = x.step; });
+          step = first === 99 ? 7 : first; return render();
+        }
+        errors = { "agreement.name": (j && j.message) || "We could not finish that just now. Please try again in a minute." };
+        render();
+      }).catch(function () { busy = false; errors = { "agreement.name": "We could not finish that just now. Please try again." }; render(); });
+    });
+  }
+
+  function renderDone() {
+    var j = doneInfo, kids = [h("div", { class: "brand", text: j.brand }), h("h1", { text: "You are all set" }), h("p", { text: j.page_text || "Your portal is ready." })];
+    if (j.portal_url) kids.push(h("p", null, h("a", { href: j.portal_url }, h("button", { type: "button" }, "Open your portal"))), h("p", { class: "steps", text: "Bookmark it: this link is only for you." }));
+    if (j.emailed && j.email) kids.push(h("p", { class: "steps", text: "We also emailed it to " + j.email + "." }));
+    if (j.payment_line) kids.push(h("div", { class: "note", text: "Payment on file: " + j.payment_line + ". Nothing has been charged or debited: we send you a statement first, once a month." }));
+    if (j.common_walkthroughs) kids.push(h("div", { class: "note", text: "We will be in touch to set up your free common-area walkthrough." }));
+    if (j.common_bids) kids.push(h("div", { class: "note", text: "Your common-area proposal is on its way. We confirm the price at a free walkthrough." }));
+    app.replaceChildren(h("div", { class: "card done" }, kids));
+    scrollTop();
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

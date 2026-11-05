@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Property Manager Rewards</title>
-<meta name="description" content="See what your properties could earn in loyalty points with Two Hour Maids: turnovers, common areas and more.">
+<title>Facilities by Two Hour Maids Rewards</title>
+<meta name="description" content="See what your properties could earn with Facilities by Two Hour Maids Rewards: points on every paid statement, redeemed for technology and gifts.">
 <!--
   Property-manager rewards calculator (2026-10-14; PM-LOYALTY.md). Public, for prospects. Link as pm-earn.html?org=two-hour-maids.
   Rates come from the pm-program function (JSON; Supabase will not serve html from a function, gotcha 1). While the program is off, that
@@ -50,8 +50,8 @@
 <body>
 <div class="wrap">
   <div class="card">
-    <h1>What could your properties earn?</h1>
-    <p>Property managers who book their turnovers and common-area cleans with <span id="org">us</span> earn loyalty points on every paid clean, and trade them for technology gifts or money off future cleans.</p>
+    <h1>Facilities by Two Hour Maids Rewards</h1>
+    <p>Property managers and commercial accounts of Facilities by <span id="org">Two Hour Maids</span> earn points on every paid statement, on unit turnovers and on commercial cleaning, and trade them for technology and gifts. You pick a reward at checkout, tell us where to send it, and we buy it and send it. Points post when your monthly statement is paid, and they roll over.</p>
   </div>
   <div id="banner"></div>
 
@@ -79,7 +79,7 @@
   <div class="card">
     <h2>Rewards your first year would cover <span id="ex2" class="example"></span></h2>
     <div id="rewards"></div>
-    <p class="small" style="margin-top:10px">Rewards are obtained only by redeeming points. Points have no cash value and cannot be bought.</p>
+    <p class="small" style="margin-top:10px">Rewards are obtained only by redeeming points. Points have no cash value, cannot be bought, sold or transferred, and a reward is delivered after our team confirms it.</p>
   </div>
 
   <div class="card">
@@ -96,7 +96,7 @@
     <p class="small" style="margin-top:10px">Texting opens your own messages app; we reply about your walkthrough only. Reply STOP any time.</p>
   </div>
 
-  <p class="small">Estimates assume the same volume every month, every invoice paid on time, and our standard rate per labor hour. Your real price and points depend on your agreement. The program, its rates and its rewards may change with notice. Please make sure your employer allows you to accept rewards.</p>
+  <p class="small">Estimates assume the same volume every month, every statement paid on time, and our standard turnover price (at least $189 a unit). Your real price and points depend on your agreement. The program, its rates and its rewards may change with notice. Please make sure your employer allows you to accept rewards.</p>
 </div>
 
 <script>
@@ -131,6 +131,7 @@
   ];
   var HOURS = { '0/1': 2, '1/1': 2.5, '2/1': 3, '2/2': 3.5, '3/1': 4, '3/2': 4.5, '3/3': 5, '4/2': 5.5, '4/3': 6 };
   var RATE = 5000;
+  var MIN_TURNOVER = 18900; // the least a turnover is priced at ($189)
   // EXAMPLE-END
 
   // FORMULA-START (same as src/lib/pmLoyalty.ts)
@@ -183,7 +184,7 @@
   }
   // FORMULA-END
 
-  var state = { live: false, program: EXAMPLE_PROGRAM, rewards: EXAMPLE_REWARDS, hours: HOURS, rate: RATE };
+  var state = { live: false, program: EXAMPLE_PROGRAM, rewards: EXAMPLE_REWARDS, hours: HOURS, rate: RATE, min: MIN_TURNOVER, categories: {} };
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function usd(c) { return '$' + Math.round(c / 100).toLocaleString('en-US'); }
@@ -198,7 +199,7 @@
   function render() {
     var p = state.program, ex = state.live ? '' : 'Example';
     ['ex1', 'ex2', 'ex3'].forEach(function (id) { $(id).textContent = ex; });
-    var input = { turnoversPerMonth: Number($('t').value), otherCleansPerMonth: Number($('o').value), pricePerCleanCents: priceForSize($('s').value, state.rate, state.hours) };
+    var input = { turnoversPerMonth: Number($('t').value), otherCleansPerMonth: Number($('o').value), pricePerCleanCents: Math.max(priceForSize($('s').value, state.rate, state.hours), state.min) };
     var y = [1, 2, 3].map(function (n) { return projectYear(Object.assign({ year: n }, input), p); });
     $('spend').textContent = usd(y[0].spend_cents);
     $('pts1').textContent = num(y[0].points);
@@ -209,14 +210,16 @@
     $('years').innerHTML = '<div style="margin-top:10px">' + y.map(function (r, i) {
       return '<div class="row"><div>' + (i === 2 ? 'Year 3 and after' : 'Year ' + (i + 1)) + ' <span class="small">(' + (yearBp(i + 1, p.year_bp) / 100) + '% of what you pay' + (r.unit_bonus_points ? ', plus unit and on-time bonuses' : '') + ')</span></div><b>' + num(r.points) + ' pts</b></div>';
     }).join('') + '</div>';
-    var un = rewardsUnlocked(y[0].points, state.rewards);
+    var CAT = { tech: 'Technology', fun: 'Gift' };
+    var catOf = {}; state.rewards.forEach(function (r) { catOf[r.title] = r.category || (r.kind === 'credit' ? 'credits' : r.kind === 'addon' || r.kind === 'perk' ? 'extras' : 'tech'); });
+    var un = rewardsUnlocked(y[0].points, state.rewards.filter(function (r) { return !r.kind || r.kind === 'item'; }));
     $('rewards').innerHTML = un.length
-      ? un.map(function (r) { return '<div class="row"><div>' + esc(r.title) + ' <span class="small">' + num(r.points_cost) + ' pts</span></div><b>' + (r.times > 1 ? r.times + ' times' : 'Yes') + '</b></div>'; }).join('')
+      ? un.map(function (r) { return '<div class="row"><div>' + esc(r.title) + ' <span class="small">' + esc(CAT[catOf[r.title]] || '') + ' · ' + num(r.points_cost) + ' pts</span></div><b>' + (r.times > 1 ? r.times + ' times' : 'Yes') + '</b></div>'; }).join('')
       : '<p>Add a few cleans a month to see the rewards your points would cover.</p>';
     $('tiers').innerHTML = sortedTiers(p.tiers).map(function (t) {
       return '<div class="tier' + (t.name === y[0].tier ? ' on' : '') + '"><b>' + esc(t.name) + '</b><div class="small">' + (t.min_spend_cents ? usd(t.min_spend_cents) + '+ a year' : 'From your first clean') + '</div><ul>' + (t.perks || []).map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
     }).join('');
-    $('bonusNote').textContent = 'Also: ' + num(p.referral_bonus_points) + ' points when a property manager you refer books their first clean, and ' + num(p.commitment_bonus_points) + ' points for a year-long agreement.';
+    $('bonusNote').textContent = 'Also: ' + num(p.referral_bonus_points) + ' points when a property manager you refer pays their first statement, and ' + num(p.commitment_bonus_points) + ' points for a year-long agreement.';
   }
 
   function start(live) {
@@ -234,7 +237,7 @@
         state.live = true;
         state.program = d.program;
         state.rewards = d.rewards || [];
-        if (d.pricing) { state.hours = d.pricing.hours_by_size || HOURS; state.rate = d.pricing.rate_cents || RATE; }
+        if (d.pricing) { state.hours = d.pricing.hours_by_size || HOURS; state.rate = d.pricing.rate_cents || RATE; state.min = d.pricing.min_cents == null ? MIN_TURNOVER : d.pricing.min_cents; }
       }
       start(state.live);
     })
