@@ -337,11 +337,11 @@
   function priceKey(b) { return [b.common_area_sqft, b.common_bathrooms, b.floors, JSON.stringify(b.common_service)].join("|"); }
   function s4() {
     var d = data, body = h("div");
-    put(body, h("div", { class: "note" }, h("b", { text: "Common areas are priced like a commercial job. " }), "Free walkthrough, one monthly price, and plain terms:", h("ul", { class: "plain" }, cfg.common.terms.map(function (t) { return h("li", { text: t }); }))));
+    put(body, h("div", { class: "note" }, h("b", { text: "Common areas are priced like a commercial job. " }), "Free walkthrough, one price per visit, and plain terms:", h("ul", { class: "plain" }, cfg.common.terms.map(function (t) { return h("li", { text: t }); }))));
     d.buildings.forEach(function (b, i) {
       var box = h("div", { class: "bld" }, h("b", { text: b.label || b.address || "Building " + (i + 1) }));
       var want = h("input", { type: "checkbox", checked: !!b.common_service });
-      want.addEventListener("change", function () { b.common_service = want.checked ? { frequency: "", package: "", kitchens: 0, entrances: 1, hard_floor_pct: 70 } : null; dirty(); render(); });
+      want.addEventListener("change", function () { b.common_service = want.checked ? { frequency: "", package: "standard", kitchens: 0, entrances: 1, hard_floor_pct: 70 } : null; dirty(); render(); });
       put(box, h("label", { class: "chk" }, want, h("span", { text: "I want recurring cleaning of the common areas and common bathrooms" })));
       if (b.common_service) {
         var cs = b.common_service;
@@ -368,14 +368,13 @@
         }
         if (p) {
           put(box, h("button", { class: "ghost small", type: "button", onclick: function () { post({ action: "price", building: b }).then(function (j) { pricing[i] = { key: priceKey(b), r: j }; render(); }); } }, "Recalculate"));
-          if (p.r.kind === "prices") {
-            put(box, h("div", { class: "pkgs" }, p.r.packages.map(function (k) {
-              var on = cs.package === k.key;
-              return h("button", { class: "pkg" + (on ? " on" : ""), type: "button", "aria-pressed": on ? "true" : "false", onclick: function () { cs.package = k.key; dirty(); render(); } },
-                h("span", { class: "price", text: money(k.monthly_cents) + "/mo" }), h("b", { text: k.label }), h("small", { text: k.blurb }), h("br"), h("small", { text: "About " + money(k.per_visit_cents) + " a visit" }));
-            })), h("p", { class: "steps", text: "These are estimates from what you told us. We confirm your price at a free walkthrough, then send you one plain monthly proposal." }));
+          if (p.r.kind === "price") {
+            put(box, h("div", { class: "pkgs" }, h("div", { class: "pkg on" }, h("span", { class: "price", text: money(p.r.per_visit_cents) + " per visit" }), h("b", { text: "Common areas, " + p.r.frequency_label }),
+              h("small", { text: (p.r.drive_fee_cents ? "Includes " + money(p.r.drive_fee_cents) + " " + String(p.r.drive_label || "travel and logistics fee").toLowerCase() + ". " : "") + "Before sales tax. Minimum " + money(p.r.minimum_cents) + " per visit." }), h("br"),
+              h("small", { text: "About " + money(p.r.monthly_estimate_cents) + " a month at " + p.r.frequency_label + ", billed per visit on your monthly statement." }))),
+              h("p", { class: "steps", text: "This is an estimate from what you told us. We confirm your price at a free walkthrough." }));
           } else {
-            put(box, h("div", { class: "note" }, h("b", { text: "We will price this at a free walkthrough. " }), "We visit, make your building's checklist, and send you one monthly price. We will be in touch after you finish."));
+            put(box, h("div", { class: "note" }, h("b", { text: "We will price this at a free walkthrough. " }), "We visit, make your building's checklist, and send you one price per visit. We will be in touch after you finish."));
           }
         }
       }
