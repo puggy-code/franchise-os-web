@@ -38,7 +38,8 @@
   textarea, select { width: 100%; font: inherit; border: 1px solid #ddd9ea; border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; background: #fff; }
   textarea { min-height: 90px; }
   #details-slot label { display: block; margin: 4px 0 4px; }
-  #details-slot input { width: 100%; font: inherit; border: 1px solid #ddd9ea; border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; background: #fff; }
+  #hh-slot label { display: block; margin: 4px 0; }
+  #details-slot input, #hh-slot input { width: 100%; font: inherit; border: 1px solid #ddd9ea; border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; background: #fff; }
   #details-slot textarea { min-height: 54px; }
   .msg { padding: 10px 12px; border-radius: 14px; margin: 0 0 8px; max-width: 88%; font-size: 15px; }
   .msg.customer { background: #eef2fb; margin-left: auto; } .msg.staff { background: #f6f5fb; }
@@ -72,7 +73,7 @@
     var PORTAL = {
       extras: { loyalty: { dots: 3, of: 6 }, referrals: [], free_clean_credit: false, notify: { reminders: true, on_the_way: true, reports: true, offers: false }, pets: [{ id: 'p1', name: 'Biscuit', kind: 'dog', where_during: 'Backyard', temperament: 'friendly' }], key_tags: [], free_skips: { left: 1, total: 1 }, tips: ['Pick up clutter and dishes', 'Put pets in a crate or a closed room', 'Leave entry info (key, code or lockbox)'] },
       ready: { team: [{ first_name: 'Tatiana', fun_facts: ['Loves gardening', 'Has two cats', 'Makes great tamales'], video_url: null, cleans: 212, avg_rating: 4.9, background_checked: true, insured: true }, { first_name: 'Maria', fun_facts: [], video_url: null, cleans: 87, avg_rating: null, background_checked: true, insured: true }], next_clean: { date: ymd, service: 'Two Hour Clean', two_hour: true }, plan: [{ room: 'Kitchen', items: ['Counters', 'Sink', 'Outside of appliances'] }], video_url: null, notes: [] },
-      cleaning_plans: [], org: { name: 'Two Hour Maids' },
+      cleaning_plans: [{ id: 's1', label: 'Checklist Clean', frequency: 'biweekly', time: '09:00:00', status: 'active', paused_until: null, can_pause: true, can_pick_time: false, pause_min_date: ymd, pause_max_date: ymd, restart_due: false }], org: { name: 'Two Hour Maids' },
       customer: { first_name: 'Jane', texts_on: false, contact_pref: 'text', photos_opt_out: false }, has_card: true, saved_card: null,
       current: [{ id: 'j1', can_move: false, date: ymd, time: '09:00:00', status: phase === 'arrived' ? 'in_progress' : 'on_the_way', service: 'Two Hour Clean', two_hour: true, crew: ['Tatiana', 'Maria'], progress: { done: 3, total: 7 }, report_token: null, tip_options_cents: null }],
       past: [], two_hour: true, max_requests: 2, photos: [], documents: [], balance: { owed_cents: 0, due_now_cents: 0 }, plans: [], invoices: [], messages: []
@@ -87,6 +88,9 @@
         : body.action === 'trip' ? TRIP
         : body.action === 'details_get' ? { ok: true, details: DETAILS }
         : body.action === 'details_save' ? { ok: true, details: Object.assign(DETAILS, { full_name: body.full_name || DETAILS.full_name, entry_method: body.entry_method || null, access_notes: body.access_notes || '', gate_code_saved: DETAILS.gate_code_saved || !!body.gate_code, alarm_code_saved: DETAILS.alarm_code_saved || !!body.alarm_code, language: body.language === 'es' ? 'es' : 'en' }), requested: !!(body.phone || body.email || body.address) }
+        : body.action === 'plan_options' ? { ok: true, current: { frequency: 'biweekly', price_cents: 24200 }, pending: null, options: [{ frequency: 'weekly', price_cents: 24200, current: false }, { frequency: 'biweekly', price_cents: 24200, current: true }, { frequency: 'every_4_weeks', price_cents: 25300, current: false }] }
+        : body.action === 'extras_options' ? { ok: true, addons: [{ key: 'fridge-emptied', label: 'Fridge (emptied)', cents: 3300, max_qty: 1 }, { key: 'blinds-room', label: 'Blinds in one room', cents: 1000, max_qty: 6 }], visits: [{ id: 'j2', date: ymd, time: '09:00:00', service: 'Checklist Clean', extras: null }] }
+        : /^household_/.test(body.action) ? { ok: true, phones: [] }
         : { ok: true, items: [], extra_time: [], choices: [], openings: [], options: [] };
       return Promise.resolve(new Response(JSON.stringify(out), { status: 200, headers: { 'content-type': 'application/json' } }));
     };
@@ -149,7 +153,7 @@
         .then(function (t) {
           var txt = document.getElementById('livetxt'), box = document.getElementById('livemap'), head = document.getElementById('livehead');
           if (!txt) return;
-          // Older function (before 0931): { open, driver, position, dest }. Read it the same way until the new one is deployed.
+          // Older function (before 0892): { open, driver, position, dest }. Read it the same way until the new one is deployed.
           if (t && !t.phase) t = t.open ? { phase: 'on_the_way', driver: t.driver, position: t.position, dest: t.dest, eta_min: t.position && t.dest && t.dest.lat != null ? Math.max(1, Math.round(km(t.position, t.dest) * 1.35 / 40 * 60)) : null, waiting: t.position ? null : 'location' } : { phase: 'none' };
           if (!t || t.phase === 'none') { txt.textContent = LIVE.arrived ? 'Your clean is done. The report comes next.' : 'Your team has arrived or is about to.'; if (box) box.style.display = 'none'; clearInterval(LIVE.timer); return; }
           if (t.phase === 'arrived') {
@@ -311,16 +315,22 @@
       '</p><button id="cpref" data-pref="' + (d.customer.contact_pref === 'call' ? 'text' : 'call') + '">' + (d.customer.contact_pref === 'call' ? 'Switch back to texts' : 'Call me instead') + '</button> <span id="cprefnote"></span></div>';
     if (new URLSearchParams(location.search).get('tip') === 'thanks') h = '<div class="card"><p class="ok">Thank you! Your tip goes to your team.</p></div>' + h;
     h = h.replace('<div class="card" id="billing">', '<div class="card" id="upload"><h2>Send us a file</h2><p>A floor plan, a lease, a photo of a spot that needs care. PDF or photo, up to 8 MB. It is kept with your documents.</p><input type="file" id="ufile" accept="application/pdf,image/jpeg,image/png,image/heic,image/webp"> <button id="usend">Send</button> <span id="unote"></span></div><div class="card" id="billing">');
-    // Crew on the way (0593/0931): a live map while the team drives to you (first name, ETA, no dot until they have left where they
+    // Crew on the way (0593/0892): a live map while the team drives to you (first name, ETA, no dot until they have left where they
     // started), then "arrived" and rooms done while they clean. Today only.
     var coming = (d.current || []).some(function (j) { return j.status === 'on_the_way' || (j.status === 'in_progress' && j.date === todayYmd()); });
     if (coming) h = h.replace('</nav>', '</nav><div class="card" id="live"><h2 id="livehead">Your team is on the way</h2><p id="livetxt" aria-live="polite">Finding them...</p><div id="livemap" role="img" aria-label="Map of your team on the way" style="height:240px;border-radius:12px;display:none"></div></div>');
     // Your details (CUSTOMER-APP-ANALYSIS.md): filled in by loadDetails below.
-    h = h.replace('<div class="card" id="home">', '<div class="card" id="details"><h2>Your details</h2><div id="details-slot"><p class="sub">Loading...</p></div></div><div class="card" id="home">');
+    h = h.replace('<div class="card" id="home">', '<div class="card" id="details"><h2>Your details</h2><div id="details-slot"><p class="sub">Loading...</p></div></div>' +
+      // How often we come (0934), extras on a coming clean (0933), household phones (0932): filled in by loadPlanBits below.
+      '<div class="card" id="myplan"><h2>How often we come</h2><div id="freq-slot"><p class="sub">Loading...</p></div></div>' +
+      '<div class="card" id="addextras"><h2>Add extras to a coming clean</h2><p class="sub">Up to 48 hours before. Added to that clean\'s price (plus tax) and charged the usual way. The Two Hour Clean takes no extras.</p><div id="xtra-slot"></div></div>' +
+      '<div class="card" id="household"><h2>Household phones</h2><p class="sub">Up to 2 more phones that can sign in and manage this account. We text a code to that phone to confirm it.</p><div id="hh-slot"></div></div>' +
+      '<div class="card" id="home">');
     h = h.replace('<nav><a href="#home">', '<nav><a href="#details">Your details</a><a href="#home">');
     root.innerHTML = h;
     if (coming) startLive();
     if (window.loadDetails) window.loadDetails();
+    if (window.loadPlanBits) window.loadPlanBits(d.cleaning_plans || []);
     if (window.loadDocs) window.loadDocs();
     if (window.loadAsks) window.loadAsks();
     (function () {
@@ -831,6 +841,93 @@
       }).catch(function () {});
     };
     if (document.getElementById('details-slot')) window.loadDetails();
+  })();
+</script>
+<script>
+  // How often we come (decision 558, 0934), extras on a coming Checklist Clean (559, 0933), household phones (561, 0932). Same server
+  // actions as the phone app; every price comes from customer-portal.
+  (function () {
+    var FREQ = { weekly: 'Every week', biweekly: 'Every 2 weeks', every_3_weeks: 'Every 3 weeks', every_4_weeks: 'Every 4 weeks', every_5_weeks: 'Every 5 weeks', every_6_weeks: 'Every 6 weeks' };
+    var XERR = { too_long: 'That is more than one visit holds. Pick fewer.', has_extras: 'This clean already has extras. Message us to change them.', too_close: 'Inside 48 hours: please message us.', billed: 'Already billed. Please message us.' };
+    var PICKS = {}, VISIT = null, PLANS = [];
+    function cp(body) { body.t = token; return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }); }
+    function drawFreq() {
+      var el = document.getElementById('freq-slot'); if (!el) return;
+      if (!PLANS.length) { el.innerHTML = '<p class="sub">You do not have a regular plan. Book one any time.</p>'; return; }
+      el.innerHTML = '';
+      PLANS.forEach(function (p) {
+        cp({ action: 'plan_options', series_id: p.id }).then(function (r) {
+          if (!r.ok) return;
+          var o = r.j, box = document.createElement('div');
+          var head = '<p><b>' + esc(p.label || '') + ' · ' + esc(FREQ[p.frequency] || p.frequency) + '</b></p>';
+          if (o.pending) box.innerHTML = head + '<p>Asked: ' + esc(FREQ[o.pending.to_frequency] || o.pending.to_frequency) + ' at ' + esc(money(o.pending.to_price_cents)) + ' a visit. We confirm it soon; your next visit stays as it is.</p><button class="btn alt" data-wd="' + esc(p.id) + '">Cancel my request</button>';
+          else box.innerHTML = head + (o.options || []).map(function (x) { return '<div class="row"><div><b>' + esc(FREQ[x.frequency] || x.frequency) + '</b><div class="sub">' + esc(money(x.price_cents)) + '</div></div>' + (x.current ? '<span class="tag blue">Now</span>' : '<button class="btn alt" data-fs="' + esc(p.id) + '" data-ff="' + esc(x.frequency) + '">Ask for this</button>') + '</div>'; }).join('') + '<p class="sub">Prices are before tax. Any special rate you have stays.</p>';
+          el.appendChild(box);
+        });
+      });
+    }
+    function drawExtras(o) {
+      var el = document.getElementById('xtra-slot'); if (!el) return;
+      if (!o.visits || !o.visits.length) { el.innerHTML = '<p class="sub">No Checklist Clean more than 2 days away. Extras can be added to a Checklist Clean.</p>'; return; }
+      if (!VISIT || !o.visits.some(function (v) { return v.id === VISIT; })) VISIT = (o.visits.filter(function (v) { return !v.extras; })[0] || o.visits[0]).id;
+      var v = o.visits.filter(function (x) { return x.id === VISIT; })[0];
+      var total = (o.addons || []).reduce(function (n, a) { return n + a.cents * (PICKS[a.key] || 0); }, 0);
+      el.innerHTML = '<div>' + o.visits.map(function (x) { return '<button class="btn' + (x.id === VISIT ? '' : ' alt') + '" data-xv="' + esc(x.id) + '">' + esc(day(x.date)) + '</button> '; }).join('') + '</div>' +
+        (v.extras ? '<p><b>On this clean:</b> ' + esc(v.extras.summary) + ' (' + esc(money(v.extras.cents)) + ')</p>' + (v.extras.removable ? '<button class="btn alt" data-xr="' + esc(v.id) + '">Take them off</button>' : '')
+          : (o.addons || []).map(function (a) { var q = PICKS[a.key] || 0; return '<div class="row"><div><b>' + esc(a.label) + '</b><div class="sub">' + esc(money(a.cents)) + (a.max_qty > 1 ? ' each' : '') + '</div></div><div>' + (q ? '<button class="btn alt" data-xm="' + esc(a.key) + '" aria-label="Less ' + esc(a.label) + '">−</button> <b>' + q + '</b> ' : '') + '<button class="btn alt" data-xp="' + esc(a.key) + '" data-max="' + a.max_qty + '" aria-label="More ' + esc(a.label) + '">+</button></div></div>'; }).join('') +
+            (total ? '<button class="btn" data-xa="1">Add to ' + esc(day(v.date)) + ' for ' + esc(money(total)) + '</button>' : '')) +
+        '<p id="xnote" class="sub" role="status"></p>';
+      el.onclick = function (e) {
+        var b = e.target.closest && e.target.closest('button'); if (!b) return;
+        if (b.hasAttribute('data-xv')) { VISIT = b.getAttribute('data-xv'); PICKS = {}; drawExtras(o); return; }
+        if (b.hasAttribute('data-xp')) { var k = b.getAttribute('data-xp'); PICKS[k] = Math.min(+b.getAttribute('data-max'), (PICKS[k] || 0) + 1); drawExtras(o); return; }
+        if (b.hasAttribute('data-xm')) { var m = b.getAttribute('data-xm'); PICKS[m] = Math.max(0, (PICKS[m] || 0) - 1); drawExtras(o); return; }
+        var note = document.getElementById('xnote');
+        if (b.hasAttribute('data-xa')) {
+          b.disabled = true;
+          var extras = Object.keys(PICKS).filter(function (k) { return PICKS[k] > 0; }).map(function (k) { return { key: k, qty: PICKS[k] }; });
+          cp({ action: 'extras_add', job_id: VISIT, extras: extras }).then(function (r) { if (r.ok) { PICKS = {}; loadExtras('Added. Your team will see it.'); } else { b.disabled = false; note.textContent = XERR[r.j && r.j.error] || 'Something went wrong. Please try again.'; } });
+        }
+        if (b.hasAttribute('data-xr')) cp({ action: 'extras_remove', job_id: b.getAttribute('data-xr') }).then(function (r) { if (r.ok) loadExtras(''); else note.textContent = XERR[r.j && r.j.error] || 'Something went wrong. Please try again.'; });
+      };
+    }
+    function loadExtras(msg) { cp({ action: 'extras_options' }).then(function (r) { if (r.ok) { drawExtras(r.j); var n = document.getElementById('xnote'); if (n && msg) n.textContent = msg; } }); }
+    function drawPhones(list, pending) {
+      var el = document.getElementById('hh-slot'); if (!el) return;
+      el.innerHTML = list.map(function (p) { return '<div class="row"><div><b>' + esc(p.name || p.phone) + '</b><div class="sub">' + esc(p.phone) + '</div></div><div><span class="tag ' + (p.confirmed ? 'good' : 'warn') + '">' + (p.confirmed ? 'Can sign in' : 'Waiting for the code') + '</span> <button class="btn alt" data-hr="' + esc(p.id) + '">Remove</button></div></div>'; }).join('') +
+        (pending ? '<label class="sub" for="hhcode">6-digit code</label><input id="hhcode" inputmode="numeric" autocomplete="one-time-code" maxlength="6"><button class="btn" id="hhok">Confirm</button>'
+          : list.length < 2 ? '<label class="sub" for="hhname">Their name</label><input id="hhname" maxlength="60"><label class="sub" for="hhphone">Phone number</label><input id="hhphone" type="tel" autocomplete="off"><button class="btn alt" id="hhsend">Text them a code</button>' : '') +
+        '<p id="hhnote" class="sub" role="status"></p>';
+      var n = document.getElementById('hhnote');
+      Array.prototype.forEach.call(el.querySelectorAll('[data-hr]'), function (b) { b.onclick = function () { cp({ action: 'household_remove', id: b.getAttribute('data-hr') }).then(function (r) { if (r.ok) drawPhones(r.j.phones || [], null); }); }; });
+      var send = document.getElementById('hhsend');
+      if (send) send.onclick = function () {
+        var ph = document.getElementById('hhphone').value.replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+        if (!/^[2-9]\d{9}$/.test(ph)) { n.textContent = 'Please type a 10-digit US phone number.'; return; }
+        cp({ action: 'household_add', phone: ph, name: document.getElementById('hhname').value }).then(function (r) {
+          if (!r.ok) { n.textContent = ({ limit: 'You already have 2 household phones.', own_phone: 'That is the main phone on the account.' })[r.j && r.j.error] || 'Something went wrong. Please try again.'; return; }
+          drawPhones(r.j.phones || [], ph); document.getElementById('hhnote').textContent = 'We texted a 6-digit code to that phone. Type it here within 10 minutes.';
+        });
+      };
+      var ok = document.getElementById('hhok');
+      if (ok) ok.onclick = function () {
+        cp({ action: 'household_verify', phone: pending, code: document.getElementById('hhcode').value }).then(function (r) {
+          if (r.ok) drawPhones(r.j.phones || [], null); else document.getElementById('hhnote').textContent = 'That code did not work. Check it, or ask for a new one.';
+        });
+      };
+    }
+    document.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-fs],[data-wd]'); if (!b) return;
+      b.disabled = true;
+      var act = b.hasAttribute('data-fs') ? cp({ action: 'plan_change', series_id: b.getAttribute('data-fs'), frequency: b.getAttribute('data-ff') }) : cp({ action: 'plan_change_withdraw', series_id: b.getAttribute('data-wd') });
+      act.then(drawFreq);
+    });
+    window.loadPlanBits = function (plans) {
+      PLANS = (plans || []).filter(function (p) { return p.status === 'active' || p.status === 'paused'; });
+      drawFreq();
+      loadExtras('');
+      cp({ action: 'household_list' }).then(function (r) { if (r.ok) drawPhones(r.j.phones || [], null); });
+    };
   })();
 </script>
 </body>
