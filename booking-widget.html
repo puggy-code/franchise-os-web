@@ -902,6 +902,9 @@
 
   </section>
 
+  <!-- Wide screens (>= 900px, Jack 2026-11-04): the estimator moves here and stays beside the steps. Phones keep it inside the first step. -->
+  <aside id="bw-side" class="bw-side" aria-label="Estimate for your home"></aside>
+
 </div>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -909,6 +912,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <script src="https://js.stripe.com/v3/"></script>
+<script>
+(function () {
+  // Estimator beside the steps on wide screens, back inside the first step on phones.
+  var est = document.getElementById("bw-est"), side = document.getElementById("bw-side");
+  var anchor = document.querySelector("#bw-gate-form .bw-gate-price");
+  if (!est || !side || !anchor || !window.matchMedia) return;
+  var mq = window.matchMedia("(min-width: 900px)");
+  function place() { if (mq.matches) side.appendChild(est); else anchor.parentNode.insertBefore(est, anchor); }
+  place();
+  if (mq.addEventListener) mq.addEventListener("change", place); else if (mq.addListener) mq.addListener(place);
+})();
+</script>
 <script>
 (function () {
   "use strict";
@@ -4629,6 +4644,7 @@
       // (above, at 450 ms); the calendar then holds the time (dTry) and the details step opens as the sheet (quickSetup).
       if (q.get("quick") === "1" && svcKey === "two_hour") {
         quickMode = true;
+        document.getElementById("bw-root").setAttribute("data-quick", "1");
         document.getElementById("bw-root").classList.add("bw-quick");
         setTimeout(function () { stepGate.hidden = true; stepServices.hidden = true; stepCalendar.hidden = false; }, 500);
       }
@@ -6508,6 +6524,19 @@
   #bw-root .bw-done-detail { margin: 16px 0 0; font-size: .8125rem; color: var(--t-muted); }
   #bw-root .bw-ready-cta a { border-radius: 4px; background: var(--t-blue); }
   @media (prefers-reduced-motion: reduce) { #bw-root .bw-caret { transition: none; } }
+
+  /* Wide screens: steps on the left, the estimator as a sticky side column. Phone layout is untouched. */
+  #bw-side { display: none; }
+  @media (min-width: 900px) {
+    #bw-root { display: grid; grid-template-columns: minmax(0, 440px) 280px; column-gap: 24px; max-width: 744px; align-items: start; }
+    #bw-root > * { grid-column: 1; }
+    #bw-root > #bw-menu { grid-column: 1 / -1; }
+    #bw-root > #bw-side { display: block; grid-column: 2; grid-row: 1; position: sticky; top: 16px; align-self: start; }
+    #bw-root[data-quick] { display: block; max-width: 440px; }
+    #bw-root[data-quick] > #bw-side { display: none; }
+    #bw-root:has(#bw-step-done:not([hidden])) > #bw-side,
+    #bw-root:has(#bw-step-outofarea:not([hidden])) > #bw-side { display: none; }
+  }
 </style>
 <!-- Measurement (Meta, Google Analytics 4, Google Ads, Clarity; every ID empty = off), the notice, "No thanks" and the booking's first
      and last touch: pixel.js, next to this page. On twohourmaids.com the page layout adds it instead (scripts/build-site.cjs). -->
