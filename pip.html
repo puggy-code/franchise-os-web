@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,noarchive">
-<title>Property Improvement Plan</title>
+<title>Property Elevation Plan</title>
 <!--
-  The Property Improvement Plan: a 10-page document (migration 0301, PROPERTY-IMPROVEMENT-PLAN.md).
+  The Property Elevation Plan: a 10-page document (migration 0301, PROPERTY-IMPROVEMENT-PLAN.md).
 
       pip.html                    the GENERIC plan: the blank 10-page template to hand a prospect (no data is fetched)
       pip.html?t=<token>          one property's plan, from the pip-report function, with before/after photos
@@ -113,7 +113,7 @@
 </head>
 <body>
 <div class="bar-top" id="top">
-  <span class="who" id="who">Property Improvement Plan</span>
+  <span class="who" id="who">Property Elevation Plan</span>
   <span class="btns"><button class="ghost" id="print" type="button">Print</button><button id="pdf" type="button">Download PDF</button></span>
 </div>
 <div id="root"><div class="msg"><p>Loading the plan…</p></div></div>
@@ -195,7 +195,7 @@
 
   // ---------------------------------------------------------------- the ten pages
   function page(n, inner, cls) {
-    return '<section class="page ' + (cls || '') + '"><div class="body">' + inner + '</div><div class="pno"><span>Property Improvement Plan' +
+    return '<section class="page ' + (cls || '') + '"><div class="body">' + inner + '</div><div class="pno"><span>Property Elevation Plan' +
       (DATA.plan.property_name ? ' · ' + esc(DATA.plan.property_name) : '') + '</span><span>' + n + ' / 10</span></div></section>';
   }
   function chip(cls, label) { return '<span class="chip ' + cls + '">' + esc(label) + '</span>'; }
@@ -206,15 +206,15 @@
     DATA = d;
     var p = d.plan, s = d.stats, g = !!d.generic;
     var prop = p.property_name || (g ? 'Your property' : 'Your property');
-    document.title = 'Property Improvement Plan' + (p.property_name ? ' · ' + p.property_name : '');
-    document.getElementById('who').textContent = g ? 'Property Improvement Plan (sample template)' : prop;
+    document.title = 'Property Elevation Plan' + (p.property_name ? ' · ' + p.property_name : '');
+    document.getElementById('who').textContent = g ? 'Property Elevation Plan (sample template)' : prop;
     var byArea = {}; d.areas.forEach(function (a) { byArea[a.area] = a; });
     var all = []; d.areas.forEach(function (a) { a.items.forEach(function (i) { i._area = a.area; all.push(i); }); });
     var out = [];
 
     // 1 Cover
     out.push(page(1,
-      '<p class="kicker">' + esc(d.org.name) + '</p><h1>Property Improvement Plan</h1>' +
+      '<p class="kicker">' + esc(d.org.name) + '</p><h1>Property Elevation Plan</h1>' +
       '<div class="prop">' + (g ? 'Prepared for: ' + blank(260) : esc(prop)) + '</div>' +
       '<p>' + (g ? 'Address: ' + blank(300) : esc(p.property_address || '')) + (p.unit_count ? ' · ' + p.unit_count + ' units' : '') + '</p>' +
       '<div class="meta"><div><b>Property manager</b>' + (g ? blank(180) : esc(p.manager_name || '')) + '</div>' +
@@ -334,7 +334,7 @@
       var s = d.stats, p = d.plan, g = !!d.generic, prop = p.property_name || 'Your property';
       function ink(r, gg, b) { doc.setTextColor(r, gg, b); }
       function font(w, sz) { doc.setFont('helvetica', w).setFontSize(sz); }
-      function foot() { font('normal', 8); ink(156, 153, 171); doc.text('Property Improvement Plan' + (p.property_name ? ' · ' + p.property_name : ''), M, H - 24); doc.text(pageNo + ' / 10', W - M, H - 24, { align: 'right' }); }
+      function foot() { font('normal', 8); ink(156, 153, 171); doc.text('Property Elevation Plan' + (p.property_name ? ' · ' + p.property_name : ''), M, H - 24); doc.text(pageNo + ' / 10', W - M, H - 24, { align: 'right' }); }
       function newPage() { foot(); doc.addPage(); pageNo++; y = M; }
       function title(kick, t) { font('bold', 9); ink(0, 74, 173); doc.text(kick.toUpperCase(), M, y); y += 18; font('bold', 18); ink(21, 18, 31); doc.text(t, M, y); y += 24; }
       function para(t, sz, color) { font('normal', sz || 10); ink.apply(null, color || [61, 58, 75]); var lines = doc.splitTextToSize(String(t), W - M * 2); lines.forEach(function (l) { if (y > H - 60) { cont(); } doc.text(l, M, y); y += (sz || 10) + 4; }); y += 4; }
@@ -345,7 +345,7 @@
       // 1 cover
       doc.setFillColor(0, 74, 173); doc.rect(0, 0, W, H, 'F');
       font('bold', 10); ink(188, 211, 255); doc.text(d.org.name.toUpperCase(), M, 200);
-      font('bold', 34); ink(255, 255, 255); doc.text('Property Improvement Plan', M, 240);
+      font('bold', 34); ink(255, 255, 255); doc.text('Property Elevation Plan', M, 240);
       font('bold', 20); doc.text(g ? 'Prepared for: ____________________' : prop, M, 290);
       font('normal', 12); doc.text(g ? 'Address: ______________________________' : String(p.property_address || ''), M, 312);
       font('normal', 11);

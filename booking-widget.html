@@ -69,7 +69,7 @@
 {"@context":"https://schema.org","@type":"HouseCleaningService","name":"Two Hour Maids","url":"https://twohourmaids.com",
  "areaServed":{"@type":"City","name":"Minneapolis-St. Paul, MN"},
  "hasOfferCatalog":{"@type":"OfferCatalog","name":"Home cleaning","itemListElement":[
-  {"@type":"Offer","itemOffered":{"@type":"Service","name":"Two Hour Clean","description":"Two hours, two cleaners: kitchen, floors, up to 2.5 bathrooms and 2-4 bedrooms."},"priceSpecification":{"@type":"PriceSpecification","price":"222.00","priceCurrency":"USD","valueAddedTaxIncluded":false}},
+  {"@type":"Offer","itemOffered":{"@type":"Service","name":"Two Hour Clean","description":"Two hours, two cleaners: kitchen, floors, up to 3 bathrooms and 2-4 bedrooms."},"priceSpecification":{"@type":"PriceSpecification","price":"222.00","priceCurrency":"USD","valueAddedTaxIncluded":false}},
   {"@type":"Offer","itemOffered":{"@type":"Service","name":"The Checklist Clean","description":"Our standard checklist in every room, priced by bedrooms and bathrooms."},"priceSpecification":{"@type":"PriceSpecification","minPrice":"222.00","priceCurrency":"USD","valueAddedTaxIncluded":false}}]},
  "potentialAction":{"@type":"ReserveAction","target":{"@type":"EntryPoint","urlTemplate":"https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/agent-api/mcp?org_slug=two-hour-maids","encodingType":"application/json","contentType":"application/json"}}}
 </script>
@@ -102,23 +102,13 @@
             <select id="bw-gate-bathrooms"></select>
           </label>
         </div>
-        <!-- How the home is right now (Jack, 2026-11-04): picked here, used at the very end. A home that is "been a while" or "really dirty" is
-             offered the extra half hour right before Pay. The price stays flat; nothing here changes it. -->
-        <label class="bw-gate-field bw-gate-cond">
-          <span>How is your home right now?</span>
-          <select id="bw-gate-condition">
-            <option value="kept">Kept up</option>
-            <option value="while">It has been a while</option>
-            <option value="dirty">Really dirty</option>
-          </select>
-        </label>
         <!-- Suggested for this home (Jack, 2026-11-04: "suggest ... the proper amount of time for that home ... an estimator"). Same rule as the
-             "Fits your home" line on the service list (twoHourFits): the Two Hour Clean up to 4 beds and 2.5 baths, else The Checklist Clean. -->
+             "Fits your home" line on the service list (twoHourFits): the Two Hour Clean up to 4 beds and 3 baths, else The Checklist Clean. -->
         <div id="bw-est" class="bw-est" aria-live="polite">
           <div class="bw-est-head"><span class="bw-est-tag">Suggested for your home</span><b id="bw-est-name">Two Hour Clean</b></div>
           <div class="bw-est-grid">
             <div><small>Cleaning time</small><b id="bw-est-time">2 hr</b></div>
-            <div><small>Crew</small><b id="bw-est-crew">2 maids</b></div>
+            <div><small>Crew</small><b id="bw-est-crew">Team of 2</b></div>
             <div><small>Price</small><b id="bw-est-price">$222</b></div>
           </div>
           <p id="bw-est-why" class="bw-est-why"></p>
@@ -142,18 +132,31 @@
     </div>
   </div>
 
-  <!-- STEP 0b: Select services (Jack, 2026-10-17, after Fresha's "Select services"): white raised tiles with the time, a short
-       description, the price for this home and a + button. Picking one opens the times. Built from the service buttons below, so the
-       first-visit rule and the price list apply here too. -->
+  <!-- STEP 0b, the first screen since 2026-11-04 (Jack: "merge the /book-now flow into 3 screens"): the home's beds, baths and condition,
+       each clean with its price, the Two Hour Clean's plan chips and its fit line. Built from the service buttons below, so the first-visit
+       rule and the price list apply here too. The Two Hour Clean goes straight to the times; every other clean goes to its choices first. -->
   <div id="bw-step-services" class="bw-svcs" hidden>
     <div class="bw-svcs-bar bw-bar">
-      <button type="button" id="bw-svcs-back" class="bw-svcs-back bw-bar-back" aria-label="Back"></button>
-      <div class="bw-svcs-bar-title bw-bar-title"><h3 class="bw-svcs-title">Choose your clean</h3><p class="bw-bar-sub">Two Hour Maids</p><div id="bw-svcs-home" class="bw-svcs-home"></div></div>
+      <button type="button" id="bw-svcs-back" class="bw-svcs-back bw-bar-back" aria-label="Back" hidden></button>
+      <div class="bw-svcs-bar-title bw-bar-title"><h3 class="bw-svcs-title">Choose your clean</h3><div id="bw-svcs-home" class="bw-svcs-home"></div></div>
     </div>
     <div class="bw-svcs-size">
       <label class="bw-svcs-size-field"><span>Bedrooms</span><select id="bw-svcs-bed"></select></label>
       <label class="bw-svcs-size-field"><span>Bathrooms</span><select id="bw-svcs-bath"></select></label>
+      <!-- How the home is right now (Jack, 2026-11-04): picked here, on the first screen since the three-screen flow, used at the very end.
+           A home that is "been a while" or "really dirty" is offered the extra half hour right before Pay. The price stays flat. -->
+      <label class="bw-svcs-size-field bw-svcs-cond">
+        <span>How is your home right now?</span>
+        <select id="bw-gate-condition">
+          <option value="kept">Kept up</option>
+          <option value="while">It has been a while</option>
+          <option value="dirty">Really dirty</option>
+        </select>
+      </label>
     </div>
+    <!-- "Want help finding the right option?" (Jack, 2026-11-05): four one-tap questions that end on the Two Hour Clean or the Checklist
+         Clean, by the cards' own rule (chooserPick, twoHourFitsFor = _shared/intake.ts fitsTwoHour). Optional; /book-now#help opens it. -->
+    <button type="button" id="bw-help-pick" class="bw-help-pick">Want help finding the right option?</button>
     <div id="bw-svcs-chips" class="bw-svcs-chips" role="tablist" hidden></div>
     <div id="bw-svcs-list"></div>
   </div>
@@ -201,7 +204,7 @@
           <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="13" r="8" stroke="currentColor" stroke-width="1.6"/><path d="M12 9v4l3 2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 2h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         </span>
         <span class="bw-svc-name">Two Hour Clean</span>
-        <span class="bw-svc-sub">Two maids, two hours</span>
+        <span class="bw-svc-sub">A team of two, two hours</span>
       </button>
       <!-- The Checklist Clean (The Works merged into it, 2026-10-13). Until Basic / Extra / Deluxe have prices in the catalog, this
            bed/bath-priced button IS The Checklist Clean (the same price the text agent quotes). Once the levels are priced, loadCatalog()
@@ -370,7 +373,7 @@
     <div id="bw-rotational-wrap" class="bw-tier-wrap" hidden>
       <label class="bw-checkbox-row">
         <input type="checkbox" id="bw-rotational">
-        <span><b>Rotate the detail work.</b> Each visit adds extra care to a different part of your home.</span>
+        <span id="bw-rotational-text"></span>
       </label>
     </div>
 
@@ -507,7 +510,8 @@
 
   </div>
 
-  <!-- STEP 2: contact + card, shown in place of the calendar once a slot is picked -->
+  <!-- STEP 2, the third screen: one details-and-pay form, shown in place of the calendar once a time is held. Name, email, phone, address
+       and ZIP carry autocomplete, so one autofill tap fills them; the plan agreement, Apple Pay / Google Pay and the card are all here. -->
   <div id="bw-step-form" class="bw-card" hidden>
     <div class="bw-bar">
       <button type="button" id="bw-back" class="bw-bar-back bw-back" aria-label="Change time"></button>
@@ -516,6 +520,18 @@
 
     <div id="bw-hold" class="bw-hold" aria-live="polite" hidden></div>
     <div id="bw-selected-summary" class="bw-summary"></div>
+    <!-- Good to know, shown once a clean is picked (Jack, 2026-11-08: roll-out ideas 10, 12, 13, 18). -->
+    <div class="bw-know" aria-label="Good to know">
+      <div class="bw-know-i"><b>Photo report</b><span>After every visit: rooms done, photos, who came, and a PDF to keep.</span></div>
+      <div class="bw-know-i"><b>Arrival promise</b><span>A 30-minute arrival window. Pick 9:00, 11:40 or 2:40.</span></div>
+      <div class="bw-know-i"><b>Quick answers</b><span>Do I need to be home? No. Contract? Never. Supplies? We bring them.</span></div>
+      <div class="bw-know-i"><b>Our promise</b><span>We promise excellence, not perfection. If something's off, tell us in your report.</span></div>
+    </div>
+    <style>
+      #bw-root .bw-know { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14em), 1fr)); gap: 8px; margin: 10px 0 14px; }
+      #bw-root .bw-know-i { padding: 10px 12px; border-radius: 12px; background: #0a2f51; color: #fff; font-size: .8125rem; line-height: 1.5; }
+      #bw-root .bw-know-i b { display: block; margin-bottom: 2px; color: #ffe600; font-size: .6875rem; letter-spacing: 1.2px; text-transform: uppercase; }
+    </style>
     <!-- Contact info as one tappable row (the Reserve flow's "Contact Info" row): shows who the booking is for and goes back to edit it.
          Only after the contact step; quick booking keeps the name, phone and email fields in the form. -->
     <div id="bw-contact-card" class="bw-sec-block" hidden>
@@ -528,9 +544,10 @@
          same price as later visits (prc-0025). Plain copy for everyone, no lookup; hidden once the page knows this is a returning customer. -->
     <div id="bw-triage" class="bw-triage">If this is your first clean with us, it's a triage clean: kitchen and baths first. <details class="bw-whats"><summary>What's that?</summary><p>We learn your home and start with the kitchen and baths. What we can't reach is done free on your next visit.</p></details></div>
     <!-- Quick booking (?quick=1: the Two Hour Clean from the website's time buttons). The plan chips, "Have a code?", the total and the
-         agreements move up here, above the short form; access notes, pets and requests come after booking. Hidden in the normal flow. -->
+         agreements move up here, above the short form; access notes, pets and requests come after booking. In the normal flow (since the
+         three-screen flow, 2026-11-04) only the pay block shows: the plan agreement, the terms and Apple Pay / Google Pay (fullPaySetup). -->
     <div id="bw-quick-top" class="bw-quick-top" hidden>
-      <p class="bw-quick-what"><b>2 maids, about 2 hours.</b> For well-kept homes. <button type="button" class="bw-quick-link" id="bw-quick-fits">What fits in 2 hours</button></p>
+      <p class="bw-quick-what"><b>A team of two, about 2 hours.</b> For well-kept homes. <button type="button" class="bw-quick-link" id="bw-quick-fits">What fits in 2 hours</button></p>
       <div id="bw-quick-chips" class="bw-quick-chips" role="radiogroup" aria-label="How often"></div>
     </div>
     <div id="bw-quick-pay" class="bw-quick-pay" hidden>
@@ -587,23 +604,6 @@
         <div id="bw-kids-ages"></div>
         <label class="bw-checkbox-row"><input type="checkbox" id="bw-kids-gift" checked><span>Yes, leave a free holiday gift for each child</span></label>
       </div>
-
-      <!-- How did you hear about us (71; Jack 2026-10-27 cus-0017/0018/0019): required, one tap. A friend code picks Friend (still changeable);
-           Other has an optional few words. -->
-      <label class="bw-field">
-        <span>How did you hear about us?</span>
-        <select id="bw-heard" name="heard" required>
-          <option value="">Pick one</option>
-          <option value="google">Google</option>
-          <option value="friend">Friend</option>
-          <option value="yard_sign">Yard sign</option>
-          <option value="flyer_mail">Flyer or mail</option>
-          <option value="facebook">Facebook</option>
-          <option value="nextdoor">Nextdoor</option>
-          <option value="other">Other</option>
-        </select>
-        <input type="text" id="bw-heard-other" maxlength="80" placeholder="A few words (optional)" hidden>
-      </label>
 
       <div class="bw-field-row">
         <label class="bw-field bw-field-grow">
@@ -783,6 +783,8 @@
           <span id="bw-submit-label">Confirm booking</span>
         </button>
         <p class="bw-sheet-fine" id="bw-sheet-fine">By booking you agree to our <a href="https://www.twohourmaids.com/terms-and-conditions" target="_blank" rel="noopener">terms</a> and the $50 inside-48-hours cancellation fee.</p>
+        <!-- Moved here from the website price cards (Jack, 2026-11-08: "keep these disclaimers at the end"). -->
+        <p class="bw-sheet-fine bw-catchup"><b>Your first 2 cleans are Catch-Up Cleans.</b> We get your home up to speed. What we can't reach is done free next visit. We promise excellence, not perfection.</p>
       </div>
     </form>
   </div>
@@ -812,6 +814,18 @@
     <p id="bw-done-detail" class="bw-done-detail"></p>
     <!-- "Name three" (0303): one ready-to-send note per friend the customer named. Sent from THEIR phone; we never text a friend. -->
     <div id="bw-done-n3" class="bw-done-n3" hidden></div>
+    <!-- "How did you hear about us?" after booking (Jack, 2026-11-05): optional, one tap, saved by customer-portal how_heard. -->
+    <div id="bw-heard" class="bw-heard" hidden>
+      <p class="bw-heard-q">How did you hear about us?</p>
+      <div class="bw-heard-chips">
+        <button type="button" data-heard="google">Google</button><button type="button" data-heard="friend">Friend</button>
+        <button type="button" data-heard="yard_sign">Yard sign</button><button type="button" data-heard="flyer_mail">Flyer or mail</button>
+        <button type="button" data-heard="facebook">Facebook</button><button type="button" data-heard="nextdoor">Nextdoor</button>
+        <button type="button" data-heard="other">Other</button>
+      </div>
+      <div class="bw-heard-other" hidden><input type="text" maxlength="80" placeholder="A few words (optional)" aria-label="Where you heard about us"><button type="button">Save</button></div>
+      <p class="bw-heard-thanks" hidden>Thank you!</p>
+    </div>
     <div class="bw-actionbar bw-actionbar-center"><button type="button" id="bw-done-btn" class="bw-primary bw-primary-auto">Done</button></div>
   </div>
 
@@ -827,7 +841,7 @@
       <summary><span class="bw-cat-name">House cleaning</span><span class="bw-cat-sub">Two Hour Clean and Checklist Clean</span></summary>
       <div class="bw-cat-body">
         <article class="bw-menu-svc">
-          <h4>Two Hour Clean <span>Two maids, two hours</span></h4>
+          <h4>Two Hour Clean <span>A team of two, two hours</span></h4>
           <p>Flat rate, for a well-kept average home.</p>
           <details class="bw-view-checklist"><summary>View our checklist</summary>
             <div id="bw-menu-checklist" class="bw-rooms"></div>
@@ -962,6 +976,8 @@
     INTAKE_URL:              "https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/booking-intake",
     // Live price list for car / window / air duct / carpet cleaning. Edit prices in the app (Admin -> Service Prices).
     CATALOG_URL:             "https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/service-catalog",
+    // The customer's account (customer-portal): the done screen saves "How did you hear about us?" with the new customer's token.
+    CUSTOMER_PORTAL_URL:     "https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/customer-portal",
 
     // Re-clean and refund policy per service. The live text comes from the service-catalog function (edited in the
     // app); this is only what shows if that call fails. The Two Hour Clean has NO re-cleans or refunds.
@@ -1368,7 +1384,7 @@
   // ---------- Select services (white tiles) ----------
   var stepServices = document.getElementById("bw-step-services");
   var SERVICE_COPY = {
-    two_hour: { time: "2 hrs \u00b7 2 maids", desc: "Two maids, two hours, one flat rate. Built for a well-kept, average-size home." },
+    two_hour: { time: "2 hrs \u00b7 team of 2", desc: "A team of two, two hours, one flat rate. Built for a well-kept, average-size home." },
     works: { time: "Untimed \u00b7 every room", desc: "Our standard checklist, completed in every room of your home. We stay until the whole home is done." },
     checklist_clean: { time: "Untimed \u00b7 every room", desc: "Our standard checklist in every room, at the level you choose, plus any extras you pick." },
     four_hour: { time: "4 hrs", desc: "The standard checklist first, then the detailing you choose, in the order you rank it." }
@@ -1399,10 +1415,10 @@
   // service (no refund or tax claims we do not make).
   var SERVICE_FEATURES = {
     // Plain facts only, never a ranking claim we have no data for (Jack, 2026-11-04; the website test checks the whole form).
-    two_hour: { highlight: "Two maids, two hours", sub: "One flat rate", feats: ["Standard checklist", "For well-kept homes"], info: true }, // cus-0003
-    works: { highlight: "Every room", sub: "Priced by home size", feats: ["Full checklist, every room", "Add extras"] },
+    two_hour: { highlight: "A team of two, two hours", sub: "One flat rate", feats: ["Standard checklist", "For well-kept homes"], info: true }, // cus-0003
+    works: { highlight: "Every room", sub: "Priced by our time estimate for your home", feats: ["Full checklist, every room", "Add extras"] },
     checklist_clean: { highlight: "Every room, untimed", sub: "Priced by level", feats: ["Our full checklist in every room", "Choose your level and extras", "Free to reschedule"] },
-    four_hour: { highlight: "Your list, ranked", sub: "9:00 to 1:30", feats: ["Full clean first", "Then your detailing list", "After your first clean"] } // prc-0344
+    four_hour: { highlight: "Your list, ranked", sub: "Any two times in a row", feats: ["Full clean first", "Then your detailing list", "After your first clean"] } // prc-0344
   };
   // "$222.00" -> "$222" (whole dollars, like Expedia); "$232.50" stays as it is.
   function wholeDollars(t) { return String(t || "").replace(/\.00\b/, ""); }
@@ -1457,15 +1473,25 @@
         wf.addEventListener("click", openTwoHourInfo);
         opt.querySelector(".bw-opt-left").appendChild(wf);
       }
-      if (recurring) opt.querySelector(".bw-opt-pill").textContent = "Save " + wholeDollars(formatPrice(frequencyDiscountCents("every_other_week", key, gateBathroomSelect.value))) + " a visit";
-      var price = wholeDollars(tilePrice(key));
+      // The Two Hour Clean's card carries its plan (Jack, 2026-11-04, the three-screen flow): the price is the chosen plan's, the pill its
+      // saving against one time, and Book goes straight to the times. Every other clean shows its one-time price and goes to its choices.
+      var twoHour = key === "two_hour";
+      var planOff = twoHour && selectedFrequency !== "one_time" ? (twoHourPrice("one_time") || 0) - (twoHourPrice(selectedFrequency) || 0) : 0;
+      if (recurring) {
+        var pill = opt.querySelector(".bw-opt-pill");
+        if (twoHour && !(planOff > 0)) pill.remove();
+        else pill.textContent = "Save " + wholeDollars(formatPrice(twoHour ? planOff : frequencyDiscountCents("every_other_week", key, gateBathroomSelect.value))) + " a visit";
+      }
+      var price = twoHour && twoHourPrice(selectedFrequency) != null ? wholeDollars(formatPrice(twoHourPrice(selectedFrequency))) : wholeDollars(tilePrice(key));
       opt.querySelector(".bw-opt-price").textContent = price;
-      opt.querySelector(".bw-opt-per").textContent = /^\$/.test(price) ? (key === "four_hour" ? "per visit" : "one-time price") : "";
-      var go = function () { btn.click(); stepServices.hidden = true; showOptionsStep(); };
-      // The recurring price, revealed a few seconds in (a red X over the one-time price). Only where a frequency discount applies.
+      opt.querySelector(".bw-opt-per").textContent = /^\$/.test(price) ? (key === "four_hour" ? "per visit"
+        : twoHour && selectedFrequency !== "one_time" ? "a visit, " + String(FREQ_SHORT[selectedFrequency] || "").toLowerCase() : "one-time price") : "";
+      var go = function () { btn.click(); stepServices.hidden = true; if (twoHour) showTimesStep(); else showOptionsStep(); };
+      // The recurring price, revealed a few seconds in (a red X over the one-time price). Only where a frequency discount applies, and not
+      // on the Two Hour Clean, whose plan chips show every price at once.
       var oneTime = /^\$/.test(price) ? Math.round(parseFloat(price.replace(/[^0-9.]/g, "")) * 100) : 0;
       var recurOff = frequencyDiscountCents("every_other_week", key, gateBathroomSelect.value);
-      if ((key === "two_hour" || key === "works") && recurOff > 0 && oneTime > recurOff) {
+      if (key === "works" && recurOff > 0 && oneTime > recurOff) {
         opt.querySelector(".bw-opt-recur b").textContent = wholeDollars(formatPrice(oneTime - recurOff));
         opt.querySelector(".bw-opt-recur-when").textContent = "with an every-other-week plan";
         revealQueue.push(opt);
@@ -1473,8 +1499,23 @@
       // A first visit is the Two Hour Clean or The Checklist Clean, the customer's choice (Jack, 2026-11-03); the Four Hour Home Detailing
       // comes after it (Jack, 2026-11-01), so its tile asks for the phone first and tells a first-timer so (askPhoneOnTile).
       var pick = function () { if (visitStatus !== "returning" && !isFirstVisitService(key)) askPhoneOnTile(opt, key, go); else go(); };
-      // Booking the Two Hour Clean shows the "Before you book" advisory first (Jack, 2026-10-18: keep it, show it when they click Two Hour).
-      opt.querySelector(".bw-opt-go").addEventListener("click", key === "two_hour" ? function () { openTwoHourAdvisory(pick); } : pick);
+      var goBtn = opt.querySelector(".bw-opt-go");
+      goBtn.addEventListener("click", pick);
+      if (twoHour) {
+        // The plan chips (the same three plans as the details step's rows), then Book across the card, then the fit check as a line under
+        // Book (Jack, 2026-11-04: it was the "Before you book" sheet, one more tap).
+        opt.appendChild(twoHourPlanChips());
+        goBtn.classList.add("bw-opt-go-wide");
+        opt.appendChild(goBtn);
+        var fit = document.createElement("p");
+        fit.className = "bw-opt-fitline";
+        fit.innerHTML = "<ul class='bw-opt-rules'><li>For well-kept homes.</li><li>Not for heavy clutter, odors, or piles of dishes or laundry.</li><li>At two hours the team moves on; we send photos of anything left.</li></ul><button type='button' class='bw-opt-alt'>Not my home? Checklist Clean</button>";
+        fit.querySelector(".bw-opt-alt").addEventListener("click", function () {
+          var c = Array.prototype.filter.call(document.querySelectorAll(".bw-opt"), function (o) { return /Checklist Clean/.test(o.querySelector(".bw-opt-name").textContent); })[0];
+          if (c) c.querySelector(".bw-opt-go").click();
+        });
+        opt.appendChild(fit);
+      }
       list.appendChild(opt);
     });
     clearTimeout(recurRevealTimer);
@@ -1483,43 +1524,325 @@
       recurRevealSeen = true;
     }, recurRevealSeen ? 700 : RECUR_REVEAL_MS);
   }
-  // What the Two Hour Clean is sized for (_shared/intake.ts): a kitchen, floors, up to 2.5 baths and 2 to 4 bedrooms, kept up.
-  function twoHourFits() {
-    var beds = Number(gateBedroomSelect.value), baths = Number(gateBathroomSelect.value);
-    return baths <= 2.5 && beds <= 4;
+  // What the Two Hour Clean is sized for (_shared/intake.ts fitsTwoHour): a kitchen, floors, up to 3 baths and 2 to 4 bedrooms (fewer
+  // is fine), kept up. One rule for the cards' "Fits your home" and the chooser; a test holds it to the server's.
+  function twoHourFitsFor(beds, baths) { return Number(baths) <= 3 && Number(beds) <= 4; }
+  function twoHourFits() { return twoHourFitsFor(gateBedroomSelect.value, gateBathroomSelect.value); }
+  // The chooser's answer (Jack, 2026-11-05): the Two Hour Clean for a home it fits that is kept up and wants a quick refresh, else the
+  // Checklist Clean. Only these two.
+  function chooserPick(beds, baths, keptUp, quickRefresh) { return twoHourFitsFor(beds, baths) && keptUp && quickRefresh ? "two_hour" : "checklist"; }
+  // The Two Hour Clean's price for a plan, whichever clean is picked right now (the plan chips on its card, the three-screen flow).
+  function twoHourPrice(k) { var s = selectedService; selectedService = "two_hour"; try { return priceForFrequency(k); } finally { selectedService = s; } }
+  // Its plan chips (Monthly, Every 2 weeks, One-time, each with its price): on its card and on the chooser's answer. A tap sets the plan
+  // (the details step's rows and the dial read the same select) and redraws the cards; `after` redraws whatever else shows them.
+  function twoHourPlanChips(after) {
+    var plans = document.createElement("div");
+    plans.className = "bw-quick-chips bw-opt-plans"; plans.setAttribute("role", "radiogroup"); plans.setAttribute("aria-label", "How often");
+    DIAL_STOPS.forEach(function (k) {
+      var p = twoHourPrice(k);
+      if (p == null) return;
+      var c = document.createElement("button");
+      c.type = "button"; c.className = "bw-quick-chip" + (k === selectedFrequency ? " is-on" : "");
+      c.setAttribute("role", "radio"); c.setAttribute("aria-checked", k === selectedFrequency ? "true" : "false");
+      c.innerHTML = "<span>" + esc(FREQ_SHORT[k] || k) + "</span><b>" + wholeDollars(formatPrice(p)) + "</b>";
+      c.addEventListener("click", function () {
+        if (selectedFrequency === k) return;
+        freqSelect.value = k; freqSelect.dispatchEvent(new Event("change"));
+        renderServiceTiles();
+        if (after) after();
+      });
+      plans.appendChild(c);
+    });
+    return plans;
   }
-  function openTwoHourAdvisory(onBook) {
-    var el = document.getElementById("bw-2h-adv");
+
+  // ---------- "Want help finding the right option?" (Jack, 2026-11-05) ----------
+  // Four questions, one per screen, one tap each, with Back and "1 of 4"; the answer is the Two Hour Clean or the Checklist Clean
+  // (chooserPick), with why and its price for this home. The answers become the first screen's beds, baths and condition, so the price
+  // here is the cards' price, and Book goes on as that card's Book does. Nothing personal is asked or measured: the events carry only which
+  // clean. /book-now#help opens it (the link on /services).
+  var PICK_QS = [
+    { key: "beds", q: "How many bedrooms?", a: [["1", "1"], ["2", "2"], ["3", "3"], ["4", "4"], ["5", "5+"]] },
+    { key: "baths", q: "How many bathrooms?", a: [["1", "1"], ["1.5", "1½"], ["2", "2"], ["2.5", "2½"], ["3", "3+"]] },
+    { key: "kept", q: "How does your home look on a normal day?", a: [["yes", "Kept up", "Everyday mess"], ["no", "Needs extra work", "Clutter, buildup or lots of pet hair"]] },
+    { key: "quick", q: "What do you want most?", a: [["yes", "A quick refresh", "The main spots: kitchen, bathrooms and floors"], ["no", "Every room", "Top to bottom, with a checklist"]] }
+  ];
+  var pickAns = {}, pickStep = 0;
+
+  // ---------- The sentence (Jack, 2026-11-08: "lets do option 2", web/drafts/booking-variations.html) ----------
+  // First the ZIP (served ZIPs pick their city, an unserved one goes to the usual notify-me screen), then one sentence:
+  // "I'd like a Two Hour Clean for my 2 bedroom, 1 bath home that's kept up, monthly, starting Monday, Nov 9 at 9:00 AM."
+  // Each blue word is a tap-to-change menu driving the widget's own selects, so prices are read off the real cards. The time is live: the
+  // server's suggested times for that city (booking-availability &suggest=1: next to a job already on the route, the hole-fillers first).
+  // "See open times" presses the card's own Book and keeps the picked time; "See all open times" opens the three-dot month calendar.
+  var SENT_SVCS = [["two_hour", "Two Hour Clean", /Two Hour Clean/], ["works", "Checklist Clean", /Checklist Clean/], ["four_hour", "Four Hour Home Detailing", /Home Detailing/]];
+  var sentSvc = "two_hour", sentZip = "", sentTimes = null, sentTime = null, sentZipNote = "";
+  var SENT_QZIP = new URLSearchParams(location.search).get("zip"); // read now: the widget tidies ?zip= out of the address later
+  function sentCard() {
+    var re = SENT_SVCS.filter(function (x) { return x[0] === sentSvc; })[0][2];
+    return Array.prototype.filter.call(document.querySelectorAll("#bw-svcs-list .bw-opt"), function (o) { return re.test((o.querySelector(".bw-opt-name") || {}).textContent || ""); })[0];
+  }
+  function sentOpts(sel, word) {
+    return Array.prototype.map.call(sel.options, function (o) {
+      var n = o.text.replace(/\s*\(.*\)\s*/, "");
+      return [o.value, o.value === "0" ? "studio" : n + " " + word];
+    });
+  }
+  function sentSlot(key) { return CONFIG.SLOTS.filter(function (x) { return x.key === key; })[0]; }
+  function sentTimeTxt(t) { var sl = sentSlot(t.slot); return prettyDate(t.day) + " at " + (sl ? sl.label : t.slot); }
+  function loadSentTimes() {
+    sentTimes = null; sentTime = null; renderSentence();
+    var t = new Date(), e = new Date(t.getTime() + 28 * 86400000);
+    var url = CONFIG.AVAILABILITY_URL + "?org_slug=" + encodeURIComponent(CONFIG.ORG_SLUG) + "&start=" + dateStr(t.getFullYear(), t.getMonth(), t.getDate()) +
+      "&end=" + dateStr(e.getFullYear(), e.getMonth(), e.getDate()) + "&suggest=1&minutes=" + (currentDurationMinutes() || 0) + (selectedCity ? "&city=" + encodeURIComponent(selectedCity) : "");
+    fetch(url).then(function (r) { if (!r.ok) throw new Error("bad"); return r.json(); }).then(function (d) {
+      var starts = CONFIG.SERVICES[selectedService] && CONFIG.SERVICES[selectedService].startSlots;
+      sentTimes = ((d && d.suggested) || []).filter(function (x) { return sentSlot(x.slot) && (!starts || starts.indexOf(x.slot) >= 0); }).slice(0, 5);
+      sentTime = sentTimes[0] || null;
+      renderSentence();
+    }).catch(function () { sentTimes = []; renderSentence(); });
+  }
+  function setSentZip(z) {
+    z = String(z || "").replace(/\D/g, "").slice(0, 5);
+    if (z.length !== 5) { sentZipNote = "Enter a 5-digit ZIP code."; renderSentence(); return; }
+    var name = Object.keys(CITY_ZIPS).filter(function (c) { return CITY_ZIPS[c].indexOf(z) !== -1; })[0];
+    if (CONFIG.SERVICE_AREA_ZIPS.indexOf(z) === -1 || !name) { track("sentence_zip_out", { item: z }); showOutOfArea(z); return; }
+    sentZip = z; sentZipNote = "";
+    var zf = document.getElementById("bw-zip");
+    if (zf && !zf.value) { zf.value = z; zf.dispatchEvent(new Event("input")); } // the details step will not ask again
+    var cs = document.getElementById("bw-city");
+    if (cs && Array.prototype.some.call(cs.options, function (o) { return o.value === name; })) { cs.value = name; cs.dispatchEvent(new Event("change", { bubbles: true })); }
+    track("sentence_zip", { item: name });
+    loadSentTimes();
+  }
+  function renderSentence() {
+    var box = document.getElementById("bw-sent");
+    if (!box) return;
+    if (!sentZip) {
+      box.innerHTML = "<p class='bw-sent-s'>First, what's your ZIP code?</p>" +
+        "<div class='bw-sent-zip'><input id='bw-sent-zip' inputmode='numeric' pattern='[0-9]*' maxlength='5' autocomplete='postal-code' placeholder='55401' aria-label='ZIP code'>" +
+        "<button type='button' class='bw-sent-go' id='bw-sent-zip-go'>See my price &rarr;</button></div>" +
+        "<p class='bw-sent-note' aria-live='polite'>" + esc(sentZipNote || "We find the open times closest to you.") + "</p>";
+      var inp = box.querySelector("#bw-sent-zip"), go = box.querySelector("#bw-sent-zip-go");
+      go.addEventListener("click", function () { setSentZip(inp.value); });
+      inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); setSentZip(inp.value); } });
+      return;
+    }
+    var cond = document.getElementById("bw-gate-condition");
+    var condTxt = { kept: "that's kept up", "while": "that needs a catch-up", dirty: "that needs a deep catch-up" };
+    var timeOpts = (sentTimes || []).map(function (t, i) { return [String(i), sentTimeTxt(t)]; });
+    var picks = {
+      svc: [sentSvc, SENT_SVCS.map(function (x) { return [x[0], x[1]]; }), function (v) { sentSvc = v; }],
+      beds: [svcsBed.value, sentOpts(svcsBed, "bedroom"), function (v) { svcsBed.value = v; svcsBed.dispatchEvent(new Event("change")); }],
+      baths: [svcsBath.value, sentOpts(svcsBath, "bath"), function (v) { svcsBath.value = v; svcsBath.dispatchEvent(new Event("change")); }],
+      cond: [cond ? cond.value : "kept", Object.keys(condTxt).map(function (k) { return [k, condTxt[k]]; }), function (v) { if (cond) { cond.value = v; cond.dispatchEvent(new Event("change")); } }],
+      freq: [selectedFrequency, DIAL_STOPS.map(function (k) { return [k, (FREQ_SHORT[k] || k).toLowerCase().replace("one-time", "one time")]; }), function (v) { freqSelect.value = v; freqSelect.dispatchEvent(new Event("change")); }],
+      time: [sentTime ? String((sentTimes || []).indexOf(sentTime)) : "", timeOpts, function (v) { sentTime = (sentTimes || [])[Number(v)] || sentTime; }],
+    };
+    var word = function (k, end) {
+      var d = picks[k], cur = d[1].filter(function (o) { return String(o[0]) === String(d[0]); })[0];
+      return "<span class='bw-sent-pick' data-k='" + k + "'><span class='bw-sent-word' role='button' tabindex='0' aria-haspopup='listbox'>" + esc(cur ? cur[1] : "") + "</span>" + (end ? "<span class='bw-sent-end'>" + end + "</span>" : "") +
+        "<span class='bw-sent-menu' role='listbox'>" + d[1].map(function (o) {
+          return "<button type='button' role='option' data-v='" + esc(String(o[0])) + "' aria-selected='" + (String(o[0]) === String(d[0])) + "'>" + esc(o[1]) + "</button>";
+        }).join("") + "</span></span>";
+    };
+    var timePart = sentTimes === null ? ", starting <span class='bw-sent-wait'>finding times near you…</span>"
+      : sentTime ? ", starting " + word("time", ".") : "";
+    var card = sentCard();
+    var price = card ? ((card.querySelector(".bw-opt-price") || {}).textContent || "") : "";
+    var per = card ? ((card.querySelector(".bw-opt-per") || {}).textContent || "") : "";
+    box.innerHTML = "<p class='bw-sent-s'>I'd like a " + word("svc") + " for my " + word("beds") + ", " + word("baths") + " home " + word("cond") +
+      (sentSvc === "two_hour" ? ", " + word("freq") : "") + timePart + (sentTime && sentTimes ? "" : ".") + "</p>" +
+      (sentTimes && !sentTimes.length ? "<p class='bw-sent-note'>See all open times below to pick a day.</p>" : "") +
+      "<div class='bw-sent-row'><div><div class='bw-sent-price'>" + esc(price) + "</div><div class='bw-sent-per'>" + esc(per) + "</div></div>" +
+      "<button type='button' class='bw-sent-go'>" + (sentTime ? "Book this time" : "See open times") + " &rarr;</button></div>" +
+      "<button type='button' class='bw-sent-all'><span class='bw-sent-dots' aria-hidden='true'><i></i><i></i><i></i></span>See all open times</button>" +
+      "<button type='button' class='bw-sent-zipchange'>ZIP " + esc(sentZip) + " &middot; change</button>";
+    Array.prototype.forEach.call(box.querySelectorAll(".bw-sent-pick"), function (pk) {
+      var d = picks[pk.getAttribute("data-k")];
+      var wd = pk.querySelector(".bw-sent-word");
+      wd.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); wd.click(); } });
+      wd.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var was = pk.classList.contains("is-open");
+        Array.prototype.forEach.call(box.querySelectorAll(".bw-sent-pick.is-open"), function (x) { x.classList.remove("is-open"); });
+        if (!was) pk.classList.add("is-open");
+      });
+      Array.prototype.forEach.call(pk.querySelectorAll(".bw-sent-menu button"), function (bt) {
+        bt.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var k = pk.getAttribute("data-k");
+          d[2](bt.getAttribute("data-v"));
+          renderServiceTiles();
+          track("sentence_pick", { item: k });
+          if (k === "svc" || k === "beds" || k === "baths") loadSentTimes(); else renderSentence(); // a longer clean can change which times fit
+        });
+      });
+    });
+    var openTimes = function (then) { var c = sentCard(); if (c) c.querySelector(".bw-opt-go").click(); setTimeout(then, 450); };
+    box.querySelector(".bw-sent-go").addEventListener("click", function () {
+      track("sentence_book", { item: sentSvc });
+      var t = sentTime;
+      openTimes(function () { if (t) { var sl = sentSlot(t.slot); if (sl) { chooseTime(t.day, sl); pickSlot(t.day, sl); } } });
+    });
+    box.querySelector(".bw-sent-all").addEventListener("click", function () {
+      track("sentence_calendar", { item: sentSvc });
+      openTimes(function () { var db = document.getElementById("bw-date-btn"); if (db) db.click(); }); // the three-dot month calendar
+    });
+    box.querySelector(".bw-sent-zipchange").addEventListener("click", function () { sentZip = ""; renderSentence(); });
+  }
+  function initSentence() {
+    var holder = document.getElementById("bw-step-services");
+    if (!holder || document.getElementById("bw-sent")) return;
+    var box = document.createElement("div");
+    box.id = "bw-sent"; box.className = "bw-sent";
+    var size = holder.querySelector(".bw-svcs-size");
+    if (size) size.classList.add("bw-sent-hide"); // the sentence sets beds, baths and condition now
+    var svcs = holder.querySelector(".bw-svcs");
+    if (svcs) svcs.parentNode.insertBefore(box, svcs); else holder.insertBefore(box, holder.firstChild);
+    [svcsBed, svcsBath, freqSelect, document.getElementById("bw-gate-condition")].forEach(function (sel) { if (sel) sel.addEventListener("change", function () { setTimeout(renderSentence, 0); }); });
+    document.addEventListener("click", function () { Array.prototype.forEach.call(document.querySelectorAll(".bw-sent-pick.is-open"), function (x) { x.classList.remove("is-open"); }); });
+    if (SENT_QZIP) setSentZip(SENT_QZIP); else renderSentence();
+  }
+  setTimeout(initSentence, 600);
+
+  // ---------- Returning customers (Jack, 2026-11-08: "same font and style as the I'd like") ----------
+  // "I'm already a customer. My phone number is ___." -> a text code to the number on file (customer-portal login_code_send; the answer
+  // never says whether the phone is a customer, and it is rate-limited) -> "The code we texted is ___." -> their account page opens.
+  // Phone and code only, never a lookup by name, email or address. Off until the franchise switches customer_login_enabled on.
+  var ACCOUNT_PAGE = "https://puggy-code.github.io/franchise-os-web/account.html";
+  var retPhone = "", retSent = false, retNote = "";
+  function renderReturning() {
+    var box = document.getElementById("bw-ret");
+    if (!box) return;
+    if (!retSent) {
+      box.innerHTML = "<p class='bw-sent-s'>I'm already a customer. My phone number is " +
+        "<input id='bw-ret-phone' class='bw-ret-in' type='tel' inputmode='tel' autocomplete='tel' maxlength='14' placeholder='(763) 555-0123' aria-label='Phone number' value='" + esc(retPhone) + "'>.</p>" +
+        "<button type='button' class='bw-ret-go' id='bw-ret-send'>Text me a code &rarr;</button>" +
+        "<p class='bw-sent-note' aria-live='polite'>" + esc(retNote || "We text a 6-digit code to the number on your account. Then you can change, skip or reschedule a clean.") + "</p>";
+      var inp = box.querySelector("#bw-ret-phone");
+      var send = function () {
+        var d = inp.value.replace(/\D/g, "").replace(/^1(?=\d{10}$)/, "");
+        if (d.length !== 10) { retPhone = inp.value; retNote = "Enter the 10-digit phone number on your account."; renderReturning(); return; }
+        retPhone = d; retNote = "";
+        track("returning_code_send", {});
+        fetch(CONFIG.CUSTOMER_PORTAL_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "login_code_send", phone: d }) })
+          .then(function () { retSent = true; renderReturning(); })
+          .catch(function () { retNote = "We could not send a code right now. Try again in a minute."; renderReturning(); });
+      };
+      box.querySelector("#bw-ret-send").addEventListener("click", send);
+      inp.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); send(); } });
+      return;
+    }
+    var shown = "(" + retPhone.slice(0, 3) + ") " + retPhone.slice(3, 6) + "-" + retPhone.slice(6);
+    box.innerHTML = "<p class='bw-sent-s'>The code we texted to " + esc(shown) + " is " +
+      "<input id='bw-ret-code' class='bw-ret-in bw-ret-code' type='text' inputmode='numeric' autocomplete='one-time-code' maxlength='6' placeholder='000000' aria-label='Code from the text'>.</p>" +
+      "<button type='button' class='bw-ret-go' id='bw-ret-check'>Open my account &rarr;</button>" +
+      "<p class='bw-sent-note' aria-live='polite'>" + esc(retNote || "If your number is on an account, the code arrives in a minute.") + "</p>" +
+      "<button type='button' class='bw-sent-zipchange' id='bw-ret-back'>Use a different number</button>";
+    var code = box.querySelector("#bw-ret-code");
+    var check = function () {
+      var c = code.value.replace(/\D/g, "");
+      if (c.length !== 6) { retNote = "Enter the 6 digits from the text."; renderReturning(); return; }
+      fetch(CONFIG.CUSTOMER_PORTAL_URL, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "login_code_check", phone: retPhone, code: c }) })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+        .then(function (x) {
+          if (x.ok && x.d && x.d.t) { track("returning_signed_in", {}); window.top.location.href = ACCOUNT_PAGE + "?t=" + encodeURIComponent(x.d.t); return; }
+          retNote = x.d && x.d.error === "slow_down" ? "Too many tries. Wait a few minutes and try again." : "That code did not match. Check the text and try again.";
+          renderReturning();
+        })
+        .catch(function () { retNote = "We could not check the code right now. Try again in a minute."; renderReturning(); });
+    };
+    box.querySelector("#bw-ret-check").addEventListener("click", check);
+    code.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); check(); } });
+    code.focus();
+    box.querySelector("#bw-ret-back").addEventListener("click", function () { retSent = false; retNote = ""; renderReturning(); });
+  }
+  function initReturning() {
+    var sent = document.getElementById("bw-sent");
+    if (!sent || document.getElementById("bw-ret")) return;
+    var box = document.createElement("div");
+    box.id = "bw-ret"; box.className = "bw-sent bw-ret";
+    sent.parentNode.insertBefore(box, sent.nextSibling);
+    renderReturning();
+  }
+  setTimeout(initReturning, 700);
+
+  function chooserCard(two) {
+    return Array.prototype.filter.call(document.querySelectorAll("#bw-svcs-list .bw-opt"), function (o) {
+      return (two ? /Two Hour Clean/ : /Checklist Clean/).test(o.querySelector(".bw-opt-name").textContent);
+    })[0];
+  }
+  function openChooser() {
+    var el = document.getElementById("bw-pick");
     if (!el) {
       el = document.createElement("div");
-      el.id = "bw-2h-adv"; el.className = "bw-2h-pop"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Before you book");
-      el.innerHTML = "<div class='bw-2h-card'><button type='button' class='bw-2h-x' aria-label='Close'>&times;</button>" +
-        // Scannable at a glance (Jack, 2026-10-18): green for what it is for, red for what it is not, bold and short.
-        "<div class='bw-2h-head'>Before you book</div>" +
-        "<div class='bw-adv-title'>Our Two Hour Clean is for</div>" +
-        "<div class='bw-adv-row is-yes'><i aria-hidden='true'>&#10003;</i><b>Well-kept homes</b></div>" +
-        "<div class='bw-adv-row is-yes'><i aria-hidden='true'>&#10003;</i><b>Soft ending: the team may need to leave at two hours for the next home. We will send photos or a short video of anything left, and you can choose to add time.</b></div>" +
-        "<div class='bw-adv-not'>Not for</div>" +
-        "<div class='bw-adv-row is-no'><i aria-hidden='true'>&times;</i><b>Heavy clutter</b></div>" +
-        "<div class='bw-adv-row is-no'><i aria-hidden='true'>&times;</i><b>Strong odors</b></div>" +
-        "<div class='bw-adv-row is-no'><i aria-hidden='true'>&times;</i><b>Piles of dishes, laundry or items</b></div>" +
-        "<button type='button' class='bw-2h-go' data-adv='book'>Book the Two Hour Clean</button>" +
-        "<button type='button' class='bw-2h-alt' data-adv='checklist'>Not my home? Checklist Clean</button></div>";
+      el.id = "bw-pick"; el.className = "bw-2h-pop"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); el.setAttribute("aria-label", "Find the right clean");
+      el.innerHTML = "<div class='bw-2h-card bw-pick-card'><button type='button' class='bw-2h-x' aria-label='Close'>&times;</button><div class='bw-pick-body' aria-live='polite'></div></div>";
       document.getElementById("bw-root").appendChild(el);
-      el.addEventListener("click", function (e) {
-        var b = e.target.closest && e.target.closest("[data-adv]");
-        if (e.target === el || (e.target.closest && e.target.closest(".bw-2h-x"))) { el.hidden = true; return; }
-        if (!b) return;
-        el.hidden = true;
-        if (b.getAttribute("data-adv") === "book") { if (el._onBook) el._onBook(); return; }
-        var c = Array.prototype.filter.call(document.querySelectorAll(".bw-opt"), function (o) { return /Checklist Clean/.test(o.querySelector(".bw-opt-name").textContent); })[0];
-        if (c) c.querySelector(".bw-opt-go").click();
-      });
+      el.addEventListener("click", function (e) { if (e.target === el || (e.target.closest && e.target.closest(".bw-2h-x"))) el.hidden = true; });
       document.addEventListener("keydown", function (e) { if (e.key === "Escape") el.hidden = true; });
     }
-    el._onBook = onBook;
+    pickAns = {}; pickStep = 0;
     el.hidden = false;
-    var go = el.querySelector(".bw-2h-go"); if (go && go.focus) go.focus();
+    renderChooser();
+    track("chooser_open");
+  }
+  function renderChooser() {
+    var body = document.querySelector("#bw-pick .bw-pick-body");
+    if (pickStep >= PICK_QS.length) { renderChooserAnswer(body); return; }
+    var q = PICK_QS[pickStep];
+    body.innerHTML = "<div class='bw-pick-top'>" + (pickStep > 0 ? "<button type='button' class='bw-pick-back'>&lsaquo; Back</button>" : "<span></span>") +
+      "<span class='bw-pick-step'>" + (pickStep + 1) + " of " + PICK_QS.length + "</span></div>" +
+      "<h4 class='bw-pick-q'>" + esc(q.q) + "</h4><div class='bw-pick-answers" + (q.a.length > 2 ? " is-grid" : "") + "'></div>";
+    var box = body.querySelector(".bw-pick-answers");
+    q.a.forEach(function (a) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "bw-pick-a";
+      b.innerHTML = "<b>" + esc(a[1]) + "</b>" + (a[2] ? "<span>" + esc(a[2]) + "</span>" : "");
+      b.addEventListener("click", function () { pickAns[q.key] = a[0]; pickStep++; renderChooser(); }); // a tap moves on: no Next
+      box.appendChild(b);
+    });
+    var back = body.querySelector(".bw-pick-back");
+    if (back) back.addEventListener("click", function () { pickStep--; renderChooser(); });
+  }
+  function renderChooserAnswer(body) {
+    var two = chooserPick(pickAns.beds, pickAns.baths, pickAns.kept === "yes", pickAns.quick === "yes") === "two_hour";
+    var setSel = function (sel, v) { if (sel && Array.prototype.some.call(sel.options, function (o) { return o.value === String(v); })) sel.value = String(v); };
+    setSel(svcsBed, pickAns.beds); setSel(svcsBath, pickAns.baths);
+    var cond = document.getElementById("bw-gate-condition");
+    if (cond) { cond.value = pickAns.kept === "yes" ? "kept" : "while"; cond.dispatchEvent(new Event("change")); }
+    changeHomeSize();
+    var name = two ? "Two Hour Clean" : "Checklist Clean";
+    var why = two ? "Your home is kept up and you want the main spots done in about two hours."
+      : !twoHourFitsFor(pickAns.beds, pickAns.baths) ? "Your home is bigger than two hours can cover. The team cleans every room from a checklist."
+      : pickAns.kept !== "yes" ? "Your home needs extra work. The team goes room by room with a checklist."
+      : "You want every room done, top to bottom, with a checklist.";
+    body.innerHTML = "<div class='bw-pick-top'><button type='button' class='bw-pick-back'>&lsaquo; Back</button><span class='bw-pick-step'>Your best fit</span></div>" +
+      "<h4 class='bw-pick-name'>The " + esc(name) + "</h4><p class='bw-pick-why'>" + esc(why) + "</p><div class='bw-pick-price'></div>" +
+      "<button type='button' class='bw-pick-book'>Book the " + esc(name) + "</button>" +
+      "<button type='button' class='bw-pick-both'>See both options</button>";
+    // Its price for this home, from what the cards show: the Two Hour Clean's plan chips and price, the Checklist Clean's one-time price.
+    var priceBox = body.querySelector(".bw-pick-price");
+    var drawPrice = function () {
+      if (two) {
+        var p = twoHourPrice(selectedFrequency);
+        priceBox.innerHTML = "<b>" + (p == null ? "" : wholeDollars(formatPrice(p))) + "</b> <span>" + (selectedFrequency === "one_time" ? "one time" : "a visit, " + esc(String(FREQ_SHORT[selectedFrequency] || "").toLowerCase())) + "</span>";
+        priceBox.appendChild(twoHourPlanChips(drawPrice));
+      } else {
+        var card = chooserCard(false), price = card ? card.querySelector(".bw-opt-price").textContent : "", per = card ? card.querySelector(".bw-opt-per").textContent : "";
+        priceBox.innerHTML = "<b>" + esc(price) + "</b> <span>" + esc(per) + "</span>";
+      }
+    };
+    drawPrice();
+    body.querySelector(".bw-pick-back").addEventListener("click", function () { pickStep = PICK_QS.length - 1; renderChooser(); });
+    body.querySelector(".bw-pick-both").addEventListener("click", function () { document.getElementById("bw-pick").hidden = true; });
+    body.querySelector(".bw-pick-book").addEventListener("click", function () {
+      document.getElementById("bw-pick").hidden = true;
+      var card = chooserCard(two);
+      if (card) card.querySelector(".bw-opt-go").click(); // the card's own Book: the Two Hour Clean to the times, the Checklist Clean to its choices
+    });
+    track("chooser_result", { item: name });
   }
   function openTwoHourInfo() {
     var el = document.getElementById("bw-2h-pop");
@@ -2291,7 +2614,7 @@
     if (!wrap) return;
     var on = selectedService === "works" && DETAIL_EXTRAS.length > 0;
     wrap.hidden = !on;
-    document.getElementById("bw-hc-wrap").hidden = !on; // the Home Care Plan card, under the frequency choice
+    document.getElementById("bw-hc-wrap").hidden = !on || (typeof ROTATION !== "undefined" && ROTATION.enabled); // the Home Care Plan card, under the frequency choice; replaced by the Rotating Detail Plan once that is on
     if (!on) return;
     renderHomeCare();
     if (hcOn) { var tt = document.getElementById("bw-works-extras-time"); tt.textContent = ""; tt.hidden = true; return; }
@@ -2427,11 +2750,66 @@
     updateTipUi();
     try { if (selected) renderSelectedSummary(); } catch (e) { /* the summary follows the next change */ }
   }
+  // ---------- The Checklist Clean is priced by its time (Jack, 2026-11-06) ----------
+  // Price = crew minutes for every room x 2 people x an hourly rate (one time $55, weekly $46...), never below the Two Hour Clean's price for
+  // the same frequency. The same numbers as supabase/functions/_shared/rotationPricing.ts (a test keeps them in step); the page replaces them
+  // with the owner's own from booking-availability ?flags=1. The server prices again and ignores this page's number.
+  var ROTATION = {
+    enabled: false, name: "Rotating Detail Plan",
+    rates: { one_time: 5500, weekly: 4600, every_other_week: 4800, every_4_weeks: 5100, every_6_weeks: 5100 },
+    every: { kitchen: [36, 40, 46], bathroom: [25, 28, 32], half_bath: [9, 10, 12], bedroom: [13, 14, 16], living_room: [18, 20, 23], dining_room: [9, 10, 12], entry_hall: [7, 8, 9] },
+    focus: { kitchen: [23, 25, 29], bathroom: [7, 8, 9], half_bath: [4, 4, 5], bedroom: [4, 4, 5], living_room: [7, 8, 9], dining_room: [4, 4, 5], entry_hall: [0, 0, 0] }
+  };
+  var ROT_SIZES = ["0-2 bed", "3 bed", "4+ bed"];
+  function rotApply(f) {
+    if (!f || !f.rotation) return;
+    ROTATION.enabled = !!f.rotation.enabled;
+    if (f.rotation.name) ROTATION.name = String(f.rotation.name);
+    if (f.rotation.rates) ROTATION.rates = f.rotation.rates;
+    var est = f.rotation.estimates;
+    if (est) ["every", "focus"].forEach(function (k) {
+      var src = est[k === "every" ? "every_visit_room" : "focus_room"];
+      if (src) Object.keys(ROTATION[k]).forEach(function (room) { if (src[room]) ROTATION[k][room] = ROT_SIZES.map(function (s) { return src[room][s]; }); });
+    });
+  }
+  function rotRooms(beds, baths) {
+    if (!isFinite(beds) || beds < 0 || !isFinite(baths) || baths < 1) return null;
+    var r = { kitchen: 1, living_room: 1, entry_hall: 1, bathroom: Math.floor(baths) };
+    if (beds >= 3) r.dining_room = 1;
+    if (beds > 0) r.bedroom = Math.floor(beds);
+    if (baths % 1 !== 0) r.half_bath = 1;
+    return r;
+  }
+  function rotMinutes(table, rooms, idx, only) {
+    var m = 0;
+    Object.keys(rooms).forEach(function (k) { if (!only || only.indexOf(k) >= 0) m += rooms[k] * table[k][idx]; });
+    return m;
+  }
+  function rotCents(mins, rate) { return Math.round((mins * 2 / 60) * rate / 100) * 100; }
+  function rotHome() {
+    var beds = Number(selectedBedrooms), baths = Number(selectedBathrooms), rooms = rotRooms(beds, baths);
+    return rooms ? { rooms: rooms, idx: beds <= 2 ? 0 : beds === 3 ? 1 : 2 } : null;
+  }
+  function worksBaseCents(freq) {
+    var floor = Math.max(0, CONFIG.BASE_PRICE_CENTS - frequencyDiscountCents(freq));
+    var h = rotHome(), rate = ROTATION.rates[freq];
+    if (!h || !rate) return floor;
+    return Math.max(floor, rotCents(rotMinutes(ROTATION.every, h.rooms, h.idx), rate));
+  }
+  var ROT_ZONES = [["kitchen"], ["bathroom", "half_bath"], ["bedroom"], ["living_room", "dining_room"]];
+  function rotationAddonCents(freq) {
+    var h = rotHome(), rate = ROTATION.rates[freq];
+    if (!h || !rate || freq === "one_time") return null;
+    var total = 0;
+    ROT_ZONES.forEach(function (z) { total += rotMinutes(ROTATION.focus, h.rooms, h.idx, z); });
+    return rotCents(total / 4, rate);
+  }
+
   function subtotalCents() {
     if (isCatalogService()) return catalogQuote().total;
     if (selectedService === "two_hour") return CONFIG.BASE_PRICE_CENTS + extraHalfN() * EXTRA_HALF_CENTS;
     if (selectedService === "works" && hcOn) return hcPriceCents() + glassCents();
-    if (selectedService === "works") return CONFIG.BASE_PRICE_CENTS + customCleanAddOnsCents() + worksExtrasCents() + glassCents();
+    if (selectedService === "works") return worksBaseCents("one_time") + worksExtrasCents() + glassCents();
     if (selectedService === "four_hour") return CONFIG.SERVICES.four_hour.oneTimeCents;
     return null;
   }
@@ -2446,6 +2824,7 @@
   function rawPriceForFrequency(freq) {
     if (selectedService === "works" && hcOn) return freq === "every_4_weeks" ? hcPriceCents() : null;   // the plan is every 4 weeks only
     if (selectedService === "four_hour") return CONFIG.SERVICES.four_hour.oneTimeCents;
+    if (selectedService === "works") return worksBaseCents(freq) + worksExtrasCents() + glassCents();   // priced by its time, see ROTATION
     var subtotal = subtotalCents();
     if (subtotal == null) return null;
     if (isCatalogService()) return subtotal; // catalog services carry no frequency discount
@@ -2463,12 +2842,15 @@
 
   // "Name three" referrals (0303). A friend's link opens this page with ?ref=<code>; kept for the visit like the QR code above.
   // create-booking checks the code and takes the friend's first-clean gift off; the page only shows it.
-  (function () {
-    var heard = document.getElementById("bw-heard"), other = document.getElementById("bw-heard-other");
-    if (!heard) return;
-    heard.addEventListener("change", function () { other.hidden = heard.value !== "other"; });
-    setTimeout(function () { if (!heard.value && friendCode()) heard.value = "friend"; }, 0);
-  })();
+  // "How did you hear about us?" (0534) is asked after booking (Jack, 2026-11-05). A Meta ad visit is never asked: it is logged as Facebook,
+  // the same rule as isMetaVisit in _shared/attribution.ts. A friend's code is logged as Friend.
+  function isMetaVisit() {
+    var a = attribution();
+    return [a && a.last, a && a.first].some(function (t) {
+      return !!t && (!!t.fbclid || /^(facebook|fb|instagram|ig|meta)$/i.test(String(t.utm_source || "").trim()));
+    });
+  }
+  function autoHeard() { return isMetaVisit() ? "facebook" : friendCode() ? "friend" : null; }
   // Kids' holiday gift (0555): one age band per child, nothing else.
   (function () {
     var sel = document.getElementById("bw-kids"), box = document.getElementById("bw-kids-box"), ages = document.getElementById("bw-kids-ages");
@@ -2736,6 +3118,7 @@
           ? " · turn left to save " + formatPrice(once - priceForFrequency("every_other_week")).replace(/\.00$/, "") : "");
   }
   function updatePricing() {
+    updateRotationBox();
     updateCustomBreakdown();
     renderWorksExtras();
     CONFIG.FREQUENCIES.forEach(function (f) {
@@ -2763,7 +3146,7 @@
     var isFourHour = selectedService === "four_hour";
     var isCatalog = isCatalogService();
     var isChecklist = selectedService === "checklist_clean";
-    rotationalWrap.hidden = !isChecklist;
+    updateRotationBox();
     updatePolicy();
     catalogFields.hidden = !isCatalog;
     if (isCatalog) {
@@ -2955,17 +3338,18 @@
   var rotationalWrap = document.getElementById("bw-rotational-wrap");
   var rotationalBox = document.getElementById("bw-rotational");
   var policies = {};
-  rotationalBox.addEventListener("change", function () {
-    // A rotational plan needs a recurring schedule: a one-time visit cannot rotate.
-    if (rotationalBox.checked && selectedFrequency === "one_time") {
-      selectedFrequency = "every_4_weeks";
-      freqSelect.value = "every_4_weeks";
-    }
-    updatePricing();
-  });
-  freqSelect.addEventListener("change", function () {
-    if (freqSelect.value === "one_time") rotationalBox.checked = false;
-  });
+  // The Rotating Detail Plan box (Jack, 2026-11-06): a repeat Checklist Clean only, after the 2 Catch-Up Cleans. It never changes today's price;
+  // the server prices it again and the third visit on carries it. The name is the owner's setting (booking-availability ?flags=1).
+  function updateRotationBox() {
+    if (typeof ROTATION === "undefined" || typeof rotationalWrap === "undefined" || !rotationalWrap || !rotationalBox) return;
+    var on = ROTATION.enabled && (selectedService === "works" || selectedService === "checklist_clean") && selectedFrequency !== "one_time" && !(typeof hcOn !== "undefined" && hcOn);
+    var cents = on ? rotationAddonCents(selectedFrequency) : null;
+    rotationalWrap.hidden = !(on && cents);
+    if (!on || !cents) { rotationalBox.checked = false; return; }
+    document.getElementById("bw-rotational-text").innerHTML = "After my 2 Catch-Up Cleans, add the <b>" + esc(ROTATION.name) + "</b>: one room gets extra detail every visit. <b>+" + wholeDollars(formatPrice(cents)) + " per visit.</b>";
+  }
+  rotationalBox.addEventListener("change", function () { updatePricing(); });
+  freqSelect.addEventListener("change", function () { updateRotationBox(); });
   function updatePolicy() {
     var el = document.getElementById("bw-policy");
     var p = policies[selectedService];
@@ -3220,6 +3604,8 @@
       updateServiceView();
       updatePricing();
     }
+    // The first screen shows from the start (the three-screen flow), so the price list and a first visit can land after it: redraw the cards.
+    if (!stepServices.hidden) renderServiceTiles();
   }
 
   function activateService(btn) {
@@ -3359,7 +3745,8 @@
     if (tax > 0) rows.push([(tf.fee > 0 ? "Taxes and fees" : "Sales tax") + infoBtn("About taxes and fees", taxInfo), formatPrice(tax)]);
     if (tip > 0) rows.push(["Tip for your team", formatPrice(tip)]);
     var total = price == null ? null : price - nOff - cOff - sOff - rOff + tax + tip;
-    orderTotalNow = total == null ? 0 : total; // the quick sheet's wallet shows this (the credit-card total until a card is known)
+    orderTotalNow = total == null ? 0 : total; // the wallet shows this (the credit-card total until a card is known)
+    if (eceElements && orderTotalNow > 0) { try { eceElements.update({ amount: orderTotalNow }); } catch (e) { /* the wallet keeps the last amount */ } }
     var html = rows.map(function (r) { return "<div class='bw-order-row'><span>" + r[0] + "</span><span>" + r[1] + "</span></div>"; }).join("");
     var chargedNow = recurring || paysNowNow();
     var totalInfo = (recurring ? "Charged now, then before each visit. Cancel your plan anytime." : "Charged now. Our cancellation policy applies.") +
@@ -3646,7 +4033,7 @@
         var b = document.createElement("button");
         b.type = "button"; b.className = "bw-navbtn"; b.style.cssText = "width:auto;padding:8px 12px";
         b.textContent = prettyDate(x.day) + ", " + slot.label;
-        b.addEventListener("click", function () { chooseTime(x.day, slot); });
+        b.addEventListener("click", function () { chooseTime(x.day, slot); pickSlot(x.day, slot); });
         list.appendChild(b);
       });
       box.hidden = !list.children.length;
@@ -3752,7 +4139,7 @@
           dot.setAttribute("aria-label", dStr + " " + slot.label + (available ? " available" + routeNote : " booked"));
           if (available) {
             dot.addEventListener("click", function (dStr, slot) {
-              return function () { chooseTime(dStr, slot); closeDatePop(); };
+              return function () { chooseTime(dStr, slot); closeDatePop(); pickSlot(dStr, slot); };
             }(dStr, slot));
           } else {
             dot.disabled = true;
@@ -3912,7 +4299,21 @@
       cardEl.mount("#bw-card-element");
       cardEl._mounted = true;
     }
-    if (quickMode) quickSetup();
+    if (quickMode) quickSetup(); else fullPaySetup();
+  }
+  // The details-and-pay form of the three-screen flow (Jack, 2026-11-04): Apple Pay / Google Pay here too, through the quick sheet's
+  // pay block (the same Express Checkout and ConfirmationToken path to create-booking). The plan agreement moves up into that block, right
+  // above the wallet, which checks it before it opens. The card form below stays as it was.
+  var fullPayReady = false;
+  function fullPaySetup() {
+    if (fullPayReady) return;
+    fullPayReady = true;
+    var pay = document.getElementById("bw-quick-pay"), terms = pay.querySelector(".bw-quick-terms");
+    var consent = document.getElementById("bw-recurring-consent-wrap");
+    if (consent) pay.insertBefore(consent, terms);
+    pay.hidden = false;
+    try { renderOrder(); } catch (e) { /* the total comes with the next change */ }
+    mountWallets();
   }
   // The picked time, its price (a plan's price with the one-time price beside it) and what is booked, at the top of the details step.
   // Drawn again when the quick sheet's plan changes.
@@ -3957,7 +4358,7 @@
 
     formError.hidden = true;
     var usedToken = walletToken; walletToken = null; // a wallet's ConfirmationToken is used once, by this submit only
-    if (quickMode && !quickFieldsOk()) return;
+    if (!quickFieldsOk()) return; // who and where: asked on this form in every flow since the three-screen flow
 
     var zip = document.getElementById("bw-zip").value.trim();
     if (!/^\d{5}$/.test(zip)) {
@@ -3986,6 +4387,8 @@
     if (selectedFrequency !== "one_time" && !(recurringConsent && recurringConsent.checked)) {
       formError.textContent = "Please check the box to agree to the charges for your recurring plan.";
       formError.hidden = false;
+      // The box sits above the wallet, at the top of this form (the three-screen flow): take the customer to it.
+      try { recurringConsent.scrollIntoView({ block: "center", behavior: "smooth" }); recurringConsent.focus({ preventScroll: true }); } catch (e) { /* the message says where */ }
       return;
     }
 
@@ -4017,7 +4420,8 @@
       service_label: CONFIG.SERVICES[selectedService].label,
       // For the Checklist Clean the server works out the level and add-ons from the priced choices.
       checklist_tier: "basic",
-      rotational: selectedService === "checklist_clean" && rotationalBox.checked,
+      rotational: false,   // the server decides from the third visit (migration 0952)
+      rotation_addon_wanted: (selectedService === "works" || selectedService === "checklist_clean") && rotationalBox.checked,
       photos_opt_out: CONFIG.PHOTO_OPT_OUT_LIVE ? document.getElementById("bw-photo-optout").checked : undefined,
       // Detailing: the ranked list goes first, so the team works it in the customer's order.
       special_requests: (selectedService === "four_hour" && detailPicks.length
@@ -4075,8 +4479,7 @@
       contact_pref: (document.getElementById("bw-contact-pref") || {}).value === "call" ? "call" : "text",
       kids_gifts: kidsAnswer().gifts,
       kids: kidsAnswer().bands,
-      how_heard: (document.getElementById("bw-heard") || {}).value || null,
-      how_heard_other: (document.getElementById("bw-heard-other") || {}).value ? document.getElementById("bw-heard-other").value.trim().slice(0, 80) : null,
+      how_heard: autoHeard(),
       referred_by: friendCode() ? null : ((document.getElementById("bw-n3-by") || {}).value || "").trim() || null,
       price_test_id: priceTestFields().price_test_id,
       price_arm: priceTestFields().price_arm,
@@ -4274,11 +4677,33 @@
     if (!isSubmitting) renderOrder();
   }
 
+  // Only for a brand-new customer (the getting-ready link carries their account token) who was not already logged as Meta or Friend.
+  function askHeard(readyUrl) {
+    var box = document.getElementById("bw-heard"), m = /[?&]t=([0-9a-f]{32})/.exec(readyUrl || "");
+    if (!box || !m || autoHeard()) return;
+    var otherRow = box.querySelector(".bw-heard-other");
+    function save(heard, other) {
+      box.querySelector(".bw-heard-chips").hidden = true; otherRow.hidden = true; box.querySelector(".bw-heard-thanks").hidden = false;
+      fetch(CONFIG.CUSTOMER_PORTAL_URL, { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ t: m[1], action: "how_heard", how_heard: heard, how_heard_other: other || null }) }).catch(function () {});
+    }
+    box.querySelectorAll("[data-heard]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (b.getAttribute("data-heard") !== "other") return save(b.getAttribute("data-heard"));
+        box.querySelectorAll("[data-heard]").forEach(function (x) { x.classList.toggle("bw-on", x === b); });
+        otherRow.hidden = false; otherRow.querySelector("input").focus();
+      });
+    });
+    otherRow.querySelector("button").addEventListener("click", function () { save("other", otherRow.querySelector("input").value.trim().slice(0, 80)); });
+    box.hidden = false;
+  }
+
   function showDone(res) {
     bookingCompleted = true;
     // The customer's getting-ready link (confirm-booking's ready_url, 0162) leads the done screen when the server sends it.
     var ready = document.getElementById("bw-ready-cta"), readyUrl = res && typeof res.ready_url === "string" && /^https:\/\//.test(res.ready_url) ? res.ready_url : "";
     if (ready && readyUrl) { ready.querySelector("a").href = readyUrl; ready.hidden = false; }
+    askHeard(readyUrl);
     track("purchase", { value: bookingValue(), transaction_id: lastBookingId, item: serviceName() });
     if (holdTimer) { clearInterval(holdTimer); holdTimer = null; }
     hold = null;
@@ -4404,7 +4829,7 @@
   var oaFromLink = false, oaFromTimes = false;
   document.getElementById("bw-oa-back").addEventListener("click", function () {
     stepOutOfArea.hidden = true;
-    if (oaFromLink) { oaFromLink = false; stepGate.hidden = false; return; }
+    if (oaFromLink) { oaFromLink = false; showServicesStep(); return; }
     if (oaFromTimes) { oaFromTimes = false; stepCalendar.hidden = false; return; }
     stepForm.hidden = false;
   });
@@ -4577,10 +5002,13 @@
       box.appendChild(b);
     });
   }
-  // The short form still needs who and where.
+  // The details-and-pay form needs who and where (the quick sheet's check, every flow since the three-screen flow; it took over the
+  // contact screen's checks).
   function quickFieldsOk() {
     var name = document.getElementById("bw-name").value.trim(), phone = document.getElementById("bw-phone").value.replace(/\D/g, ""), addr = document.getElementById("bw-address").value.trim();
-    var msg = !name ? "Please add your name." : phone.length < 10 ? "Please add a 10-digit phone number." : !addr ? "Please add the address of the home we clean." : "";
+    var email = document.getElementById("bw-email").value.trim();
+    var msg = !name ? "Please add your name." : phone.length < 10 ? "Please add a 10-digit phone number."
+      : email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? "That email does not look right." : !addr ? "Please add the address of the home we clean." : "";
     if (msg) { formError.textContent = msg; formError.hidden = false; }
     return !msg;
   }
@@ -4601,7 +5029,8 @@
       var opt = Array.prototype.filter.call(sel.options, function (o) { return o.value === String(v); })[0];
       if (opt) { sel.value = opt.value; sel.dispatchEvent(new Event("change")); }
     }
-    setTimeout(function () { pick(bedroomSelect, q.get("beds")); pick(bathroomSelect, q.get("baths")); }, 400);
+    // on the first screen's selects, which keep every other bed and bath select in step (changeHomeSize)
+    setTimeout(function () { pick(svcsBed, q.get("beds")); pick(svcsBath, q.get("baths")); }, 400);
     // ?service=two_hour | checklist | four_hour preselects the service (website deep links, /llms.txt). A first visit still becomes a
     // Checklist Clean inside activateService.
     var svcKey = { two_hour: "two_hour", checklist: "works", checklist_clean: "works", works: "works", four_hour: "four_hour", detailing: "four_hour" }[String(q.get("service") || "").toLowerCase()];
@@ -4666,6 +5095,7 @@
     fetch(CONFIG.AVAILABILITY_URL + "?flags=1&org_slug=" + encodeURIComponent(CONFIG.ORG_SLUG)).then(function (r) { return r.json(); }).then(function (d) {
       // Pay by bank: offer "add the card fee you save to your crew's tip" (0676) only when the business has it on.
       bankFeeTipOn = !!(d && d.flags && d.flags.bank_fee_tip);
+      try { rotApply(d && d.flags); updatePricing(); } catch (e) { /* the built-in numbers stay */ }
       if (bankFeeTipOn) { try { renderOrder(); } catch (e) {} }
       if (!wrap || !d || !d.flags || !d.flags.tie_tip) return;
       wrap.hidden = false;
@@ -4777,11 +5207,11 @@
     var works = hmod && hmod.smart ? hmod.minutes : CONFIG.SERVICES.works.durationMinutes;
     document.getElementById("bw-est-name").textContent = fits ? "Two Hour Clean" : "The Checklist Clean";
     document.getElementById("bw-est-time").textContent = fits ? "2 hr" : "About " + hm(works);
-    document.getElementById("bw-est-crew").textContent = "2 maids";
+    document.getElementById("bw-est-crew").textContent = "Team of 2";
     var worksText = document.getElementById("bw-gate-price-works").textContent;
     document.getElementById("bw-est-price").textContent = wholeDollars(fits ? formatPrice(CONFIG.BASE_PRICE_CENTS) : (LEVELS_PRICED ? "By level" : worksText));
     var why = fits
-      ? homeLabel() + " fits two maids in two hours: the kitchen, the floors, up to 2½ baths and 2 to 4 bedrooms."
+      ? homeLabel() + " fits a team of two in two hours: the kitchen, the floors, up to 2½ baths and 2 to 4 bedrooms."
       : homeLabel() + " is more than two hours covers (up to 4 bedrooms and 2½ baths). The Checklist Clean works through every room and takes the time it takes.";
     var cond = (document.getElementById("bw-gate-condition") || {}).value || "kept";
     if (cond !== "kept" && fits) why += " Since your home is " + CONDITION_TEXT[cond] + ", we will suggest an extra half hour before you pay. Your price stays flat.";
@@ -4916,7 +5346,8 @@
       b.setAttribute("aria-checked", picked ? "true" : "false");
       if (picked) b.classList.add("is-picked");
       if (pin) b.classList.add("is-route");
-      if (open) b.addEventListener("click", function () { chooseTime(pickedDay, slot); });
+      // A tap on a time holds it and moves on to the details (the three-screen flow, 2026-11-04: no Continue).
+      if (open) b.addEventListener("click", function () { var d = pickedDay; chooseTime(d, slot); pickSlot(d, slot); });
       else { b.disabled = true; b.setAttribute("aria-label", slot.label + " booked"); }
       box.appendChild(b);
     });
@@ -5096,8 +5527,8 @@
     document.addEventListener("click", function (e) { if (!pop.hidden && !pop.contains(e.target) && !dateBtn.contains(e.target)) closeDatePop(); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeDatePop(); });
 
-    // steps
-    document.getElementById("bw-options-go").addEventListener("click", function () { stepOptions.hidden = true; showContactStep(null); });
+    // steps (the three-screen flow, 2026-11-04: no contact screen; who and where are asked on the details-and-pay form)
+    document.getElementById("bw-options-go").addEventListener("click", function () { stepOptions.hidden = true; showTimesStep(); });
     document.getElementById("bw-contact-back").addEventListener("click", function () {
       stepContact.hidden = true;
       if (contactReturn === "form") stepForm.hidden = false; else showOptionsStep();
@@ -5119,7 +5550,7 @@
     });
     document.getElementById("bw-times-back").addEventListener("click", function () {
       stepCalendar.hidden = true;
-      if (contactDone) showContactStep(null); else showOptionsStep();
+      if (selectedService === "two_hour") showServicesStep(); else showOptionsStep();
     });
     document.getElementById("bw-times-go").addEventListener("click", function () { if (chosen) pickSlot(chosen.dateStr, chosen.slot); });
     document.getElementById("bw-contact-edit").addEventListener("click", function () { stepForm.hidden = true; showContactStep("form"); });
@@ -5134,6 +5565,20 @@
     document.getElementById("bw-zip").addEventListener("input", function () { try { renderOrder(); renderSelectedSummary(); } catch (e) { /* follows the next change */ } });
   }
   initReserve();
+  // The three-screen flow (Jack, 2026-11-04: "merge the /book-now flow into 3 screens"): the page opens on the cleans, their prices, the Two
+  // Hour Clean's plan and the home's details (the old first panel, submitted as it stands), and "Have a code?" sits on the details-and-pay
+  // form for every clean, above the order. The quick sheet (the website's time buttons) and a link with an unserved ZIP keep their own start.
+  (function () {
+    var promo = document.getElementById("bw-promo-wrap"), promoNote = document.getElementById("bw-promo-note"), order = document.getElementById("bw-order");
+    if (promo && order) { order.parentNode.insertBefore(promo, order); if (promoNote) order.parentNode.insertBefore(promoNote, order); }
+    // Who and where together at the top of the form (name, email, phone, address, ZIP), so one autofill tap fills them.
+    var addrRow = document.getElementById("bw-address").closest(".bw-field-row"), phoneField = document.getElementById("bw-phone").closest(".bw-field");
+    if (addrRow && phoneField) phoneField.parentNode.insertBefore(addrRow, phoneField.nextSibling);
+    if (!quickMode && stepOutOfArea.hidden) gateForm.dispatchEvent(new Event("submit", { cancelable: true }));
+    // "Want help finding the right option?": the button under the home's details, and /book-now#help (the link on /services) opens it.
+    document.getElementById("bw-help-pick").addEventListener("click", openChooser);
+    if (!quickMode && stepOutOfArea.hidden && location.hash === "#help") openChooser();
+  })();
 
   addWatchCard(document.getElementById("bw-step-gate"));
   addWatchCard(document.getElementById("bw-step-services"));
@@ -5452,6 +5897,7 @@
   }
   .bw-gate-submit:hover { background: #e7ecea; }
 
+  .bw-opt-rules { margin: 4px 0 6px; padding-left: 18px; } .bw-opt-rules li { margin: 0 0 2px; }
   /* ---------- Choose your clean (Jack, 2026-10-17, after Expedia's room options). DM Sans: the closest free match to Centra No2. ---------- */
   .bw-svcs { background: #fff; border-radius: 18px; padding: 0 0 8px; margin-bottom: 16px; font-family: "DM Sans", "Work Sans", sans-serif; color: #1F2532; overflow: hidden; }
   .bw-svcs-bar { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; padding: 14px 8px 12px; border-bottom: 1px solid #E3E6EA; }
@@ -5743,6 +6189,16 @@
   @media (max-width: 420px) { .bw-n3-names { grid-template-columns: 1fr; } }
   .bw-n3-ref { color: var(--bw-ink, inherit); font-weight: 600; }
   .bw-done-n3 { margin-top: 18px; text-align: left; }
+  .bw-heard { margin-top: 18px; text-align: center; }
+  .bw-heard-q { font-weight: 600; font-size: 0.9375rem; margin: 0 0 10px; }
+  .bw-heard-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .bw-heard-chips[hidden], .bw-heard-other[hidden], .bw-heard-thanks[hidden] { display: none; }
+  .bw-heard-chips button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--bw-hairline); border-radius: 999px; background: #fff; font: inherit; font-size: 0.875rem; cursor: pointer; color: inherit; }
+  .bw-heard-chips button.bw-on { border-color: #309DDD; background: #eaf6fd; }
+  .bw-heard-other { display: flex; gap: 8px; margin-top: 10px; }
+  .bw-heard-other input { flex: 1; min-width: 0; min-height: 44px; }
+  .bw-heard-other button { min-height: 44px; padding: 0 16px; border: 0; border-radius: 10px; background: #309DDD; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+  .bw-heard-thanks { color: var(--bw-muted); margin: 0; }
   .bw-n3-done-title { font-family: "Fraunces", serif; font-weight: 600; font-size: 1rem; margin: 0 0 4px; }
   .bw-n3-done-sub { color: var(--bw-muted); font-size: 0.8125rem; margin: 0 0 10px; line-height: 1.5; }
   .bw-n3-share { border: 1px solid var(--bw-hairline); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; background: #fff; }
@@ -5974,7 +6430,7 @@
   #bw-root .bw-2h-prio-found button { border: 0; background: var(--t-blue); color: #fff; font: inherit; font-size: 0.875rem; font-weight: 700; border-radius: 12px; padding: 11px 18px; cursor: pointer; width: 100%; }
   #bw-root .bw-opt-fit { color: var(--t-blue) !important; font-weight: 600; }
   #bw-root .bw-opt-info { border: 0; background: none; padding: 6px 0 0; font: inherit; font-size: 0.7813rem; font-weight: 600; color: var(--t-blue); text-decoration: underline; cursor: pointer; }
-  #bw-root .bw-2h-pop { position: fixed; inset: 0; background: rgba(11,26,51,.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+  #bw-root .bw-2h-pop { position: fixed; inset: 0; background: rgba(11,26,51,.45); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 70; }
   #bw-root .bw-2h-pop[hidden] { display: none; }
   #bw-root .bw-2h-card { position: relative; background: #fff; border-radius: 18px; padding: 20px; max-width: 380px; width: 100%; box-shadow: 0 18px 50px rgba(11,26,51,.25); }
   #bw-root .bw-2h-card { max-width: 340px; padding: 22px 20px 18px; }
@@ -6203,7 +6659,7 @@
   #bw-root .bw-time-save { display: block; font-size: 0.6875rem; font-weight: 700; color: var(--t-green); line-height: 1.2; }
   /* Quick booking (?quick=1): only who, where and the card below the sheet; the rest comes after booking */
   #bw-root.bw-quick .bw-field:has(#bw-lang), #bw-root.bw-quick .bw-field:has(#bw-contact-pref), #bw-root.bw-quick .bw-field:has(#bw-kids),
-  #bw-root.bw-quick #bw-kids-box, #bw-root.bw-quick .bw-field:has(#bw-heard), #bw-root.bw-quick .bw-field:has(#bw-special-requests),
+  #bw-root.bw-quick #bw-kids-box, #bw-root.bw-quick .bw-field:has(#bw-special-requests),
   #bw-root.bw-quick .bw-yard-sign, #bw-root.bw-quick .bw-pet-note, #bw-root.bw-quick .bw-photo-note, #bw-root.bw-quick .bw-notes-tools, #bw-root.bw-quick #bw-notes-found,
   #bw-root.bw-quick #bw-n3, #bw-root.bw-quick #bw-half-wrap, #bw-root.bw-quick #bw-tip-wrap, #bw-root.bw-quick #bw-tie-wrap,
   #bw-root.bw-quick #bw-paymethod, #bw-root.bw-quick #bw-shift-note, #bw-root.bw-quick #bw-paytime { display: none !important; }
@@ -6537,6 +6993,75 @@
     #bw-root:has(#bw-step-done:not([hidden])) > #bw-side,
     #bw-root:has(#bw-step-outofarea:not([hidden])) > #bw-side { display: none; }
   }
+  /* The three-screen flow (Jack, 2026-11-04): the home's condition across the size row; on the Two Hour Clean's card the plan chips, Book
+     across the card and the fit line under it; no Continue under the times (a tap on a time moves on). */
+  #bw-root .bw-svcs-cond, #bw-root .bw-svcs-size > .bw-dd:has(+ .bw-svcs-cond) { grid-column: 1 / -1; } /* the custom dropdown sits just before its label */
+  #bw-root .bw-opt-plans, #bw-root .bw-opt-go-wide, #bw-root .bw-opt-fitline { grid-column: 1 / -1; }
+  #bw-root .bw-opt-plans { margin: 2px 0 0; }
+  #bw-root .bw-opt-go-wide { width: 100%; margin-top: 0; }
+  #bw-root .bw-opt-fitline { margin: 0; font-size: 0.8125rem; line-height: 1.5; color: var(--t-ink-2); }
+  #bw-root .bw-opt-alt { display: inline; padding: 0; border: 0; background: none; color: var(--t-blue); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+  #bw-root .bw-actionbar:has(#bw-times-go) { display: none; }
+  /* "Want help finding the right option?" (Jack, 2026-11-05): the button under the home's details, and the four-question sheet (one tap per
+     answer, Back, "1 of 4", then the answer with its price and Book) */
+  #bw-root .bw-help-pick { display: block; width: calc(100% - 36px); min-height: 48px; margin: 4px 18px 14px; padding: 10px 16px; border: 1.5px solid var(--t-blue); border-radius: 12px; background: #fff; color: var(--t-blue); font: inherit; font-size: 1rem; font-weight: 600; cursor: pointer; }
+  #bw-root .bw-help-pick:hover { background: #F1F5FF; }
+  #bw-root .bw-pick-card { max-width: 420px; }
+  #bw-root .bw-pick-top { display: flex; justify-content: space-between; align-items: center; min-height: 28px; margin: 0 30px 4px 0; }
+  #bw-root .bw-pick-back { border: 0; background: none; padding: 4px 0; color: var(--t-blue); font: inherit; font-weight: 600; cursor: pointer; }
+  #bw-root .bw-pick-step { font-size: 0.8125rem; font-weight: 600; color: var(--t-muted); }
+  #bw-root .bw-pick-q, #bw-root .bw-pick-name { margin: 6px 0 14px; font-size: 1.3125rem; line-height: 1.3; font-weight: 700; color: var(--t-ink); }
+  #bw-root .bw-pick-answers { display: grid; gap: 10px; }
+  #bw-root .bw-pick-answers.is-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #bw-root .bw-pick-a { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; min-height: 64px; padding: 12px 16px; border: 1.5px solid var(--t-line); border-radius: 14px; background: #fff; color: var(--t-ink); font: inherit; text-align: left; cursor: pointer; }
+  #bw-root .bw-pick-answers.is-grid .bw-pick-a { align-items: center; text-align: center; }
+  #bw-root .bw-pick-a b { font-size: 1.125rem; font-weight: 700; }
+  #bw-root .bw-pick-answers.is-grid .bw-pick-a b { font-size: 1.375rem; }
+  #bw-root .bw-pick-a span { font-size: 0.875rem; line-height: 1.4; color: var(--t-ink-2); }
+  #bw-root .bw-pick-a:hover, #bw-root .bw-pick-a:focus-visible { border-color: var(--t-blue); background: #F1F5FF; }
+  #bw-root .bw-pick-why { margin: 0 0 12px; line-height: 1.5; color: var(--t-ink-2); }
+  #bw-root .bw-pick-price { margin: 0 0 14px; }
+  #bw-root .bw-pick-price b { font-size: 1.625rem; color: var(--t-ink); }
+  #bw-root .bw-pick-price span { color: var(--t-ink-2); }
+  #bw-root .bw-pick-price .bw-quick-chips { margin: 12px 0 0; }
+  #bw-root .bw-pick-book { display: block; width: 100%; min-height: 56px; border: 0; border-radius: 12px; background: var(--t-blue); color: #fff; font: inherit; font-size: 1.0625rem; font-weight: 700; cursor: pointer; }
+  #bw-root .bw-pick-both { display: block; margin: 12px auto 0; padding: 6px; border: 0; background: none; color: var(--t-blue); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+
+  /* The sentence (Jack, 2026-11-08: option 2 of the ten drafts). */
+  #bw-root .bw-sent { background: #fff; border-radius: 22px; padding: 22px 20px 18px; margin: 0 0 16px; box-shadow: 0 1px 3px rgba(60,64,67,.15), 0 10px 30px -12px rgba(10,47,81,.2); }
+  #bw-root .bw-sent-s { font: 600 clamp(1.25rem, 4.6vw, 1.75rem)/1.65 Poppins, var(--mac-font); color: #0a2f51; margin: 0 0 16px; }
+  #bw-root .bw-sent-pick { position: relative; display: inline; }
+  #bw-root .bw-sent-word { display: inline !important; width: auto !important; min-height: 0 !important; margin: 0 !important; text-align: left !important; border: 0; background: transparent; padding: 0 2px; font: inherit; color: #1f5fd1; border-bottom: 3px solid #ffed00; border-radius: 0; box-shadow: none; cursor: pointer; }
+  #bw-root .bw-sent-menu { display: none; position: absolute; left: 0; top: 110%; z-index: 30; min-width: 210px; max-height: 280px; overflow-y: auto; background: #fff; border-radius: 14px; padding: 6px; box-shadow: 0 16px 40px rgba(10,47,81,.22); }
+  #bw-root .bw-sent-pick.is-open .bw-sent-menu { display: block; }
+  #bw-root .bw-sent-menu button { display: block; width: 100%; text-align: left; border: 0; background: transparent; border-radius: 10px; padding: 10px 12px; font: 600 1rem var(--mac-font); color: #0b1b33; cursor: pointer; }
+  #bw-root .bw-sent-menu button:hover, #bw-root .bw-sent-menu button[aria-selected="true"] { background: #f2f6fa; color: #0a2f51; }
+  #bw-root .bw-sent-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; border-top: 1px solid #e2e8ef; padding-top: 14px; }
+  #bw-root .bw-sent-price { font: 800 2.25rem/1 Poppins, var(--mac-font); color: #0a2f51; letter-spacing: -0.5px; }
+  #bw-root .bw-sent-per { font-size: .875rem; color: #5b6b88; margin-top: 4px; }
+  #bw-root .bw-sent-go { border: 0; border-radius: 16px; background: #ffed00; color: #0a2f51; font: 800 1.125rem Poppins, var(--mac-font); min-height: 56px; padding: 0 26px; cursor: pointer; box-shadow: 0 8px 20px rgba(255,237,0,.25); }
+  #bw-root .bw-sent-hide { display: none !important; }
+
+  #bw-root .bw-sent-zip { display: flex; gap: 10px; flex-wrap: wrap; }
+  #bw-root .bw-sent-zip input { flex: 1; min-width: 140px; min-height: 56px; border: 1.5px solid #c6cbd3; border-radius: 14px; padding: 0 16px; font: 700 1.25rem var(--mac-font); color: #0a2f51; letter-spacing: 2px; }
+  #bw-root .bw-sent-zip input:focus { outline: none; border-color: #1f5fd1; box-shadow: 0 0 0 1px #1f5fd1 inset; }
+  #bw-root .bw-sent-note { margin: 10px 0 0; font-size: .875rem; color: #5b6b88; }
+  #bw-root .bw-sent-wait { color: #5b6b88; font-weight: 500; }
+  #bw-root .bw-sent-all { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 50px; margin-top: 12px; border: 1.5px solid #0a2f51; border-radius: 14px; background: #fff; color: #0a2f51; font: 700 1rem var(--mac-font); cursor: pointer; }
+  #bw-root .bw-sent-dots { display: inline-flex; gap: 3px; }
+  #bw-root .bw-sent-dots i { width: 7px; height: 7px; border-radius: 50%; background: #34a853; display: block; }
+  #bw-root .bw-sent-dots i:nth-child(3) { background: #ea4335; }
+  #bw-root .bw-sent-zipchange { display: block; margin: 10px auto 0; border: 0; background: none; color: #5b6b88; font: 500 .8125rem var(--mac-font); text-decoration: underline; cursor: pointer; }
+  #bw-root #bw-sent .bw-sent-word, #bw-root #bw-sent button.bw-sent-word { display: inline !important; width: auto !important; max-width: none !important; min-height: 0 !important; padding: 0 2px !important; }
+
+  /* Returning customers: the same card and sentence type as the booking sentence. */
+  #bw-root .bw-ret .bw-sent-s { margin-bottom: 14px; }
+  #bw-root .bw-ret-in { display: inline-block; width: 11.5ch; max-width: 100%; border: 0; border-bottom: 3px solid #ffed00; background: transparent; padding: 0 2px; font: inherit; color: #1f5fd1; outline: none; }
+  #bw-root .bw-ret-in::placeholder { color: #9aa8bf; }
+  #bw-root .bw-ret-in:focus { border-bottom-color: #1f5fd1; }
+  #bw-root .bw-ret-code { width: 6.5ch; letter-spacing: 3px; }
+  #bw-root .bw-ret-go { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 52px; border: 0; border-radius: 14px; background: #0a2f51; color: #fff; font: 700 1.0625rem Poppins, var(--mac-font); cursor: pointer; }
 </style>
 <!-- Measurement (Meta, Google Analytics 4, Google Ads, Clarity; every ID empty = off), the notice, "No thanks" and the booking's first
      and last touch: pixel.js, next to this page. On twohourmaids.com the page layout adds it instead (scripts/build-site.cjs). -->

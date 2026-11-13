@@ -17,14 +17,35 @@
   Goes to the separate public web repo with the other pages; not published from here.
 -->
 <style>
-  :root { --bg: #f6f5fb; --card: #fff; --ink: #15121f; --muted: #6b6880; --line: #f1eff7; --brand: #004aad; --gold: #9a6b00; --gold-soft: #fff4d6; --ok: #166534; --err: #b91c1c; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg: #0f0d16; --card: #1a1724; --ink: #f2f0f8; --muted: #a29fb5; --line: #2b2738; --brand: #6ea3ff; --gold: #f1c35a; --gold-soft: #3a2f12; --ok: #6ee7a0; --err: #fca5a5; }
-  }
+  /* 2026-11-12 (Jack): the staff app's look: the blue-to-white gradient and frosted white tiles (60% white, 40% see-through, blurred). Light only, like the app. */
+  :root { --bg: rgba(255,255,255,.55); --card: rgba(255,255,255,.6); --ink: #10151E; --muted: #3B4452; --line: rgba(16,21,30,.08); --brand: #004aad; --gold: #9a6b00; --gold-soft: #fff4d6; --ok: #166534; --err: #b91c1c; color-scheme: light; }
   * { box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: var(--bg); color: var(--ink); margin: 0; padding: 20px 16px 48px; line-height: 1.5; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif; color: var(--ink); margin: 0; padding: 20px 16px 48px; line-height: 1.5; min-height: 100vh;
+    background: #f7faff linear-gradient(to bottom, #004aad 0, #1a5ec3 120px, #4a80d8 220px, #8fb3ec 320px, #cfe0f8 440px, #eaf1fc 600px, #f7faff 900px) no-repeat; }
   .wrap { max-width: 680px; margin: 0 auto; }
-  .card { background: var(--card); border-radius: 18px; padding: 20px; margin: 0 0 14px; }
+  .card { background: var(--card); -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); border: 1px solid rgba(255,255,255,.7); box-shadow: 0 6px 24px rgba(0,40,110,.10); border-radius: 20px; padding: 18px; margin: 0 0 12px; }
+  .hero { background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; color: #fff; padding: 6px 4px 14px; }
+  .hero .brand { color: rgba(255,255,255,.85); } .hero h1 { color: #fff; font-size: 28px; } .hero p { color: rgba(255,255,255,.9); margin: 0; }
+  .textus { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--ink); }
+  .textus .ic { flex: 0 0 44px; height: 44px; border-radius: 50%; background: var(--brand); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .textus b { display: block; } .textus span { font-size: 13px; color: var(--muted); }
+  .ring { --p: 0; width: 76px; height: 76px; border-radius: 50%; flex: 0 0 76px; background: conic-gradient(var(--brand) calc(var(--p) * 1%), rgba(0,74,173,.12) 0); display: flex; align-items: center; justify-content: center; }
+  .ring b { width: 60px; height: 60px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .plan-top { display: flex; gap: 14px; align-items: center; }
+  .next b.when { display: block; font-size: 20px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; } .chip { background: rgba(0,74,173,.08); color: var(--brand); border-radius: 999px; padding: 4px 10px; font-size: 13px; font-weight: 600; }
+  textarea { width: 100%; font: inherit; color: var(--ink); background: rgba(255,255,255,.8); border: 1px solid var(--line); border-radius: 12px; padding: 10px; min-height: 76px; margin: 6px 0; resize: vertical; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  table.rep { width: 100%; border-collapse: collapse; font-size: 14px; } table.rep td { padding: 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; } table.rep td:first-child { width: 64px; color: var(--muted); font-weight: 700; } table.rep tr:last-child td { border-bottom: 0; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .tile { display: block; text-decoration: none; color: var(--ink); background: rgba(255,255,255,.7); border-radius: 14px; padding: 12px; font-weight: 700; font-size: 14px; }
+  .tile .sub { font-weight: 400; }
+  .people { display: flex; gap: 14px; flex-wrap: wrap; } .person { text-align: center; font-size: 13px; font-weight: 700; background: none; color: var(--ink); padding: 0; }
+  .person .av { width: 56px; height: 56px; font-size: 20px; margin: 0 auto 4px; display: flex; }
+  details.more { background: var(--card); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,.7); border-radius: 16px; padding: 12px 16px; margin: 0 0 10px; }
+  details.more > summary { color: var(--ink); list-style: none; display: flex; justify-content: space-between; } details.more > summary::-webkit-details-marker { display: none; } details.more > summary::after { content: '›'; color: var(--muted); font-size: 20px; line-height: 1; } details.more[open] > summary::after { transform: rotate(90deg); }
+  details.more .card { background: transparent; border: 0; box-shadow: none; padding: 8px 0 0; margin: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .sec { font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: rgba(16,21,30,.6); font-weight: 800; margin: 18px 4px 8px; }
   h1 { font-size: 24px; margin: 0 0 4px; }
   h2 { font-size: 13px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
   p { color: var(--muted); margin: 0 0 8px; }
@@ -228,6 +249,7 @@
     return '<div class="uwrap"><div class="urow"><input class="u-unit" placeholder="Unit, like 347" maxlength="12" value="' + esc(u.unit || '') + '" aria-label="Unit">' +
       '<select class="u-size" aria-label="Unit size">' + sizeOpts(u.size || '2/2') + '</select>' +
       '<input class="u-sqft" inputmode="numeric" maxlength="5" placeholder="Sq ft" value="' + esc(u.sqft || '') + '" aria-label="Square feet (optional)">' +
+      '<input class="u-win" inputmode="numeric" maxlength="2" placeholder="Windows" aria-label="Number of windows (optional, for the windows price)">' +
       '<button type="button" class="ghost" data-rm-unit aria-label="Remove this unit">&times;</button></div>' + unitAccessHtml() + '</div>';
   }
   function requestHtml(d) {
@@ -261,6 +283,7 @@
       var z = r.querySelector('.u-size').value.split('/'), sq = r.querySelector('.u-sqft').value.replace(/[^0-9]/g, '');
       var o = { unit: r.querySelector('.u-unit').value, beds: Number(z[0]), baths: Number(z[1]) };
       if (sq) o.sqft = Number(sq);
+      var wn = r.querySelector('.u-win').value.replace(/[^0-9]/g, ''); if (wn) o.windows = Number(wn);
       var am = r.querySelector('.u-am'), av = {};
       Array.prototype.forEach.call(r.querySelectorAll('.u-af [data-acc]'), function (i) { if (i.value.trim()) av[i.getAttribute('data-acc')] = i.value.trim(); });
       if ((am && am.value) || Object.keys(av).length) { o.access_method = am ? am.value : ''; o.access = av; }
@@ -297,7 +320,7 @@
   function quoteHtml(q) {
     var lines = q.lines.map(function (l, i) {
       var seen = {}, all = [{ date: l.date, time: l.time, when: l.when, rush: !!l.rush_cents }].concat(q.options).filter(function (o) { var k = o.date + o.time; if (seen[k]) return false; seen[k] = 1; return true; });
-      return '<div class="line"><div><div class="unit">Unit ' + esc(l.unit) + '</div><div class="sub">' + (l.beds === 0 ? 'Studio' : l.beds + ' bed') + ' / ' + l.baths + ' bath &middot; ' + l.hours + ' labor-hrs &middot; ' + (l.min_applied ? 'our minimum per turnover <b>' + esc(money(l.est_cents)) + '</b>' : '&times; ' + esc('$' + (q.rate_cents / 100).toFixed(2).replace(/\.00$/, '')) + '/hr = <b>' + esc(money(l.est_cents)) + '</b>') + '</div></div>' +
+      return '<div class="line"><div><div class="unit">Unit ' + esc(l.unit) + '</div>' + (l.scope_cents ? '<div class="sub">Includes walls, baseboards and windows: <b>' + esc(money(l.scope_cents)) + '</b></div>' : '') + '<div class="sub">' + (l.beds === 0 ? 'Studio' : l.beds + ' bed') + ' / ' + l.baths + ' bath &middot; <b>' + esc(money(l.est_cents)) + '</b>' + (l.min_applied ? ' (our minimum per turnover)' : '') + '</div></div>' +
         (q.rush ? '<div class="sub q-rush" data-i="' + i + '">' + (l.rush_cents ? rushTxt(q, l.rush_cents) : '') + '</div>' : '') +
         '<select class="q-slot" data-i="' + i + '" aria-label="Time for unit ' + esc(l.unit) + '">' + all.map(function (o) { return '<option value="' + esc(o.date + '|' + o.time) + '"' + (o.rush ? ' data-rush="1"' : '') + '>' + esc(o.when) + (o.rush ? ' (rush fee)' : '') + '</option>'; }).join('') + '</select></div>';
     }).join('');
@@ -389,8 +412,9 @@
   }
   function hoursHtml(d) {
     if (!(d.hours_table || []).length) return '';
-    return '<div class="card"><h2>Your price by unit size</h2><p class="sub">Hours by size at your rate of ' + esc('$' + (d.rate_cents / 100).toFixed(2).replace(/\.00$/, '')) + ' an hour, with a two-person crew.' + (d.minimum_cents > 0 ? ' The least we charge for a turnover is ' + esc(money(d.minimum_cents)) + '.' : '') + '</p><table class="hrs">' +
-      d.hours_table.map(function (r) { return '<tr><td>' + esc(r.size) + '</td><td class="sub">' + r.hours + ' hrs</td><td>' + esc(money(r.cents)) + (r.min_applied ? ' <span class="sub">minimum</span>' : '') + '</td></tr>'; }).join('') + '</table></div>';
+    // Price per unit only, never hours or an hourly rate (Jack, 2026-11-12).
+    return '<div class="card"><h2>Your price by unit size</h2>' + (d.minimum_cents > 0 ? '<p class="sub">The least we charge for a turnover is ' + esc(money(d.minimum_cents)) + '.</p>' : '') + '<table class="hrs">' +
+      d.hours_table.map(function (r) { return '<tr><td>' + esc(r.size) + '</td><td>' + esc(money(r.cents)) + '</td></tr>'; }).join('') + '</table></div>';
   }
   function paymentHtml(d) {
     var p = d.payment;
@@ -424,12 +448,42 @@
       '<button type="button" id="tm2-go">Accept</button> <span id="tm2-msg"></span></div>';
     return h;
   }
+  function scopesHtml(d) {
+    var sc = d.scopes; if (!sc) return '';
+    var p = sc.prices || {}, skipped = sc.skipped || [];
+    function row(key, label, price) {
+      return '<label class="switch"><input type="checkbox" data-scope="' + key + '"' + (skipped.indexOf(key) < 0 ? ' checked' : '') + (sc.can_set ? '' : ' disabled') + '> <span>' + label + ' &middot; <b>' + esc(price) + '</b></span></label>';
+    }
+    return '<div class="card" id="scopes-card"><h2>Walls, windows and baseboards</h2>' +
+      row('walls', 'Spot-clean marks off the walls', money(p.walls) + ' per unit') +
+      row('baseboards', 'Wipe the baseboards', money(p.baseboards) + ' per unit') +
+      row('windows', 'Clean the windows inside', money(p.windowEach) + ' per window (enter the windows when you request a unit)') +
+      '<p class="small">' + (sc.can_set ? 'Untick one to leave it out of every turnover and its price. Your request form shows the new total.' : 'Your account administrator chooses these.') + ' <span id="sc-msg"></span></p></div>';
+  }
   function autoBookHtml(d) {
     var a = d.auto_book || {};
     return '<div class="card"><h2>Book automatically</h2><label class="switch"><input type="checkbox" id="ab-toggle"' + (a.on ? ' checked' : '') + (a.can_set ? '' : ' disabled') + '> <span>Book my turnovers as soon as I ask, without a confirmation step</span></label>' +
       '<p class="small">' + (a.locked ? 'Your account manager has turned this off for your account. Text or call us to change it.' : a.can_set ? 'When this is on, a unit you request here or by text is booked as soon as we have a time. It is never a Sunday or a holiday, and you can switch it off any time.' : 'The company administrator can switch this on.') + '</p><span id="ab-msg"></span></div>';
   }
   function money2(c) { return c == null ? '' : '$' + (c / 100).toFixed(2); }
+  function walkHtml(d) {
+    var ws = d.walkthroughs || [];
+    if (!ws.length) return '';
+    var names = { walls: 'wall spot cleaning', windows: 'windows', baseboards: 'baseboards' };
+    return '<div class="card"><h2>Finished units</h2>' + ws.map(function (w) {
+      var pct = w.items_total ? Math.round(100 * w.items_done / w.items_total) : 0;
+      var rooms = {}, order = [];
+      (w.checklist || []).forEach(function (i) { if (!rooms[i.room]) { rooms[i.room] = []; order.push(i.room); } rooms[i.room].push(i); });
+      var skipped = (w.skipped_scopes || []).map(function (s) { return names[s] || s; });
+      var shots = (w.photos || []).filter(function (p) { return p.url; }).map(function (p) { return '<a href="' + esc(p.url) + '" target="_blank" rel="noopener"><img src="' + esc(p.url) + '" alt="' + esc(p.subject) + '" style="width:30%;max-width:140px;border-radius:8px;margin:2px"></a>'; }).join('');
+      var vids = (w.videos || []).filter(function (v) { return v.url; }).map(function (v) { return '<a href="' + esc(v.url) + '" target="_blank" rel="noopener">' + (v.step === 'before_quick' ? 'Before video' : 'After video') + '</a>'; }).join(' &middot; ');
+      return '<div class="claim"><div class="unit">Unit ' + esc(w.unit) + (w.building ? ' &middot; ' + esc(w.building) : '') + '</div>' +
+        '<div class="sub">' + esc(w.job_date || '') + ' &middot; ' + esc(w.items_done) + ' of ' + esc(w.items_total) + ' checklist items done (' + pct + '%)' + (w.finished_by ? ' &middot; ' + esc(w.finished_by) : '') + '</div>' +
+        (skipped.length ? '<div class="sub">Not included, at your request: ' + esc(skipped.join(', ')) + '</div>' : '') +
+        (shots ? '<div style="margin-top:6px">' + shots + '</div>' : '') + (vids ? '<div class="sub" style="margin-top:6px">' + vids + '</div>' : '') +
+        '<details><summary class="sub">The checklist</summary>' + order.map(function (r) { return '<div class="sub"><b>' + esc(r) + '</b></div>' + rooms[r].map(function (i) { return '<div class="sub">' + (i.done ? '&#10003; ' : '&#9675; ') + esc(i.label) + '</div>'; }).join(''); }).join('') + '</details></div>';
+    }).join('') + '</div>';
+  }
   function claimsHtml(d) {
     var cs = d.claims || [];
     if (!cs.length) return '';
@@ -465,6 +519,57 @@
     return fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.message || j.error || 'server_error'); return j; }); });
   }
+  // ---- 2026-11-12 (Jack): less to read, more to tap. Each part shows only when there is something in it. ----
+  function shortDate(d) { return d ? new Date(d + 'T12:00:00').toLocaleDateString([], { month: 'numeric', day: 'numeric', year: '2-digit' }) : ''; }
+  function planHtml(p) {
+    if (!p || !p.total) return '';
+    var pct = Math.round(100 * (p.done || 0) / p.total);
+    return '<div class="card"><div class="plan-top"><div class="ring" style="--p:' + pct + '"><b>' + pct + '%</b></div><div><h2 style="margin:0">' + esc(p.name || 'Property Elevation Plan') + '</h2>' +
+      '<div class="unit">' + p.done + ' of ' + p.total + ' done</div>' + (p.target_date ? '<div class="sub">Expected done by ' + esc(pretty(p.target_date)) + '</div>' : '') + '</div></div>' +
+      '<details><summary class="sub">See every item</summary><table class="rep">' + (p.items || []).map(function (i) {
+        return '<tr><td>' + (i.done_at ? '&#10003;' : '&#9675;') + '</td><td>' + esc(i.label) + (i.done_at ? '<div class="sub">Done ' + esc(pretty(String(i.done_at).slice(0, 10))) + '</div>' : '') + '</td></tr>';
+      }).join('') + '</table></details></div>';
+  }
+  function nextHtml(d) {
+    var n = d.next_visit;
+    if (!n) { var b = (d.requests || []).filter(function (r) { return r.state === 'booked' && r.date; }).sort(function (x, y) { return x.date < y.date ? -1 : 1; })[0]; if (b) n = { date: b.date, label: 'Turnover, unit ' + b.unit }; }
+    if (!n) return '';
+    var focus = (d.plan && d.plan.focus) || [], extras = d.extras_requested || [];
+    return '<div class="card next"><h2>Your next cleaning</h2><b class="when">' + esc(pretty(n.date)) + '</b>' + (n.label ? '<div class="sub">' + esc(n.label) + '</div>' : '') +
+      (focus.length ? '<div class="sub" style="margin-top:10px"><b>What we will focus on</b></div><div class="chips">' + focus.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' : '') +
+      (extras.length ? '<div class="sub" style="margin-top:8px"><b>Extras you asked for</b></div><div class="chips">' + extras.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' : '') + '</div>';
+  }
+  function noteHtml() {
+    return '<div class="card" id="note-card"><h2>Anything you want done?</h2><textarea id="nt-text" maxlength="1000" placeholder="Tell us here. We read every one."></textarea>' +
+      '<div class="btns"><label class="ghost" style="border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer">&#128247; Add a photo<input type="file" id="nt-photo" accept="image/*" hidden></label>' +
+      '<button type="button" id="nt-send">Send</button> <span id="nt-msg" class="small"></span></div></div>';
+  }
+  var KIND = { turnover: 'Turnover cleaning report', common_area: 'Common area cleaning report', office: 'Office cleaning report' };
+  function reportsHtml(d, byB) {
+    var reps = d.reports || (d.requests || []).filter(function (r) { return r.report_token; }).map(function (r) { return { date: r.date, kind: 'turnover', unit: r.unit, building: byB[r.building_id], token: r.report_token }; });
+    if (!reps.length) return '';
+    return '<div class="card"><h2>Cleaning reports</h2><table class="rep">' + reps.map(function (r) {
+      return '<tr><td>' + esc(shortDate(r.date)) + '</td><td><a href="report.html?t=' + encodeURIComponent(r.token) + '">' + esc(KIND[r.kind] || 'Cleaning report') + '</a>' +
+        '<div class="sub">' + (r.unit ? 'Unit ' + esc(r.unit) : '') + (r.unit && r.building ? ' &middot; ' : '') + esc(r.building || '') + '</div></td></tr>';
+    }).join('') + '</table></div>';
+  }
+  function serviceHtml(sv) {
+    if (!sv || !sv.per_visit_cents) return '';
+    return '<div class="card"><h2>Your service</h2><div class="row"><span>Price per visit</span><b>' + esc(money2(sv.per_visit_cents).replace(/\.00$/, '')) + '</b></div>' +
+      (sv.how_often ? '<div class="row"><span>How often</span><b>' + esc(sv.how_often) + '</b></div>' : '') + '</div>';
+  }
+  function videosHtml(v) {
+    v = (v || []).filter(function (x) { return safeUrl(x.url); });
+    if (!v.length) return '';
+    return '<div class="card"><h2>Videos</h2><div class="tiles">' + v.map(function (x) { return '<a class="tile" href="' + esc(x.url) + '" target="_blank" rel="noopener">&#9654; ' + esc(x.title) + '</a>'; }).join('') + '</div></div>';
+  }
+  function crewTeamHtml(t) {
+    t = t || [];
+    if (!t.length) return '';
+    return '<div class="card"><h2>Get to know your crew</h2><div class="people">' + t.map(function (p, i) {
+      return '<button type="button" class="person" data-person="' + i + '">' + (safeUrl(p.photo_url) ? '<img class="av" src="' + esc(p.photo_url) + '" alt="">' : '<span class="av">' + esc(String(p.first_name).slice(0, 1)) + '</span>') + esc(p.first_name) + '</button>';
+    }).join('') + '</div><div id="person-box"></div><p style="margin:10px 0 0"><a href="#note-card" id="nt-crew">Leave a note for your crew</a></p></div>';
+  }
   function render(d) {
     data = d;
     var byB = {};
@@ -475,36 +580,77 @@
         (r.report_token ? ' &middot; <a href="report.html?t=' + encodeURIComponent(r.report_token) + '">View the report</a>' : '') + '</div>' + crewHtml(r.crew) + '</div>' +
         '<span class="tag ' + esc(r.state) + '">' + esc(LABEL[r.state] || r.state) + '</span></div>';
     }).join('');
-    var who = d.viewer && d.viewer.name ? ' &middot; ' + esc(d.viewer.name) : '';
+    var who = d.viewer && d.viewer.name ? esc(d.viewer.name) : '';
     var gateOpen = !(d.gate && !d.gate.ok);
+    var more = function (title, inner) { return inner ? '<details class="more"><summary>' + title + '</summary>' + inner + '</details>' : ''; };
+    var sms = 'sms:' + TEXT_NUMBER.replace(/[^0-9]/g, '');
     root.innerHTML =
-      '<div class="card"><p class="brand">Facilities by Two Hour Maids</p><h1>' + esc(d.account.name) + '</h1><p>Your property portal' + who + '</p>' +
-      '<div class="stats"><div class="stat"><b>' + d.totals.upcoming + '</b>Upcoming</div><div class="stat"><b>' + d.totals.waiting + '</b>Waiting for a yes</div><div class="stat"><b>' + d.totals.cleaned + '</b>Cleaned</div></div></div>' +
-      claimsHtml(d) +
+      '<div class="card hero"><p class="brand">Facilities by Two Hour Maids</p><h1>' + esc(d.account.name) + '</h1>' + (who ? '<p>Property manager &middot; ' + who + '</p>' : '') + '</div>' +
+      '<a class="card textus" href="' + sms + '"><span class="ic" aria-hidden="true">&#128172;</span><span><b>Text us anytime</b><span>Instant quote, instant booking &middot; ' + TEXT_NUMBER + '</span></span></a>' +
       (gateOpen ? '' : termsHtml(d)) +
+      planHtml(d.plan) +
+      nextHtml(d) +
+      noteHtml() +
+      reportsHtml(d, byB) +
+      '<div class="sec">Book more</div>' +
       requestHtml(d) +
-      '<div class="card"><h2>Recent turnovers</h2>' + (rows || '<p>Nothing in the last 4 months.</p>') + '</div>' +
       hostHtml(d.host, byB) +
-      buildingsHtml(d) +
-      autoBookHtml(d) +
-      loyaltyHtml(d.loyalty) +
-      '<div id="rewards-card"></div>' +
-      loyaltySoonHtml(d) +
-      paymentHtml(d) +
-      statementsHtml(d) +
-      statsHtml(d.stats) +
-      hoursHtml(d) +
-      docsHtml(d) +
-      (gateOpen ? termsHtml(d) : '') +
-      '<div class="card"><h2>Prefer to text?</h2><p>Text us the unit and size, like "Unit 4B 2/2" or "347 two bedroom two bath", from your phone on file, at ' + TEXT_NUMBER + '. We reply with a quote and book when you say YES' + (d.auto_book && d.auto_book.on ? ' (or right away, since Book automatically is on)' : '') + '.</p></div>';
+      more('Deeper cleaning items', scopesHtml(d)) +
+      serviceHtml(d.service) +
+      videosHtml(d.videos) +
+      crewTeamHtml(d.team) +
+      // Rewards as one row that opens the shop (Jack, 2026-11-12); the older points card only when the new one is off.
+      (d.rewards_card ? '' : loyaltyHtml(d.loyalty)) +
+      (d.rewards_card ? '<details class="more"><summary>Rewards &middot; ' + esc(pts(d.rewards_card.balance)) + ' points' + (d.rewards_card.tier ? ' &middot; ' + esc(d.rewards_card.tier.name) : '') + '</summary><div id="rewards-card"></div></details>' : '<div id="rewards-card"></div>') +
+      '<div class="sec">Account</div>' +
+      more('Payment on file', paymentHtml(d)) +
+      more('Statements', statementsHtml(d)) +
+      more('Insurance and papers', docsHtml(d)) +
+      more('Price sheet', hoursHtml(d)) +
+      more('Buildings and how we get in', buildingsHtml(d)) +
+      more('Book automatically', autoBookHtml(d)) +
+      (gateOpen ? more('Service agreement', termsHtml(d)) : '');
     // Facilities by Two Hour Maids Rewards: drawn by pm-loyalty-card.js; absent (null) when the program is off or not applied yet.
     if (window.THMLoyalty && d.rewards_card) {
       THMLoyalty.render(document.getElementById('rewards-card'), d.rewards_card, {
         checkout: function (items, delivery) { return loyaltyPost({ action: 'reward_checkout', items: items, delivery: delivery }); },
         ask: function (message) { return loyaltyPost({ action: 'loyalty_ask', message: message }); },
       });
+    } else if (d.rewards_card && document.readyState !== 'complete') {
+      // The data came back before pm-loyalty-card.js loaded (2026-11-12): draw again once it has.
+      window.addEventListener('load', function () { if (data === d && window.THMLoyalty) render(d); }, { once: true });
     }
   }
+
+  // The note box: text and one photo (shrunk on the phone first) to the office.
+  function shrink(file) {
+    return new Promise(function (ok, bad) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () { var k = Math.min(1, 1280 / Math.max(img.width, img.height)), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); ok(c.toDataURL('image/jpeg', 0.8)); };
+      img.onerror = bad; img.src = url;
+    });
+  }
+  document.addEventListener('change', function (e) { if (e.target && e.target.id === 'nt-photo') { var m = document.getElementById('nt-msg'); m.className = 'small'; m.textContent = e.target.files[0] ? 'Photo added' : ''; } });
+  document.addEventListener('click', function (e) {
+    var t = e.target;
+    if (t && t.id === 'nt-crew') { var ta = document.getElementById('nt-text'); if (ta) { ta.placeholder = 'A note for your crew'; ta.setAttribute('data-crew', '1'); setTimeout(function () { ta.focus(); }, 300); } }
+    var pb = t && t.closest && t.closest('[data-person]');
+    if (pb && data && data.team) {
+      var p = data.team[Number(pb.getAttribute('data-person'))], box = document.getElementById('person-box');
+      box.innerHTML = '<div class="claim"><div class="unit">' + esc(p.first_name) + '</div>' + (safeUrl(p.video_url) ? '<video src="' + esc(p.video_url) + '" controls playsinline style="width:100%;border-radius:12px;margin:6px 0"></video>' : '') +
+        (p.facts || []).map(function (f) { return '<div class="sub">&#8226; ' + esc(f) + '</div>'; }).join('') + (p.cleans ? '<div class="sub">' + esc(p.cleans) + ' cleanings with us</div>' : '') + '</div>';
+    }
+    if (t && t.id === 'nt-send') {
+      var text = document.getElementById('nt-text').value.trim(), f = document.getElementById('nt-photo').files[0], msg = document.getElementById('nt-msg');
+      if (!text && !f) { msg.className = 'err'; msg.textContent = 'Type something or add a photo.'; return; }
+      t.disabled = true; msg.className = 'small'; msg.textContent = 'Sending...';
+      (f ? shrink(f) : Promise.resolve(null)).then(function (photo) { return postJson({ action: 'note', text: text, photo: photo, for_crew: document.getElementById('nt-text').getAttribute('data-crew') === '1' }); }).then(function (res) {
+        t.disabled = false;
+        if (res && res.ok) { msg.className = 'ok'; msg.textContent = 'Sent. Thank you!'; document.getElementById('nt-text').value = ''; document.getElementById('nt-photo').value = ''; }
+        else { msg.className = 'err'; msg.textContent = ERR.server_error; }
+      }).catch(function () { t.disabled = false; msg.className = 'err'; msg.textContent = ERR.server_error; });
+    }
+  });
 
   // The unit you typed is one we know: its size and square feet fill in.
   var unitKey = function (l) { return String(l || '').toLowerCase().replace(/^(unit|apt\.?|apartment|#)\s*/, '').replace(/[^a-z0-9]/g, ''); };
@@ -572,6 +718,15 @@
     }
   });
   document.addEventListener('change', function (e) {
+    if (e.target && e.target.getAttribute && e.target.getAttribute('data-scope')) {
+      var boxes = document.querySelectorAll('[data-scope]'), skip = [], sm = document.getElementById('sc-msg');
+      Array.prototype.forEach.call(boxes, function (c) { if (!c.checked) skip.push(c.getAttribute('data-scope')); c.disabled = true; });
+      postJson({ action: 'set_scopes', skip: skip }).then(function (res) {
+        Array.prototype.forEach.call(boxes, function (c) { c.disabled = false; });
+        sm.className = res.ok ? 'ok' : 'err'; sm.textContent = res.ok ? 'Saved.' : (ERR[res.j.error] || ERR.server_error);
+      }).catch(function () { Array.prototype.forEach.call(boxes, function (c) { c.disabled = false; }); sm.className = 'err'; sm.textContent = ERR.server_error; });
+      return;
+    }
     if (!e.target || e.target.id !== 'ab-toggle') return;
     var cb = e.target, m = document.getElementById('ab-msg'), want = cb.checked;
     cb.disabled = true; m.className = ''; m.textContent = '';

@@ -25,6 +25,7 @@
     '.thm-loy .loy-agree b{display:block;margin-bottom:4px}' +
     '.thm-loy .loy-agree textarea{width:100%;font:inherit;color:inherit;background:transparent;border:1px solid var(--loy-line);border-radius:10px;padding:10px 12px;margin-top:8px}' +
     '.thm-loy .loy-note{background:var(--loy-gold-soft);color:var(--loy-gold);border-radius:12px;padding:10px 14px;font-weight:700;margin:12px 0}' +
+    '.thm-loy details.loy-earn-box{margin:14px 0 4px}.thm-loy details.loy-earn-box summary{cursor:pointer;font-weight:700;color:var(--loy-muted);font-size:13px;text-transform:uppercase;letter-spacing:.6px}' +
     '.thm-loy ul.loy-earn{margin:0;padding-left:18px;color:var(--loy-muted)}' +
     '.thm-loy ul.loy-earn li{margin:0 0 4px}' +
     '.thm-loy .loy-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}' +
@@ -224,10 +225,13 @@
         root.appendChild(el('div', 'loy-note', num(data.expiring.points) + ' points expire on ' + day(data.expiring.on) + ' unless a statement is paid or you redeem them.'));
       }
 
-      root.appendChild(el('h3', null, 'How you earn'));
+      // Folded (Jack, 2026-11-12): fewer words on the card; tap to read how points are earned.
+      var earn = el('details', 'loy-earn-box');
+      earn.appendChild(el('summary', null, 'How you earn'));
       var ul = el('ul', 'loy-earn');
       (data.how_to_earn || []).forEach(function (t) { ul.appendChild(el('li', null, t)); });
-      root.appendChild(ul);
+      earn.appendChild(ul);
+      root.appendChild(earn);
 
       var groups = data.groups || [];
       root.appendChild(el('h3', null, 'Choose a reward'));

@@ -119,6 +119,23 @@
   .chips label { background: #f6f5fb; border-radius: 999px; padding: 8px 14px; font-size: 15px; cursor: pointer; }
   .chips label.on { background: #004aad; color: #fff; }
   .chips input { position: absolute; opacity: 0; width: 0; height: 0; }
+  /* 2026-11-12: a property manager's report wears the staff app's look (pm-portal.html): blue gradient, frosted white tiles. */
+  body.pm { background: #f7faff linear-gradient(to bottom, #004aad 0, #1a5ec3 120px, #4a80d8 220px, #8fb3ec 320px, #cfe0f8 440px, #eaf1fc 600px, #f7faff 900px) no-repeat; color: #10151E; }
+  body.pm .card { background: rgba(255,255,255,.6); -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%); border: 1px solid rgba(255,255,255,.7); box-shadow: 0 6px 24px rgba(0,40,110,.10); border-radius: 20px; padding: 18px; }
+  body.pm .hero { color: #fff; padding: 6px 4px 16px; } body.pm .hero h1 { color: #fff; } body.pm .hero .meta { color: rgba(255,255,255,.92); }
+  body.pm .brand { font-size: 12px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase; color: rgba(255,255,255,.85); margin: 0 0 6px; }
+  .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .ba figure { margin: 0; } .ba img, .ba .none { width: 100%; aspect-ratio: 3/4; object-fit: cover; border-radius: 12px; background: rgba(16,21,30,.06); display: block; }
+  .ba figcaption { font-size: 12px; color: #3B4452; text-align: center; margin-top: 4px; }
+  .found { padding: 8px 0; border-bottom: 1px solid rgba(16,21,30,.08); } .found:last-child { border-bottom: 0; }
+  .ring { --p: 0; width: 76px; height: 76px; border-radius: 50%; flex: 0 0 76px; background: conic-gradient(#004aad calc(var(--p) * 1%), rgba(0,74,173,.12) 0); display: flex; align-items: center; justify-content: center; }
+  .ring b { width: 60px; height: 60px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .plan-top { display: flex; gap: 14px; align-items: center; }
+  details.more { background: rgba(255,255,255,.6); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,.7); border-radius: 16px; padding: 12px 16px; margin: 0 0 16px; }
+  details.more > summary { cursor: pointer; font-weight: 700; }
+  .pm-actions { margin-top: 10px; } body.pm .pm-actions .ghost { display: inline-block; width: auto; margin: 0 6px 0 0; background: rgba(255,255,255,.9); color: #004aad; border: 0; border-radius: 10px; padding: 8px 14px; font-weight: 700; }
+  h3.fg-our_damage { color: #b91c1c; } h3.fg-pre_existing { color: #92400e; }
+  table.sum { width: 100%; border-collapse: collapse; font-size: 14px; } table.sum td { padding: 8px 0; border-bottom: 1px solid rgba(16,21,30,.08); } table.sum td:last-child { text-align: right; font-weight: 700; }
+  @media print { body.pm { background: #fff !important; padding: 0; } body.pm .card { background: #fff !important; box-shadow: none !important; border: 1px solid #ddd !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; break-inside: avoid; } body.pm .hero, body.pm .hero h1, body.pm .hero .meta { color: #10151E !important; } body.pm .brand { color: #004aad !important; } .pm-actions, video { display: none !important; } }
 </style>
 </head>
 <body>
@@ -668,6 +685,155 @@
     return r.status === 'done' ? name + (r.done_at ? ' — done ' + requestTime(r.done_at) : ' — done') : name;
   }
 
+  // Your home's detail status (the Rotating Detail Plan): each room group's last detailed date, the next Focus room, and the one-tap offer
+  // after Catch-Up Clean B. The name is the owner's setting (organizations.rotation_product_name), never typed here.
+  function homeDetailBlock(d) {
+    var h = d.home_detail;
+    if (!h || !h.enabled) return '';
+    var name = esc(h.product_name || '');
+    var rows = (h.zones || []).map(function (z) {
+      return '<li><span class="tick">' + (z.last_detailed ? '&#10003;' : '&mdash;') + '</span><span>' + esc(z.label) + ': ' +
+        (z.last_detailed ? 'detailed ' + esc(prettyDate(z.last_detailed)) : 'not yet') + '</span></li>';
+    }).join('');
+    var next = '';
+    if (h.status === 'active' && h.next_focus) {
+      var nz = (h.zones || []).filter(function (z) { return z.n === h.next_focus; })[0];
+      next = nz ? '<p><strong>Next Focus room:</strong> ' + esc(nz.label) + '</p>' : '';
+    } else if (h.catch_up_next) {
+      next = '<p>Your first 2 cleans are Catch-Up Cleans. We get your home up to speed. We promise excellence, not perfection.</p>';
+    }
+    var offer = '';
+    if (h.offer && d.portal_token) {
+      offer = '<p>Your home is caught up. Add the ' + name + '.</p><p>One room gets extra detail every visit.</p><button class="ghost" id="rotReq">Add the ' + name + '</button><p id="rotMsg" class="meta"></p>';
+    } else if (h.status === 'requested') {
+      offer = '<p class="meta">Thank you. We got your request for the ' + name + '. We will confirm it soon.</p>';
+    }
+    return card('<h2>Your home&rsquo;s detail status</h2>' + (rows ? '<ul>' + rows + '</ul>' : '') + next + offer);
+  }
+  function wireRotation(d) {
+    var b = document.getElementById('rotReq');
+    if (!b) return;
+    b.addEventListener('click', function () {
+      b.disabled = true;
+      fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ t: d.portal_token, action: 'rotation_request' }) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { document.getElementById('rotMsg').textContent = j && j.ok ? 'Thank you. We will confirm soon.' : 'We could not save that. Please try again later.'; if (!(j && j.ok)) b.disabled = false; })
+        .catch(function () { document.getElementById('rotMsg').textContent = 'We could not save that. Please try again later.'; b.disabled = false; });
+    });
+  }
+
+  // ---- A property manager's report (Jack, 2026-11-12): the staff app's look on the phone, a clean page when printed, and the same as a PDF.
+  // Before and after by room, what the crew found in clear groups, the Elevation Plan, every item we cleaned, then a summary table. No rating, no referral.
+  var PM_KIND = { turnover: 'Turnover cleaning report', common_area: 'Common area cleaning report', office: 'Office cleaning report' };
+  function pmWhere(p) { return [p.unit ? 'Unit ' + p.unit : '', p.building || ''].filter(function (x) { return x; }).join(' · '); }
+  function pmCleaned(d) {
+    return (d.tasks.rooms || []).map(function (r) {
+      var done = r.tasks.filter(function (t) { return t.done; });
+      return done.length ? { room: r.room, items: done.map(function (t) { return t.label; }) } : null;
+    }).filter(function (x) { return x; });
+  }
+  function renderPm(d) {
+    var p = d.pm || {};
+    document.body.className = 'pm';
+    var where = pmWhere(p);
+    var head = '<div class="hero"><p class="brand">Facilities by Two Hour Maids</p><h1>' + esc(PM_KIND[p.kind] || 'Cleaning report') + '</h1>' +
+      '<p class="meta">' + esc([where, prettyDate(d.job.scheduled_date)].filter(function (x) { return x; }).join(' · ')) + '</p>' +
+      (d.crew.length ? '<p class="meta">Cleaned by ' + esc(d.crew.join(' and ')) + '</p>' : '') +
+      '<div class="pm-actions"><button type="button" class="ghost" id="pm-print">Print</button> <button type="button" class="ghost" id="pdf">Download PDF</button></div></div>';
+    var rooms = [], pick = {};
+    ['before', 'after'].forEach(function (k) {
+      (d.photos[k] || []).forEach(function (ph) { var r = ph.room || 'Other'; if (!pick[r]) { pick[r] = { before: [], after: [] }; rooms.push(r); } pick[r][k].push(ph.url); });
+    });
+    var ba = rooms.length ? card('<h2>Before and after</h2>' + rooms.map(function (r) {
+      var b = pick[r].before[0], a = pick[r].after[0];
+      return '<h3>' + esc(r) + '</h3><div class="ba">' +
+        '<figure>' + (b ? '<img src="' + esc(b) + '" alt="' + esc(r) + ' before">' : '<div class="none"></div>') + '<figcaption>Before</figcaption></figure>' +
+        '<figure>' + (a ? '<img src="' + esc(a) + '" alt="' + esc(r) + ' after">' : '<div class="none"></div>') + '<figcaption>After</figcaption></figure></div>';
+    }).join('')) : '';
+    var groups = p.found || [];
+    var found = groups.length ? card('<h2>What the crew found</h2>' + groups.map(function (g) {
+      return '<h3 class="fg fg-' + esc(g.group) + '">' + esc(g.label) + '</h3>' + g.items.map(function (f) {
+        return '<div class="found"><div>' + (f.room ? '<b>' + esc(f.room) + ':</b> ' : '') + esc(f.text) + '</div>' + (f.status ? '<div class="meta">' + esc(f.status) + '</div>' : '') +
+          ((f.photos || []).length ? '<div class="grid">' + f.photos.map(function (u) { return '<figure><img src="' + esc(u) + '" alt=""></figure>'; }).join('') + '</div>' : '') + '</div>';
+      }).join('');
+    }).join('')) : card('<h2>What the crew found</h2><p>Nothing to report: no damage, nothing left behind.</p>');
+    var plan = '';
+    if (p.plan && p.plan.total) {
+      var pc = Math.round(100 * p.plan.done / p.plan.total);
+      plan = card('<div class="plan-top"><div class="ring" style="--p:' + pc + '"><b>' + pc + '%</b></div><div><h2 style="margin:0">Property Elevation Plan</h2><div><b>' + p.plan.done + ' of ' + p.plan.total + ' done</b></div>' +
+        (p.plan.target_date ? '<p class="meta">Expected done by ' + esc(prettyDate(p.plan.target_date)) + '</p>' : '') + '</div></div>' +
+        (p.plan.focus && p.plan.focus.length ? '<p class="meta" style="margin-top:10px">Next: ' + esc(p.plan.focus.join(', ')) + '</p>' : ''));
+    }
+    var cleaned = pmCleaned(d);
+    var what = card('<h2>What we cleaned</h2>' + (cleaned.length ? cleaned.map(function (r) {
+      return '<h3>' + esc(r.room) + '</h3><ul>' + r.items.map(function (t) { return '<li><span class="tick">&#10003;</span><span>' + esc(t) + '</span></li>'; }).join('') + '</ul>';
+    }).join('') : '<p>No checklist was recorded for this visit.</p>'));
+    var vids = (d.videos || []).filter(function (v) { return v.url; });
+    var videos = vids.length ? card('<h2>Videos</h2>' + vids.map(function (v) {
+      return '<h3>' + (v.kind === 'before' ? 'Before' : 'After') + '</h3><video controls playsinline preload="metadata" src="' + esc(v.url) + '" style="width:100%;border-radius:12px;background:#000"></video>';
+    }).join('')) : '';
+    var count = function (g) { var x = groups.filter(function (y) { return y.group === g; })[0]; return x ? x.items.length : 0; };
+    var summary = card('<h2>Summary</h2><table class="sum">' +
+      '<tr><td>Checklist items done</td><td>' + d.tasks.completed + ' of ' + d.tasks.total + '</td></tr>' +
+      '<tr><td>Rooms photographed</td><td>' + rooms.length + '</td></tr>' +
+      '<tr><td>Damage that was already there</td><td>' + count('pre_existing') + '</td></tr>' +
+      '<tr><td>Damage our team caused</td><td>' + count('our_damage') + '</td></tr>' +
+      '<tr><td>Maintenance needed</td><td>' + count('maintenance') + '</td></tr>' +
+      '<tr><td>Items left behind</td><td>' + count('left_behind') + '</td></tr>' +
+      '<tr><td>Running low</td><td>' + count('running_low') + '</td></tr>' +
+      (p.plan && p.plan.total ? '<tr><td>Elevation Plan</td><td>' + p.plan.done + ' of ' + p.plan.total + '</td></tr>' : '') + '</table>');
+    root.innerHTML = head + ba + found + plan + what + videos + summary + '<p class="foot">Facilities by Two Hour Maids</p>';
+    document.title = (PM_KIND[p.kind] || 'Cleaning report') + (where ? ': ' + where : '');
+    document.getElementById('pdf').addEventListener('click', function () { buildPmPdf(d, this); });
+    document.getElementById('pm-print').addEventListener('click', function () { window.print(); });
+  }
+
+  // The PDF a property manager keeps or forwards: letter size, the same parts in the same order, photos two to a row.
+  function buildPmPdf(d, btn) {
+    if (!window.jspdf) { alert('Could not build the PDF. Please try again.'); return; }
+    var p = d.pm || {}, label = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Building…';
+    var shots = d.photos.before.concat(d.photos.after);
+    (p.found || []).forEach(function (g) { g.items.forEach(function (f) { (f.photos || []).forEach(function (u) { shots.push({ url: u }); }); }); });
+    Promise.all(shots.map(function (s) { return asDataUrl(s.url); })).then(function (datas) {
+      var img = {}; shots.forEach(function (s, i) { if (datas[i]) img[s.url] = datas[i]; });
+      var doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'letter' });
+      var W = doc.internal.pageSize.getWidth(), H = doc.internal.pageSize.getHeight(), M = 48, y = M;
+      var clean = function (s) { return String(s || '').replace(/[—–]/g, '-').replace(/·/g, '-'); };
+      function room(h) { if (y + h > H - M) { doc.addPage(); y = M; } }
+      function heading(t) { room(30); y += 6; doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(0, 74, 173); doc.text(clean(t).toUpperCase(), M, y); y += 14; doc.setTextColor(16, 21, 30); }
+      function line(t, bold) { doc.setFont('helvetica', bold ? 'bold' : 'normal').setFontSize(10); doc.splitTextToSize(clean(t), W - 2 * M).forEach(function (l) { room(14); doc.text(l, M, y); y += 13; }); }
+      function pics(urls) {
+        var w = (W - 2 * M - 12) / 2, h = w * 0.75;
+        for (var i = 0; i < urls.length; i += 2) {
+          room(h + 10);
+          [urls[i], urls[i + 1]].forEach(function (u, k) { if (u && img[u]) { try { doc.addImage(img[u], 'JPEG', M + k * (w + 12), y, w, h); } catch (e) { /* skip one bad photo */ } } });
+          y += h + 10;
+        }
+      }
+      doc.setFont('helvetica', 'bold').setFontSize(9).setTextColor(0, 74, 173); doc.text('FACILITIES BY TWO HOUR MAIDS', M, y); y += 22;
+      doc.setFontSize(20).setTextColor(16, 21, 30); doc.text(clean(PM_KIND[p.kind] || 'Cleaning report'), M, y); y += 18;
+      doc.setFont('helvetica', 'normal').setFontSize(11).setTextColor(59, 68, 82);
+      doc.text(clean([pmWhere(p), prettyDate(d.job.scheduled_date)].filter(function (x) { return x; }).join(' - ')), M, y); y += 14;
+      if (d.crew.length) { doc.text('Cleaned by ' + d.crew.join(' and '), M, y); y += 14; }
+      var byRoom = {}, order = [];
+      ['before', 'after'].forEach(function (k) { (d.photos[k] || []).forEach(function (ph) { var r = ph.room || 'Other'; if (!byRoom[r]) { byRoom[r] = {}; order.push(r); } if (!byRoom[r][k]) byRoom[r][k] = ph.url; }); });
+      if (order.length) { heading('Before and after'); order.forEach(function (r) { line(r + ' (before, after)', true); pics([byRoom[r].before, byRoom[r].after]); }); }
+      heading('What the crew found');
+      if (!(p.found || []).length) line('Nothing to report: no damage, nothing left behind.');
+      (p.found || []).forEach(function (g) { line(g.label, true); g.items.forEach(function (f) { line('- ' + (f.room ? f.room + ': ' : '') + f.text + (f.status ? ' (' + f.status + ')' : '')); if ((f.photos || []).length) pics(f.photos); }); });
+      if (p.plan && p.plan.total) { heading('Property Elevation Plan'); line(p.plan.done + ' of ' + p.plan.total + ' done' + (p.plan.target_date ? ', expected done by ' + prettyDate(p.plan.target_date) : '')); if ((p.plan.focus || []).length) line('Next: ' + p.plan.focus.join(', ')); }
+      heading('What we cleaned');
+      pmCleaned(d).forEach(function (r) { line(r.room, true); r.items.forEach(function (t) { line('[x] ' + t); }); });
+      heading('Summary');
+      var count = function (g) { var x = (p.found || []).filter(function (z) { return z.group === g; })[0]; return x ? x.items.length : 0; };
+      [['Checklist items done', d.tasks.completed + ' of ' + d.tasks.total], ['Damage that was already there', count('pre_existing')], ['Damage our team caused', count('our_damage')], ['Maintenance needed', count('maintenance')], ['Items left behind', count('left_behind')], ['Running low', count('running_low')]]
+        .forEach(function (r) { room(16); doc.setFont('helvetica', 'normal').setFontSize(10); doc.text(String(r[0]), M, y); doc.text(String(r[1]), W - M, y, { align: 'right' }); y += 15; });
+      doc.save(clean((PM_KIND[p.kind] || 'Cleaning report') + ' ' + (p.unit || p.building || '') + ' ' + d.job.scheduled_date).trim().replace(/\s+/g, '-') + '.pdf');
+      btn.disabled = false; btn.textContent = label;
+    }).catch(function () { btn.disabled = false; btn.textContent = label; alert('Could not build the PDF. Please try again.'); });
+  }
+
   function render(d) {
     DATA = d;
     var pct = d.tasks.total ? Math.round((d.tasks.completed / d.tasks.total) * 100) : 0;
@@ -675,7 +841,7 @@
     var head = card(
       '<h1>' + esc(d.job.service_label || 'Your cleaning') + '</h1>' +
       '<p class="meta">' + esc(prettyDate(d.job.scheduled_date)) + '</p>' +
-      (d.job.checklist_tier ? '<p class="meta">' + esc(({ basic: 'Basic', extra: 'Extra', deluxe: 'Deluxe' })[d.job.checklist_tier] || '') + ' Checklist Clean' + (d.job.rotational ? ' · Rotational plan' : '') + '</p>' : '') +
+      (d.job.checklist_tier ? '<p class="meta">' + esc(({ basic: '', extra: 'Extra ', deluxe: 'Deluxe ' })[d.job.checklist_tier] || '') + 'Checklist Clean' + (d.job.rotational ? ' · ' + esc((d.home_detail && d.home_detail.product_name) || 'Rotating Detail Plan') : '') + '</p>' : '') +
       (d.rating ? '<p class="rated">' + '★'.repeat(d.rating) + '</p>' : '') +
       (d.crew.length
         ? '<div class="crew">' + d.crew.map(function (n) { return '<span class="who">' + esc(n) + '</span>'; }).join('') + '</div>'
@@ -718,6 +884,7 @@
     if (d.final_touch) list += '<p class="final-touch"><span class="tick">&#10003;</span> ' + esc(d.final_touch) + '</p>';
     if (d.we_fixed) list += '<p class="final-touch"><span class="tick">&#10003;</span> ' + esc(d.we_fixed) + '</p>';
 
+    if (d.pm) { renderPm(d); return; }
     var photos = (d.photos.before.length || d.photos.after.length)
       ? card('<h2>Photos</h2>' + photoBlock('Before', d.photos.before) + photoBlock('After', d.photos.after))
       : '';
@@ -739,13 +906,13 @@
 
     // A property manager's report has no referral gift and no star rating.
     var pm = !!(d.job && d.job.pm_report);
-    root.innerHTML = head + summary + reviewAskBlock(d) + requestsCard + extrasCard + card(list) + (pm ? '' : surveyBlock(d)) + (pm ? '' : missedBlock(d)) + (pm ? '' : issueBlock(d)) + (pm ? '' : feedbackBlock(d)) + (pm ? '' : ideasBlock(d)) + photos + videos + (pm ? '' : referralBlock(d)) + pdf +
+    root.innerHTML = head + summary + reviewAskBlock(d) + requestsCard + extrasCard + card(list) + (pm ? '' : homeDetailBlock(d)) + (pm ? '' : surveyBlock(d)) + (pm ? '' : missedBlock(d)) + (pm ? '' : issueBlock(d)) + (pm ? '' : feedbackBlock(d)) + (pm ? '' : ideasBlock(d)) + photos + videos + (pm ? '' : referralBlock(d)) + pdf +
       (d.portal_token ? card('<h2>Your account</h2><p>Your records, photos, invoices and a direct line to us, all in one place that stays yours.</p><a class="btn" href="account.html?t=' + esc(d.portal_token) + '">Open your account</a>') : '') +
       (!pm && d.org.three_rs_video_url && /^https:\/\//i.test(d.org.three_rs_video_url) ? card('<h2>One minute: referrals, reviews and recurring</h2><p>Three easy ways to get the most from us.</p><a class="btn" href="' + esc(d.org.three_rs_video_url) + '" target="_blank" rel="noopener">Watch the video</a>') : '') +
       '<p class="foot">' + esc(d.org.name) + '</p>';
 
     document.title = d.org.name + ' — your clean report';
-    if (!pm) { wireReferral(d); wireMissed(d); wireIssue(d); wireFeedback(d); wireSurvey(); }
+    if (!pm) { wireRotation(d); wireReferral(d); wireMissed(d); wireIssue(d); wireFeedback(d); wireSurvey(); }
     document.getElementById('pdf').addEventListener('click', function () { buildPdf(d, this); });
   }
 

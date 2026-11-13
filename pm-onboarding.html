@@ -328,8 +328,8 @@
       put(body, h("h3", { text: "Book automatically" }), h("label", { class: "chk" }, ab, h("span", null, h("b", { text: "Book my turnovers without waiting for a yes." }), h("br"), h("span", { class: "steps", text: "When you text or enter a unit and its size, and a time is open, we book it and confirm. You can turn this off any time in the portal." }))));
     }
     put(body, h("h3", { text: "Turnover prices" }), h("p", { text: cfg.turnover.note }),
-      h("table", null, h("tr", null, h("th", { text: "Unit size" }), h("th", { class: "r", text: "Time" }), h("th", { class: "r", text: "Price" })),
-        cfg.turnover.rows.map(function (r) { return h("tr", null, h("td", { text: r.label }), h("td", { class: "r", text: hrs(r.hours) }), h("td", { class: "r", text: money(r.cents) })); })),
+      h("table", null, h("tr", null, h("th", { text: "Unit size" }), h("th", { class: "r", text: "Price" })),
+        cfg.turnover.rows.map(function (r) { return h("tr", null, h("td", { text: r.label }), h("td", { class: "r", text: money(r.cents) })); })),
       cfg.turnover.minimum_cents ? h("p", { class: "steps", text: "Every turnover is at least " + money(cfg.turnover.minimum_cents) + " per unit." }) : null);
     shell("Turnovers", "Tell us how you like to work. You can book your first one when you finish.", body, h("div", null, nav(), saveLater()));
   }
