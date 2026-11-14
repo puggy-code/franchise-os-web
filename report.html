@@ -399,6 +399,35 @@
       .then(function (r) { return r.json().catch(function () { return { ok: false, error: 'bad_response' }; }); });
   }
 
+  // ---- Customer Kudos (Jack, 2026-11-14): a few kind words for the team. They get it right away; it is never posted anywhere. ----
+  var KUDOS_THANKS = 'Thank you! Your team got your kudos.';
+  function kudosBlock(d) {
+    var had = d.kudos || '';
+    return card('<h2>Customer Kudos</h2><p>Anything the team did that you loved? They read every one.</p>' +
+      '<textarea id="kudostext" maxlength="500" placeholder="Loved how the towels were folded!">' + esc(had) + '</textarea>' +
+      '<button id="kudosgo" type="button">' + (had ? 'Update my kudos' : 'Send kudos') + '</button>' +
+      '<div class="err" id="kudoserr" hidden></div><p id="kudosok" class="ok"' + (had ? '>' + KUDOS_THANKS : ' hidden>') + '</p>');
+  }
+  function wireKudos(d) {
+    var go = document.getElementById('kudosgo');
+    if (!go) return;
+    go.addEventListener('click', function () {
+      var t = document.getElementById('kudostext').value.trim();
+      var err = document.getElementById('kudoserr'), ok = document.getElementById('kudosok');
+      err.hidden = true;
+      if (t.length < 2) { err.textContent = 'Write a few words first.'; err.hidden = false; return; }
+      go.disabled = true;
+      var fail = function () { go.disabled = false; err.textContent = 'Could not send. Please try again.'; err.hidden = false; };
+      post({ action: 'kudos', note: t }).then(function (r) {
+        if (!r.ok) return fail();
+        go.disabled = false;
+        d.kudos = t;
+        ok.textContent = KUDOS_THANKS; ok.hidden = false;
+        go.textContent = 'Update my kudos';
+      }, fail);
+    });
+  }
+
   // ---- "Did everything go well?" (any service). Yes closes it with thanks; No asks what went wrong, with optional photos. ----
   var ISSUE_OPTIONS = [
     ['missed_area', 'Something was missed or not clean'],
@@ -906,13 +935,13 @@
 
     // A property manager's report has no referral gift and no star rating.
     var pm = !!(d.job && d.job.pm_report);
-    root.innerHTML = head + summary + reviewAskBlock(d) + requestsCard + extrasCard + card(list) + (pm ? '' : homeDetailBlock(d)) + (pm ? '' : surveyBlock(d)) + (pm ? '' : missedBlock(d)) + (pm ? '' : issueBlock(d)) + (pm ? '' : feedbackBlock(d)) + (pm ? '' : ideasBlock(d)) + photos + videos + (pm ? '' : referralBlock(d)) + pdf +
+    root.innerHTML = head + summary + reviewAskBlock(d) + requestsCard + extrasCard + card(list) + (pm ? '' : kudosBlock(d)) + (pm ? '' : homeDetailBlock(d)) + (pm ? '' : surveyBlock(d)) + (pm ? '' : missedBlock(d)) + (pm ? '' : issueBlock(d)) + (pm ? '' : feedbackBlock(d)) + (pm ? '' : ideasBlock(d)) + photos + videos + (pm ? '' : referralBlock(d)) + pdf +
       (d.portal_token ? card('<h2>Your account</h2><p>Your records, photos, invoices and a direct line to us, all in one place that stays yours.</p><a class="btn" href="account.html?t=' + esc(d.portal_token) + '">Open your account</a>') : '') +
       (!pm && d.org.three_rs_video_url && /^https:\/\//i.test(d.org.three_rs_video_url) ? card('<h2>One minute: referrals, reviews and recurring</h2><p>Three easy ways to get the most from us.</p><a class="btn" href="' + esc(d.org.three_rs_video_url) + '" target="_blank" rel="noopener">Watch the video</a>') : '') +
       '<p class="foot">' + esc(d.org.name) + '</p>';
 
     document.title = d.org.name + ' — your clean report';
-    if (!pm) { wireRotation(d); wireReferral(d); wireMissed(d); wireIssue(d); wireFeedback(d); wireSurvey(); }
+    if (!pm) { wireRotation(d); wireReferral(d); wireMissed(d); wireIssue(d); wireFeedback(d); wireSurvey(); wireKudos(d); }
     document.getElementById('pdf').addEventListener('click', function () { buildPdf(d, this); });
   }
 
@@ -1053,6 +1082,20 @@
       }
       photoRow('Before', d.photos.before);
       photoRow('After', d.photos.after);
+
+      // Customer Kudos (Jack, 2026-11-14): what they wrote, or where to write it.
+      if (!(d.job && d.job.pm_report)) {
+        room(70);
+        y += 6;
+        doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(0, 74, 173);
+        doc.text('CUSTOMER KUDOS', M, y);
+        y += 15;
+        doc.setFont('helvetica', d.kudos ? 'bold' : 'normal').setFontSize(11).setTextColor(21, 18, 31);
+        var kLines = doc.splitTextToSize(d.kudos ? '"' + String(d.kudos).replace(/[‘’]/g, "'").replace(/[“”]/g, '"') + '"' : 'Loved something about this clean? Leave Customer Kudos for your team on your report page:', W - M * 2);
+        kLines.forEach(function (l) { room(15); doc.text(l, M, y); y += 15; });
+        if (!d.kudos) { doc.setTextColor(0, 74, 173).setFontSize(9); doc.textWithLink(String(location.href).slice(0, 110), M, y, { url: location.href }); y += 14; }
+        y += 8;
+      }
 
       // Gift card
       if (d.referral.made) {
