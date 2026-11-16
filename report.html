@@ -761,6 +761,26 @@
       return done.length ? { room: r.room, items: done.map(function (t) { return t.label; }) } : null;
     }).filter(function (x) { return x; });
   }
+  // The building's numbered requests with the time each was done (keychain or by hand), and the lock-up check with its photo.
+  function pmRequestsCard(d) {
+    var rs = d.requests || [];
+    if (!rs.length) return '';
+    return card('<h2>Your requests</h2><ul>' + rs.map(function (r) {
+      return r.status === 'done'
+        ? '<li><span class="tick">&#10003;</span><span>' + esc(requestLine(r)) + '</span></li>'
+        : '<li><span class="na">&mdash;</span><span class="na-text">' + esc(requestLine(r)) + '<span class="reason">' +
+          (r.status === 'could_not' ? 'Not done this visit. We do it on the next visit or sooner, at no charge.' : 'Not marked done this visit. We do it on the next visit or sooner, at no charge.') + '</span></span></li>';
+    }).join('') + '</ul>');
+  }
+  function pmLockupCard(p) {
+    var l = p.lockup;
+    if (!l) return '';
+    return card('<h2>Locked up</h2><p class="meta">Checked ' + esc(requestTime(l.done_at)) + ' before the crew left</p><ul>' +
+      (l.items || []).map(function (t) { return '<li><span class="tick">&#10003;</span><span>' + esc(t) + '</span></li>'; }).join('') + '</ul>' +
+      (l.photo ? '<div class="grid"><figure><img src="' + esc(l.photo) + '" alt="Locked door"><figcaption>Locked door</figcaption></figure></div>' : ''));
+  }
+  function pmRequestsDone(d) { var rs = d.requests || []; return rs.filter(function (r) { return r.status === 'done'; }).length + ' of ' + rs.length; }
+
   function renderPm(d) {
     var p = d.pm || {};
     document.body.className = 'pm';
@@ -810,8 +830,10 @@
       '<tr><td>Maintenance needed</td><td>' + count('maintenance') + '</td></tr>' +
       '<tr><td>Items left behind</td><td>' + count('left_behind') + '</td></tr>' +
       '<tr><td>Running low</td><td>' + count('running_low') + '</td></tr>' +
+      ((d.requests || []).length ? '<tr><td>Your requests done</td><td>' + pmRequestsDone(d) + '</td></tr>' : '') +
+      (p.lockup ? '<tr><td>Locked up</td><td>' + esc(requestTime(p.lockup.done_at)) + '</td></tr>' : '') +
       (p.plan && p.plan.total ? '<tr><td>Elevation Plan</td><td>' + p.plan.done + ' of ' + p.plan.total + '</td></tr>' : '') + '</table>');
-    root.innerHTML = head + ba + found + plan + what + videos + summary + '<p class="foot">Facilities by Two Hour Maids</p>';
+    root.innerHTML = head + ba + pmRequestsCard(d) + found + plan + what + pmLockupCard(p) + videos + summary + '<p class="foot">Facilities by Two Hour Maids</p>';
     document.title = (PM_KIND[p.kind] || 'Cleaning report') + (where ? ': ' + where : '');
     document.getElementById('pdf').addEventListener('click', function () { buildPmPdf(d, this); });
     document.getElementById('pm-print').addEventListener('click', function () { window.print(); });
@@ -824,6 +846,7 @@
     btn.disabled = true; btn.textContent = 'Building…';
     var shots = d.photos.before.concat(d.photos.after);
     (p.found || []).forEach(function (g) { g.items.forEach(function (f) { (f.photos || []).forEach(function (u) { shots.push({ url: u }); }); }); });
+    if (p.lockup && p.lockup.photo) shots.push({ url: p.lockup.photo });
     Promise.all(shots.map(function (s) { return asDataUrl(s.url); })).then(function (datas) {
       var img = {}; shots.forEach(function (s, i) { if (datas[i]) img[s.url] = datas[i]; });
       var doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'letter' });
@@ -848,15 +871,28 @@
       var byRoom = {}, order = [];
       ['before', 'after'].forEach(function (k) { (d.photos[k] || []).forEach(function (ph) { var r = ph.room || 'Other'; if (!byRoom[r]) { byRoom[r] = {}; order.push(r); } if (!byRoom[r][k]) byRoom[r][k] = ph.url; }); });
       if (order.length) { heading('Before and after'); order.forEach(function (r) { line(r + ' (before, after)', true); pics([byRoom[r].before, byRoom[r].after]); }); }
+      if ((d.requests || []).length) {
+        heading('Your requests');
+        d.requests.forEach(function (r) { line((r.status === 'done' ? '[x] ' : '[ ] ') + requestLine(r) + (r.status === 'done' ? '' : ' (we do it on the next visit or sooner, at no charge)')); });
+      }
       heading('What the crew found');
       if (!(p.found || []).length) line('Nothing to report: no damage, nothing left behind.');
       (p.found || []).forEach(function (g) { line(g.label, true); g.items.forEach(function (f) { line('- ' + (f.room ? f.room + ': ' : '') + f.text + (f.status ? ' (' + f.status + ')' : '')); if ((f.photos || []).length) pics(f.photos); }); });
       if (p.plan && p.plan.total) { heading('Property Elevation Plan'); line(p.plan.done + ' of ' + p.plan.total + ' done' + (p.plan.target_date ? ', expected done by ' + prettyDate(p.plan.target_date) : '')); if ((p.plan.focus || []).length) line('Next: ' + p.plan.focus.join(', ')); }
       heading('What we cleaned');
       pmCleaned(d).forEach(function (r) { line(r.room, true); r.items.forEach(function (t) { line('[x] ' + t); }); });
+      if (p.lockup) {
+        heading('Locked up');
+        line('Checked ' + requestTime(p.lockup.done_at) + ' before the crew left');
+        (p.lockup.items || []).forEach(function (t) { line('[x] ' + t); });
+        if (p.lockup.photo) pics([p.lockup.photo]);
+      }
       heading('Summary');
       var count = function (g) { var x = (p.found || []).filter(function (z) { return z.group === g; })[0]; return x ? x.items.length : 0; };
-      [['Checklist items done', d.tasks.completed + ' of ' + d.tasks.total], ['Damage that was already there', count('pre_existing')], ['Damage our team caused', count('our_damage')], ['Maintenance needed', count('maintenance')], ['Items left behind', count('left_behind')], ['Running low', count('running_low')]]
+      var sumRows = [['Checklist items done', d.tasks.completed + ' of ' + d.tasks.total], ['Damage that was already there', count('pre_existing')], ['Damage our team caused', count('our_damage')], ['Maintenance needed', count('maintenance')], ['Items left behind', count('left_behind')], ['Running low', count('running_low')]];
+      if ((d.requests || []).length) sumRows.push(['Your requests done', pmRequestsDone(d)]);
+      if (p.lockup) sumRows.push(['Locked up', requestTime(p.lockup.done_at)]);
+      sumRows
         .forEach(function (r) { room(16); doc.setFont('helvetica', 'normal').setFontSize(10); doc.text(String(r[0]), M, y); doc.text(String(r[1]), W - M, y, { align: 'right' }); y += 15; });
       doc.save(clean((PM_KIND[p.kind] || 'Cleaning report') + ' ' + (p.unit || p.building || '') + ' ' + d.job.scheduled_date).trim().replace(/\s+/g, '-') + '.pdf');
       btn.disabled = false; btn.textContent = label;

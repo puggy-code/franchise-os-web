@@ -553,6 +553,33 @@
         '<div class="sub">' + (r.unit ? 'Unit ' + esc(r.unit) : '') + (r.unit && r.building ? ' &middot; ' : '') + esc(r.building || '') + '</div></td></tr>';
     }).join('') + '</table></div>';
   }
+  // Your units (0710): maintenance the crew spotted (mark it seen or fixed here) and the units signed off as ready for move-in. Wording is the
+  // office's approved rows; photos are signed links.
+  function unitNotesTitle(u) {
+    if (!u || (!u.move_ins.length && !u.maintenance.length)) return '';
+    return 'Your units' + (u.open_count ? ' &middot; ' + u.open_count + ' maintenance ' + (u.open_count === 1 ? 'item' : 'items') + ' open' : '');
+  }
+  function mtButtons(m) {
+    if (m.status === 'fixed') return '';
+    return '<div style="margin-top:8px">' + (m.status === 'open' ? '<button type="button" class="alt" data-mtset="seen">Mark seen</button> ' : '') + '<button type="button" data-mtset="fixed">Mark fixed</button></div>';
+  }
+  function unitNotesHtml(u) {
+    if (!unitNotesTitle(u)) return '';
+    var pics = function (urls) { var ok = (urls || []).filter(safeUrl); return ok.length ? '<div class="photos">' + ok.map(function (x) { return '<a href="' + esc(x) + '" target="_blank" rel="noopener"><img src="' + esc(x) + '" alt="Photo from our crew"></a>'; }).join('') + '</div>' : ''; };
+    var maint = '<h3>' + esc(u.title_maintenance) + '</h3>' + (u.maintenance.length ? u.maintenance.map(function (m) {
+      return '<div class="claim" data-mt="' + esc(m.id) + '"><div class="unit">Unit ' + esc(m.unit) + (m.building ? ' &middot; ' + esc(m.building) : '') + ': ' + esc(m.category) + '</div>' +
+        '<div class="sub">' + esc(m.note) + '</div>' +
+        '<div class="sub">' + esc(pretty(m.job_date)) + (m.reported_by ? ' &middot; spotted by ' + esc(m.reported_by) : '') + ' &middot; <b class="mt-st">' + esc(u.status_words[m.status] || m.status) + '</b></div>' +
+        pics(m.photos) + '<span class="mt-btns">' + mtButtons(m) + '</span><span class="mt-msg small"></span></div>';
+    }).join('') : '<p class="sub">' + esc(u.none_text) + '</p>');
+    var ready = u.move_ins.length ? '<h3>' + esc(u.title_ready) + '</h3>' + u.move_ins.map(function (s) {
+      return '<div class="claim"><div class="unit">Unit ' + esc(s.unit) + (s.building ? ' &middot; ' + esc(s.building) : '') + '</div>' +
+        '<div class="sub">' + esc(s.text) + ' &middot; ' + esc(pretty(s.job_date)) + (s.signed_by ? ' &middot; ' + esc(s.signed_by) : '') + '</div>' +
+        (s.confirmed || []).map(function (c) { return '<div class="sub">&#10003; ' + esc(c) + '</div>'; }).join('') +
+        (s.note ? '<div class="sub">' + esc(s.note) + '</div>' : '') + pics(s.photo ? [s.photo] : []) + '</div>';
+    }).join('') : '';
+    return '<div class="card">' + maint + ready + '</div>';
+  }
   function serviceHtml(sv) {
     if (!sv || !sv.per_visit_cents) return '';
     return '<div class="card"><h2>Your service</h2><div class="row"><span>Price per visit</span><b>' + esc(money2(sv.per_visit_cents).replace(/\.00$/, '')) + '</b></div>' +
@@ -585,13 +612,15 @@
     var more = function (title, inner) { return inner ? '<details class="more"><summary>' + title + '</summary>' + inner + '</details>' : ''; };
     var sms = 'sms:' + TEXT_NUMBER.replace(/[^0-9]/g, '');
     root.innerHTML =
-      '<div class="card hero"><p class="brand">Facilities by Two Hour Maids</p><h1>' + esc(d.account.name) + '</h1>' + (who ? '<p>Property manager &middot; ' + who + '</p>' : '') + '</div>' +
+      '<div class="card hero"><p class="brand">Facilities by Two Hour Maids</p><h1>' + esc(d.account.name) + '</h1>' + (who ? '<p>Property manager &middot; ' + who + '</p>' : '') +
+        (d.contact || d.reply_promise ? '<p class="small" style="color:inherit;opacity:.9">' + (d.contact ? 'Your contact: <b>' + esc(d.contact.first_name) + '</b> &middot; ' : '') + esc(d.reply_promise || '') + '</p>' : '') + '</div>' +
       '<a class="card textus" href="' + sms + '"><span class="ic" aria-hidden="true">&#128172;</span><span><b>Text us anytime</b><span>Instant quote, instant booking &middot; ' + TEXT_NUMBER + '</span></span></a>' +
       (gateOpen ? '' : termsHtml(d)) +
       planHtml(d.plan) +
       nextHtml(d) +
       noteHtml() +
       reportsHtml(d, byB) +
+      more(unitNotesTitle(d.unit_notes), unitNotesHtml(d.unit_notes)) +
       '<div class="sec">Book more</div>' +
       requestHtml(d) +
       hostHtml(d.host, byB) +
@@ -622,6 +651,21 @@
     }
   }
 
+  // Mark a maintenance item seen or fixed (pm-portal action maintenance_status; logged as the portal).
+  document.addEventListener('click', function (e) {
+    var t = e.target, btn = t && t.closest && t.closest('[data-mtset]');
+    if (!btn) return;
+    var box = btn.closest('[data-mt]'), msg = box.querySelector('.mt-msg'), want = btn.getAttribute('data-mtset');
+    btn.disabled = true; msg.textContent = '';
+    postJson({ action: 'maintenance_status', item: box.getAttribute('data-mt'), status: want }).then(function (res) {
+      if (!res.ok || !res.j.ok) { btn.disabled = false; msg.textContent = 'Not saved. Please try again.'; return; }
+      var u = data && data.unit_notes, m = u && u.maintenance.filter(function (x) { return x.id === box.getAttribute('data-mt'); })[0];
+      if (m) { if (m.status === 'open') u.open_count--; m.status = want; }
+      box.querySelector('.mt-st').textContent = (u && u.status_words[want]) || want;
+      box.querySelector('.mt-btns').innerHTML = m ? mtButtons(m) : '';
+    }).catch(function () { btn.disabled = false; msg.textContent = 'Not saved. Please try again.'; });
+  });
+
   // The note box: text and one photo (shrunk on the phone first) to the office.
   function shrink(file) {
     return new Promise(function (ok, bad) {
@@ -646,7 +690,7 @@
       t.disabled = true; msg.className = 'small'; msg.textContent = 'Sending...';
       (f ? shrink(f) : Promise.resolve(null)).then(function (photo) { return postJson({ action: 'note', text: text, photo: photo, for_crew: document.getElementById('nt-text').getAttribute('data-crew') === '1' }); }).then(function (res) {
         t.disabled = false;
-        if (res && res.ok) { msg.className = 'ok'; msg.textContent = 'Sent. Thank you!'; document.getElementById('nt-text').value = ''; document.getElementById('nt-photo').value = ''; }
+        if (res && res.ok) { msg.className = 'ok'; msg.textContent = res.j && res.j.reply_by ? 'Sent. We will reply ' + res.j.reply_by + '.' : 'Sent. Thank you!'; document.getElementById('nt-text').value = ''; document.getElementById('nt-photo').value = ''; }
         else { msg.className = 'err'; msg.textContent = ERR.server_error; }
       }).catch(function () { t.disabled = false; msg.className = 'err'; msg.textContent = ERR.server_error; });
     }
