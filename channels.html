@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Channel Control · Two Hour Maids</title>
+<!--
+  CHANNEL CONTROL (Jack 2026-11-19): the unified marketing + hiring dashboard. One switchboard for every marketing and hiring channel,
+  shared by Franchise OS, the Two Hour Maids app, Puggy OS (the Mac) and the websites (migrations 1560-1562).
+    Marketing / Hiring   every channel by category: an on/off switch, a level slider (0-100) and a weekly budget dial, with its KPIs
+    Outreach             the lead sequence, email days and holds, pilot + launch, this week's plan, the outreach switches (from the Mac)
+    Emily                the phone + text agent: line, what she answers, her auto-replies, last 7 days. "Calls people: Off" is shown,
+                         never a control (Jack 2026-11-19: Emily answers, she does not call people)
+    Ideas                ideas, workflows, agents, specs and plans from the last 7 weeks, by category (the Mac syncs them nightly)
+    Review Hub           the ranked open asks; the hub itself stays the ONE Review Hub (claude.ai), this tab links to it
+    Log                  every switch / slider / dial move (append-only)
+  Jack's picks (2026-11-19): a slider sets a level and the dial a weekly budget; anything that spends money or texts/calls a person
+  still goes to his Approve inbox. Switches change only through set_channel (owner only, logged). Managers see it read-only.
+  Everything goes through RLS with the publishable anon key. No service_role key, ever.
+  ?demo=1 runs on fake data in this browser only (nothing is saved). ?demo=1&role=manager shows the read-only view.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --t-ink: #0B1A33; --t-ink-2: #3D4B63; --t-muted: #6B7790; --t-line: #E3E9F3; --t-soft: #F3F7FE;
+    --t-blue: #004AAD; --t-blue-2: #1F5EFF; --t-blue-soft: #E9F0FF; --t-green: #0E8A5F; --t-green-soft: #E6F6EF;
+    --t-yellow: #FFED00; --t-amber-soft: #FFF8DB; --t-off: #C9D2E1;
+    --t-shadow: 0 1px 2px rgba(11,26,51,.06), 0 8px 24px -12px rgba(11,26,51,.18);
+    color-scheme: light;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--t-soft); }
+  body { font-family: "Work Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--t-ink);
+    -webkit-font-smoothing: antialiased; font-feature-settings: "tnum" 1, "lnum" 1; font-size: 15px; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: var(--t-blue-2); }
+  [hidden] { display: none !important; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 14px 16px 80px; }
+
+  /* sign in */
+  .hero { background: linear-gradient(150deg, #003A88 0%, #004AAD 55%, #1F5EFF 100%); border-radius: 22px; padding: 26px 22px 22px;
+    box-shadow: 0 18px 40px -18px rgba(0,74,173,.6); color: #fff; max-width: 440px; margin: 8vh auto 0; }
+  .hero h1 { font-size: 26px; font-weight: 700; letter-spacing: -.4px; margin: 0 0 4px; }
+  .hero p { margin: 0 0 16px; opacity: .85; }
+  .hero label { display: block; font-weight: 600; font-size: 13px; margin: 10px 0 4px; }
+  .hero input { width: 100%; border: 0; border-radius: 12px; min-height: 46px; padding: 0 14px; color: var(--t-ink); }
+  .hero .go { width: 100%; margin-top: 16px; min-height: 48px; border: 0; border-radius: 14px; background: var(--t-yellow); color: var(--t-ink); font-weight: 700; }
+  .err { margin-top: 10px; background: rgba(255,255,255,.14); border-radius: 10px; padding: 8px 10px; font-size: 14px; }
+
+  /* top */
+  .top { display: flex; align-items: center; gap: 12px; margin: 4px 0 14px; }
+  .brand { font-weight: 700; letter-spacing: .3px; color: var(--t-blue); }
+  .brand small { display: block; font-weight: 500; color: var(--t-muted); letter-spacing: 0; font-size: 13px; }
+  .who { margin-left: auto; text-align: right; font-size: 13px; color: var(--t-muted); }
+  .who button { border: 1px solid var(--t-line); background: #fff; border-radius: 10px; padding: 4px 10px; margin-top: 4px; font-size: 13px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat { background: #fff; border: 1px solid var(--t-line); border-radius: 16px; padding: 12px 14px; box-shadow: var(--t-shadow); }
+  .stat b { display: block; font-size: 22px; letter-spacing: -.3px; }
+  .stat span { font-size: 13px; color: var(--t-muted); }
+  @media (max-width: 640px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+
+  .tabs { display: flex; gap: 4px; background: #fff; border: 1px solid var(--t-line); border-radius: 16px; padding: 4px; box-shadow: var(--t-shadow);
+    overflow-x: auto; scrollbar-width: none; margin-bottom: 14px; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { flex: 1 0 auto; border: 0; background: none; border-radius: 12px; min-height: 42px; padding: 0 14px; font-weight: 600; color: var(--t-ink-2); white-space: nowrap; }
+  .tab.is-on { background: var(--t-blue-soft); color: var(--t-blue); }
+  .tab .n { font-weight: 500; color: var(--t-muted); margin-left: 4px; font-size: 13px; }
+
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .search { flex: 1 1 220px; min-height: 42px; border: 1px solid var(--t-line); border-radius: 12px; padding: 0 12px; background: #fff; }
+  .chip { border: 1px solid var(--t-line); background: #fff; border-radius: 999px; padding: 7px 12px; font-size: 14px; font-weight: 500; color: var(--t-ink-2); }
+  .chip.is-on { background: var(--t-ink); color: #fff; border-color: var(--t-ink); }
+  .note { font-size: 13px; color: var(--t-muted); margin: 0 0 12px; }
+
+  h2.cat { font-size: 15px; font-weight: 700; margin: 18px 2px 8px; color: var(--t-ink-2); display: flex; align-items: baseline; gap: 8px; }
+  h2.cat span { font-weight: 500; color: var(--t-muted); font-size: 13px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 10px; }
+  @media (max-width: 400px) { .grid { grid-template-columns: 1fr; } }
+
+  .card { background: #fff; border: 1px solid var(--t-line); border-radius: 18px; box-shadow: var(--t-shadow); }
+  .ch { padding: 14px; display: grid; grid-template-columns: 1fr auto; gap: 10px 12px; transition: border-color .2s; }
+  .ch.is-on { border-color: #B9CDF5; }
+  .ch-name { font-weight: 700; font-size: 15px; line-height: 1.25; }
+  .ch-blurb { font-size: 13px; color: var(--t-muted); margin-top: 2px; }
+  .ch-agent { font-size: 12px; color: var(--t-muted); margin-top: 4px; }
+  .ch-ctl { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 96px; gap: 12px; align-items: center; }
+  .ch-kpi { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; }
+  .k { background: var(--t-soft); border-radius: 8px; padding: 3px 8px; font-size: 12px; color: var(--t-ink-2); }
+  .k b { color: var(--t-ink); }
+  .saved { font-size: 12px; color: var(--t-green); min-height: 16px; grid-column: 1 / -1; margin-top: -6px; }
+
+  /* switch */
+  .sw { width: 50px; height: 30px; border-radius: 999px; border: 0; background: var(--t-off); position: relative; transition: background .2s; flex: none; }
+  .sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 3px rgba(11,26,51,.25); transition: transform .2s; }
+  .sw[aria-checked="true"] { background: var(--t-blue); }
+  .sw[aria-checked="true"]::after { transform: translateX(20px); }
+  .sw:disabled { cursor: default; opacity: .6; }
+  .sw:focus-visible, .dial:focus-visible, input[type=range]:focus-visible { outline: 3px solid #9CC0FF; outline-offset: 2px; }
+
+  /* level slider */
+  .lv label { display: flex; justify-content: space-between; font-size: 12px; color: var(--t-muted); margin-bottom: 4px; }
+  .lv label b { color: var(--t-ink); font-size: 13px; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; margin: 0; }
+  input[type=range]::-webkit-slider-runnable-track { height: 8px; border-radius: 999px;
+    background: linear-gradient(90deg, var(--t-blue) var(--p, 0%), var(--t-line) var(--p, 0%)); }
+  input[type=range]::-moz-range-track { height: 8px; border-radius: 999px; background: var(--t-line); }
+  input[type=range]::-moz-range-progress { height: 8px; border-radius: 999px; background: var(--t-blue); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 24px; border-radius: 50%; background: #fff; margin-top: -8px;
+    border: 2px solid var(--t-blue); box-shadow: 0 1px 4px rgba(11,26,51,.25); }
+  input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 2px solid var(--t-blue); }
+  input[type=range]:disabled { opacity: .6; }
+  .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--t-muted); padding: 0 2px; }
+
+  /* budget dial */
+  .dial { width: 96px; height: 96px; touch-action: none; border-radius: 50%; position: relative; user-select: none; -webkit-user-select: none; }
+  .dial svg { display: block; }
+  .dial .v { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+  .dial .v b { font-size: 15px; }
+  .dial .v span { font-size: 10px; color: var(--t-muted); }
+  .dial[aria-disabled="true"] { opacity: .6; }
+
+  /* panels */
+  .pad { padding: 16px 18px; margin-bottom: 12px; }
+  .pad h3 { margin: 0 0 10px; font-size: 16px; }
+  .seq { display: flex; flex-wrap: wrap; gap: 6px; }
+  .step { background: var(--t-blue-soft); color: var(--t-blue); border-radius: 10px; padding: 6px 10px; font-size: 13px; font-weight: 600; }
+  .step i { font-style: normal; font-weight: 500; color: var(--t-ink-2); margin-left: 4px; }
+  .rows { display: grid; grid-template-columns: 170px 1fr; gap: 6px 12px; font-size: 14px; }
+  .rows dt { color: var(--t-muted); }
+  .rows dd { margin: 0; }
+  @media (max-width: 520px) { .rows { grid-template-columns: 1fr; } .rows dd { margin-bottom: 6px; } }
+  .state { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 600; background: #EEF1F6; color: var(--t-ink-2); }
+  .state.on { background: var(--t-green-soft); color: var(--t-green); }
+  pre.plan { white-space: pre-wrap; font: inherit; font-size: 14px; background: var(--t-soft); border-radius: 12px; padding: 10px 12px; margin: 8px 0 0; }
+  .big { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .big div { background: var(--t-soft); border-radius: 12px; padding: 10px; text-align: center; }
+  .big b { display: block; font-size: 22px; }
+  .big span { font-size: 12px; color: var(--t-muted); }
+
+  /* ideas */
+  details.grp { margin-bottom: 8px; }
+  details.grp > summary { list-style: none; cursor: pointer; padding: 12px 14px; display: flex; gap: 8px; align-items: center; font-weight: 600; }
+  details.grp > summary::-webkit-details-marker { display: none; }
+  details.grp > summary .c { margin-left: auto; color: var(--t-muted); font-weight: 500; font-size: 13px; }
+  .items { border-top: 1px solid var(--t-line); }
+  .it { padding: 9px 14px; border-bottom: 1px solid var(--t-line); font-size: 14px; display: grid; grid-template-columns: 78px 1fr; gap: 8px; }
+  .it:last-child { border-bottom: 0; }
+  .kind { font-size: 11px; font-weight: 600; text-transform: capitalize; color: var(--t-blue); background: var(--t-blue-soft); border-radius: 6px; padding: 2px 6px;
+    align-self: start; text-align: center; }
+  .it small { display: block; color: var(--t-muted); font-size: 12px; margin-top: 2px; }
+  .more { width: 100%; border: 0; background: none; padding: 10px; color: var(--t-blue-2); font-weight: 600; }
+  .hubbtn { display: inline-flex; align-items: center; gap: 8px; background: var(--t-blue); color: #fff; text-decoration: none; border-radius: 14px;
+    padding: 12px 18px; font-weight: 700; }
+  .empty { padding: 18px; color: var(--t-muted); text-align: center; }
+  .log { font-size: 14px; }
+  .log div { padding: 8px 14px; border-bottom: 1px solid var(--t-line); }
+  .demo { background: var(--t-amber-soft); border-radius: 12px; padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <form id="signin" class="hero" hidden novalidate>
+    <h1>Channel Control</h1>
+    <p>Every marketing and hiring channel in one place. Sign in with your app phone and PIN.</p>
+    <label>Phone<input id="si-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(612) 555-0100"></label>
+    <label>PIN<input id="si-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="4" placeholder="••••"></label>
+    <div id="si-err" class="err" hidden></div>
+    <button class="go" id="si-go" type="submit">Sign in</button>
+  </form>
+
+  <div id="app" hidden>
+    <div class="top">
+      <div class="brand">TWO HOUR MAIDS<small>Channel Control</small></div>
+      <div class="who"><span id="who"></span><br><button id="signout" type="button">Sign out</button></div>
+    </div>
+    <div id="demo-note" class="demo" hidden>Demo: fake numbers, nothing is saved.</div>
+    <div class="stats" id="stats"></div>
+    <div class="tabs" role="tablist" id="tabs">
+      <button class="tab is-on" data-tab="marketing" role="tab">Marketing<span class="n" id="n-marketing"></span></button>
+      <button class="tab" data-tab="hiring" role="tab">Hiring<span class="n" id="n-hiring"></span></button>
+      <button class="tab" data-tab="outreach" role="tab">Outreach</button>
+      <button class="tab" data-tab="emily" role="tab">Emily</button>
+      <button class="tab" data-tab="ideas" role="tab">Ideas &amp; workflows<span class="n" id="n-ideas"></span></button>
+      <button class="tab" data-tab="hub" role="tab">Review Hub<span class="n" id="n-hub"></span></button>
+      <button class="tab" data-tab="log" role="tab">Log</button>
+    </div>
+
+    <section data-pane="marketing"></section>
+    <section data-pane="hiring" hidden></section>
+    <section data-pane="outreach" hidden></section>
+    <section data-pane="emily" hidden></section>
+    <section data-pane="ideas" hidden></section>
+    <section data-pane="hub" hidden></section>
+    <section data-pane="log" hidden></section>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var SUPABASE_URL = "https://isbhlmihbibdnajvicrj.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzYmhsbWloYmliZG5hanZpY3JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MzU4NDMsImV4cCI6MjEwNTAxMTg0M30.VOKtXSF8z8A9_NiaI6zq1w_qXcrgHdW4DjiT-C4haK0";
+  var AUTH_EMAIL_DOMAIN = "staff.franchise-os.local"; // src/lib/auth.ts
+  var HUB_URL = "https://claude.ai/artifact/4YCSEh41jE75KfMCVrApvo";
+  var DIAL_MAX = 500000, DIAL_STEP = 2500; // $5,000 a week, $25 steps (the database allows up to $20,000)
+  var params = new URLSearchParams(location.search);
+  var DEMO = params.get("demo") === "1";
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function digits(s) { return String(s || "").replace(/\D/g, ""); }
+  function normalizePhone(input) { var d = digits(input); if (d.length === 10) return "+1" + d; if (d.length === 11 && d[0] === "1") return "+" + d; return "+" + d; }
+  function money(c) { var d = Math.round((c || 0) / 100); return "$" + d.toLocaleString("en-US"); }
+  function num(n) { return Number(n || 0).toLocaleString("en-US"); }
+  function lvlWord(v) { return v <= 0 ? "Off" : v < 34 ? "Low" : v < 67 ? "Medium" : v < 100 ? "High" : "Full"; }
+  function when(iso) { if (!iso) return ""; var d = new Date(iso); return isNaN(d) ? String(iso) : d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
+  function dateOnly(s) { if (!s) return ""; var d = new Date(String(s).slice(0, 10) + "T12:00:00"); return isNaN(d) ? s : d.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }); }
+
+  // ------------------------------------------------------------------ data access
+  function liveApi() {
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "tdm-channel-control" } });
+    function ok(r) { if (r.error) throw r.error; return r.data; }
+    function all(table, cols, order) {
+      var out = [], size = 1000;
+      function page(from) {
+        return sb.from(table).select(cols).order(order).range(from, from + size - 1).then(ok).then(function (rows) {
+          out = out.concat(rows);
+          return rows.length === size && out.length < 20000 ? page(from + size) : out;
+        });
+      }
+      return page(0);
+    }
+    return {
+      session: function () { return sb.auth.getSession().then(function (r) { return r.data.session; }); },
+      signIn: function (phone, pin) {
+        return sb.auth.signInWithPassword({ email: normalizePhone(phone).replace("+", "") + "@" + AUTH_EMAIL_DOMAIN, password: "pin-" + pin })
+          .then(function (r) { if (r.error) throw new Error("Phone number or PIN is incorrect."); });
+      },
+      signOut: function () { return sb.auth.signOut(); },
+      me: function (uid) { return sb.from("profiles").select("id, full_name, role").eq("id", uid).maybeSingle().then(ok); },
+      channels: function () { return sb.from("channel_control").select("*").order("sort").then(ok); },
+      kpis: function () { return sb.from("channel_kpis").select("*").then(ok); },
+      items: function () { return all("channel_items", "ext_id, area, category, channel_key, kind, title, detail, source, link, made_on, status, rank", "ext_id"); },
+      // Emily's after-call form (emily_calls, reason 'job'): only the date, language and area are read, for counts. No names or numbers.
+      jobCalls: function () {
+        var since = new Date(Date.now() - 28 * 864e5).toISOString();
+        return sb.from("emily_calls").select("started_at, language, area:answers->>area").eq("reason", "job").gte("started_at", since).limit(2000).then(ok);
+      },
+      changes: function () { return sb.from("channel_control_changes").select("channel_key, before, after, changed_at").order("changed_at", { ascending: false }).limit(80).then(ok); },
+      setChannel: function (key, v) {
+        return sb.rpc("set_channel", { p_key: key, p_enabled: v.enabled, p_level: v.level, p_weekly_budget_cents: v.weekly_budget_cents }).then(ok);
+      },
+      macStatus: function () {
+        return sb.rpc("request_marketing_status").then(ok).then(function (jid) {
+          var tries = 0;
+          function poll() {
+            return sb.from("bridge_jobs").select("status, result, error, finished_at").eq("id", jid).maybeSingle().then(ok).then(function (j) {
+              if (j && j.status === "done") return j.result && j.result.ok === false ? Promise.reject(new Error(j.result.message || "The Mac said no.")) : j.result;
+              if (j && (j.status === "failed" || j.status === "cancelled")) throw new Error("The Mac couldn't answer just now.");
+              if (++tries > 20) throw new Error("The Mac hasn't picked this up yet. It answers when it's online; try again in a minute.");
+              return new Promise(function (res) { setTimeout(res, 3000); }).then(poll);
+            });
+          }
+          return poll();
+        });
+      }
+    };
+  }
+
+  function demoApi() {
+    var role = params.get("role") || "hq_admin";
+    var mk = function (key, area, category, name, blurb, enabled, level, budget, agent) {
+      return { key: key, area: area, category: category, name: name, blurb: blurb, enabled: enabled, level: level, weekly_budget_cents: budget, agent: agent || "", kpis: [] };
+    };
+    var chans = [
+      mk("google_ads", "marketing", "Paid search", "Google Ads (search)", "Search ads for cleaning near me", false, 0, 0, "channel 1 session"),
+      mk("google_lsa", "marketing", "Paid search", "Google Local Services Ads", "Google Guaranteed pay-per-lead", false, 0, 0),
+      mk("meta_ads", "marketing", "Paid social", "Meta ads (Facebook + Instagram)", "Hyper-local video ads loop, $600 cap", true, 40, 15000, "bos_meta_campaign"),
+      mk("google_business", "marketing", "Local & maps", "Google Business Profile", "Posts, photos, Q&A, hours", true, 60, 0, "GBP pipeline"),
+      mk("angi", "marketing", "Lead platforms", "Angi", "Auto-reply rules: recurring, 23 ZIPs, 10/mo", true, 40, 5000, "Angi auto-reply + Emily"),
+      mk("cold_email", "marketing", "Email", "Cold email (B2B)", "Instantly, 20 domains, Emily signs; pilot list", true, 40, 0, "bos_cadence"),
+      mk("cold_calling", "marketing", "Phone & text", "Cold calling", "Dialer off: no calling people", false, 0, 0, "autodialer"),
+      mk("emily_inbound", "marketing", "Phone & text", "Emily answers calls + texts", "Inbound only, never outbound", true, 100, 0, "Emily phone agent"),
+      mk("facility_postcards", "marketing", "Direct mail & print", "Facility postcards (B2B)", "5.5x4.2 permit cards, starts Dec 1", true, 40, 20000, "fac_cadence"),
+      mk("yard_signs", "marketing", "Guerrilla & street", "Yard signs", "Sign at every clean", false, 0, 0),
+      mk("customer_referral", "marketing", "Referral & partners", "Customer referrals (buy six, give one)", "Referral ask after great cleans", true, 60, 0),
+      mk("indeed", "hiring", "Job boards", "Indeed", "Sponsored + free posts", true, 50, 7500, "hiring run"),
+      mk("careers_page", "hiring", "Website hiring", "Careers page (join / apply)", "join.html + apply.html + Big 5", true, 100, 0, "apply flow"),
+      mk("employee_referral", "hiring", "Referrals", "Staff referral bonus", "Crew refers a friend", false, 0, 0)
+    ];
+    var kp = chans.map(function (c, i) { return { key: c.key, leads7: c.enabled ? (i % 5) + 1 : 0, leads28: c.enabled ? (i % 5) * 4 + 3 : 0, spend28_cents: c.weekly_budget_cents * 3,
+      bookings28: c.enabled ? i % 3 : 0, revenue28_cents: c.enabled ? (i % 3) * 18900 : 0, reach28: 0, extra28: c.area === "hiring" ? { applicants: 9, hires: 1 } : {} }; });
+    var items = [];
+    ["Paid social", "Direct mail & print", "Guerrilla: Hook", "Commercial & B2B", "Field marketing hiring"].forEach(function (cat, ci) {
+      for (var n = 0; n < 6 + ci * 3; n++) items.push({ ext_id: cat + n, area: cat.indexOf("hiring") >= 0 ? "hiring" : "marketing", category: cat, kind: ["idea", "agent", "spec", "workflow", "plan"][n % 5],
+        title: "Sample " + cat.toLowerCase() + " item " + (n + 1), source: "demo", made_on: "2026-11-" + String(10 + (n % 9)), status: "", detail: "" });
+    });
+    for (var r = 1; r <= 8; r++) items.push({ ext_id: "ask" + r, area: "marketing", category: "Review Hub", kind: "review_ask", title: "Sample hub ask " + r, rank: r, link: HUB_URL, source: "demo", made_on: "2026-11-19" });
+    var changes = [{ channel_key: "meta_ads", before: { enabled: false, level: 0, weekly_budget_cents: 0 }, after: { enabled: true, level: 40, weekly_budget_cents: 15000 }, changed_at: new Date().toISOString() }];
+    var delay = function (v) { return new Promise(function (res) { setTimeout(function () { res(JSON.parse(JSON.stringify(v === undefined ? null : v))); }, 120); }); };
+    return {
+      session: function () { return delay({ user: { id: "demo" } }); },
+      signIn: function () { return delay(); }, signOut: function () { return delay(); },
+      me: function () { return delay({ id: "demo", full_name: role === "manager" ? "Demo Manager" : "Demo Owner", role: role }); },
+      channels: function () { return delay(chans); }, kpis: function () { return delay(kp); }, items: function () { return delay(items); },
+      changes: function () { return delay(changes); },
+      jobCalls: function () {
+        var now = Date.now();
+        return delay([0, 1, 2, 5, 9, 12, 20].map(function (d, i) { return { started_at: new Date(now - d * 864e5).toISOString(), language: i % 3 ? "en" : "es", area: ["Richfield", "Bloomington", "Minneapolis"][i % 3] }; }));
+      },
+      setChannel: function (key, v) { var c = chans.filter(function (x) { return x.key === key; })[0]; Object.assign(c, v); return delay(c); },
+      macStatus: function () {
+        return delay({ outreach: { sequence: [{ day: 0, channel: "email", label: "Day 0: Email" }, { day: 1, channel: "call", label: "Day 1: Call" }, { day: 2, channel: "postcard", label: "Day 2: Postcard" },
+            { day: 3, channel: "ad", label: "Day 3: Building ad" }, { day: 7, channel: "email", label: "Day 7: Email" }, { day: 12, channel: "letter", label: "Day 12: Letter" }],
+          then: "a postcard every month, up to 11 more", email_days: "Tue-Thu", email_window: "08:00-11:30 Central", pilot: { first: "2026-12-15", last: "2026-12-17", per_inbox_per_day: 5 },
+          launch: "2027-01-05", email_holds: [{ from: "2026-11-25", to: "2026-11-30" }], email_cap_today: 0,
+          this_week: { week: "2026-11-16", status: "draft", plan: "Week of 2026-11-16: 23 building ads, 150 emails, 22 postcards." },
+          channels: { dialer_bridge_on: { label: "Autodialer", on: false }, cadence_on: { label: "Daily call lists and the weekly plan", on: false },
+            text_ok_bridge_on: { label: "Follow-up texts after a call", on: true }, emily_outbound_calls_on: { label: "Emily calling people", on: false } } },
+          emily: { line: "763-230-6795", answering: true, answers: ["Phone calls", "Texts", "Email replies from interested leads"], email_replies_on: true, follow_up_texts_on: true,
+            outbound_calls_on: false, last_7_days: { calls: 16, texts: 3, booked: 0, spanish: 0 }, last_contact: "2026-11-17T18:58:32" } });
+      }
+    };
+  }
+
+  var api = DEMO ? demoApi() : liveApi();
+  var S = { me: null, canEdit: false, chans: [], kpi: {}, items: null, changes: null, mac: null, macErr: "", tab: "marketing",
+            mfilter: "all", hfilter: "all", q: "", iq: "", ikind: "all", iarea: "all", timers: {} };
+
+  // ------------------------------------------------------------------ boot
+  function start() {
+    return api.session().then(function (s) {
+      if (!s) { $("signin").hidden = false; $("app").hidden = true; return; }
+      return api.me(s.user.id).then(function (me) {
+        if (!me || (me.role !== "hq_admin" && me.role !== "manager")) { $("signin").hidden = false; fail("This page is for the owner and managers."); return api.signOut(); }
+        S.me = me; S.canEdit = me.role === "hq_admin";
+        $("signin").hidden = true; $("app").hidden = false; $("demo-note").hidden = !DEMO;
+        $("who").textContent = (me.full_name || "") + (S.canEdit ? "" : " · view only");
+        return Promise.all([api.channels(), api.kpis()]).then(function (r) {
+          S.chans = r[0]; S.kpi = {}; r[1].forEach(function (k) { S.kpi[k.key] = k; });
+          renderStats(); render();
+          api.items().then(function (it) { S.items = it; renderCounts(); if (S.tab === "ideas" || S.tab === "hub") render(); })
+            .catch(function () { S.items = []; renderCounts(); });
+        });
+      });
+    }).catch(function (e) { fail(e.message || String(e)); });
+  }
+  function fail(msg) { $("si-err").hidden = !msg; $("si-err").textContent = msg || ""; }
+
+  $("signin").addEventListener("submit", function (ev) {
+    ev.preventDefault(); fail("");
+    var phone = $("si-phone").value, pin = $("si-pin").value.trim();
+    if (digits(phone).length < 10) return fail("Enter your 10-digit phone.");
+    if (!/^\d{4}$/.test(pin)) return fail("PIN is 4 digits.");
+    $("si-go").disabled = true;
+    api.signIn(phone, pin).then(start).catch(function (e) { fail(e.message); }).then(function () { $("si-go").disabled = false; });
+  });
+  $("signout").addEventListener("click", function () { api.signOut().then(function () { location.reload(); }); });
+  $("tabs").addEventListener("click", function (ev) {
+    var t = ev.target.closest(".tab"); if (!t) return;
+    S.tab = t.getAttribute("data-tab");
+    document.querySelectorAll(".tab").forEach(function (x) { x.classList.toggle("is-on", x === t); });
+    document.querySelectorAll("[data-pane]").forEach(function (p) { p.hidden = p.getAttribute("data-pane") !== S.tab; });
+    try { localStorage.setItem("chc-tab", S.tab); } catch (e) { /* private window */ }
+    render();
+  });
+
+  // ------------------------------------------------------------------ header
+  function renderStats() {
+    var on = S.chans.filter(function (c) { return c.enabled; });
+    var budget = on.reduce(function (s, c) { return s + (c.weekly_budget_cents || 0); }, 0);
+    var leads = 0, apps = 0;
+    S.chans.forEach(function (c) { var k = S.kpi[c.key] || {}; leads += c.area === "marketing" ? Number(k.leads7 || 0) : 0; apps += Number(((k.extra7 || {}).applicants) || 0); });
+    $("stats").innerHTML =
+      '<div class="stat"><b>' + on.length + " / " + S.chans.length + "</b><span>channels on</span></div>" +
+      '<div class="stat"><b>' + money(budget) + "</b><span>weekly budget dialed in</span></div>" +
+      '<div class="stat"><b>' + num(leads) + "</b><span>leads, last 7 days</span></div>" +
+      '<div class="stat"><b>' + num(apps) + "</b><span>applicants, last 7 days</span></div>";
+    renderCounts();
+  }
+  function renderCounts() {
+    var cnt = function (a) { var all = S.chans.filter(function (c) { return c.area === a; }); return all.filter(function (c) { return c.enabled; }).length + "/" + all.length; };
+    $("n-marketing").textContent = cnt("marketing"); $("n-hiring").textContent = cnt("hiring");
+    if (S.items) {
+      $("n-ideas").textContent = num(S.items.filter(function (i) { return i.kind !== "review_ask"; }).length);
+      $("n-hub").textContent = num(S.items.filter(function (i) { return i.kind === "review_ask"; }).length);
+    }
+  }
+
+  function render() {
+    if (!S.me) return;
+    var pane = document.querySelector('[data-pane="' + S.tab + '"]');
+    if (S.tab === "marketing" || S.tab === "hiring") renderChannels(pane, S.tab);
+    else if (S.tab === "outreach" || S.tab === "emily") renderMac(pane, S.tab);
+    else if (S.tab === "ideas") renderIdeas(pane);
+    else if (S.tab === "hub") renderHub(pane);
+    else if (S.tab === "log") renderLog(pane);
+  }
+
+  // ------------------------------------------------------------------ channels
+  function renderChannels(pane, area) {
+    var fkey = area === "marketing" ? "mfilter" : "hfilter";
+    var list = S.chans.filter(function (c) {
+      if (c.area !== area) return false;
+      if (S[fkey] === "on" && !c.enabled) return false;
+      if (S[fkey] === "off" && c.enabled) return false;
+      var q = S.q.toLowerCase();
+      return !q || (c.name + " " + c.blurb + " " + c.category + " " + c.agent).toLowerCase().indexOf(q) >= 0;
+    });
+    var cats = [], by = {};
+    list.forEach(function (c) { if (!by[c.category]) { by[c.category] = []; cats.push(c.category); } by[c.category].push(c); });
+    var html = '<div class="bar"><input class="search" id="q-' + area + '" placeholder="Search channels" value="' + esc(S.q) + '">' +
+      ["all", "on", "off"].map(function (f) { return '<button class="chip' + (S[fkey] === f ? " is-on" : "") + '" data-f="' + f + '">' + ({ all: "All", on: "On", off: "Off" })[f] + "</button>"; }).join("") + "</div>" +
+      '<p class="note">The switch turns a channel on or off; the slider sets how hard its agents work; the dial sets its weekly budget. ' +
+      "Anything that spends money or texts or calls someone still asks you in the Approve inbox first." + (S.canEdit ? "" : " You're viewing; only the owner can change these.") + "</p>";
+    if (area === "hiring") html += '<div id="jobcalls"></div>';
+    if (!cats.length) html += '<div class="card empty">No channels match.</div>';
+    cats.forEach(function (cat) {
+      var on = by[cat].filter(function (c) { return c.enabled; }).length;
+      html += '<h2 class="cat">' + esc(cat) + "<span>" + on + " of " + by[cat].length + " on</span></h2><div class=\"grid\">" + by[cat].map(card).join("") + "</div>";
+    });
+    pane.innerHTML = html;
+    var qi = $("q-" + area);
+    qi.addEventListener("input", function () { S.q = qi.value; var pos = qi.selectionStart; renderChannels(pane, area); var n = $("q-" + area); n.focus(); n.setSelectionRange(pos, pos); });
+    pane.querySelectorAll("[data-f]").forEach(function (b) { b.addEventListener("click", function () { S[fkey] = b.getAttribute("data-f"); renderChannels(pane, area); }); });
+    pane.querySelectorAll(".ch").forEach(wire);
+    if (area === "hiring") jobCallsPanel();
+  }
+
+  function jobCallsPanel() {
+    var box = $("jobcalls"); if (!box) return;
+    if (S.jobCalls === undefined) {
+      S.jobCalls = null;
+      api.jobCalls().then(function (r) { S.jobCalls = r || []; }).catch(function () { S.jobCalls = []; }).then(jobCallsPanel);
+      return;
+    }
+    if (S.jobCalls === null) return;
+    var wk = Date.now() - 7 * 864e5, n7 = 0, lang = {}, area = {};
+    S.jobCalls.forEach(function (j) {
+      if (new Date(j.started_at).getTime() >= wk) n7++;
+      var l = ({ en: "English", es: "Spanish" })[j.language] || j.language || "Not said"; lang[l] = (lang[l] || 0) + 1;
+      var a = j.area || "Not said"; area[a] = (area[a] || 0) + 1;
+    });
+    function top(o) { return Object.keys(o).sort(function (a, b) { return o[b] - o[a]; }).slice(0, 6).map(function (k) { return esc(k) + " " + o[k]; }).join(" · ") || "None yet"; }
+    box.innerHTML = '<div class="card pad"><h3>Job seekers who called Emily</h3><div class="big">' +
+      "<div><b>" + num(n7) + "</b><span>last 7 days</span></div><div><b>" + num(S.jobCalls.length) + "</b><span>last 28 days</span></div></div>" +
+      '<dl class="rows" style="margin-top:10px"><dt>Languages</dt><dd>' + top(lang) + "</dd><dt>Areas</dt><dd>" + top(area) + "</dd></dl>" +
+      '<p class="note" style="margin:8px 0 0">Counts only, from Emily\'s after-call form.</p></div>';
+  }
+
+  function kpiChips(c) {
+    var k = S.kpi[c.key]; if (!k) return "";
+    var out = [];
+    if (c.area === "marketing") {
+      out.push("Leads 7d <b>" + num(k.leads7) + "</b>", "28d <b>" + num(k.leads28) + "</b>");
+      if (Number(k.bookings28)) out.push("Booked 28d <b>" + num(k.bookings28) + "</b>");
+      if (Number(k.spend28_cents)) out.push("Spent 28d <b>" + money(k.spend28_cents) + "</b>");
+      if (Number(k.spend28_cents) && Number(k.leads28)) out.push("Per lead <b>" + money(k.spend28_cents / k.leads28) + "</b>");
+      if (Number(k.revenue28_cents)) out.push("Revenue 28d <b>" + money(k.revenue28_cents) + "</b>");
+    } else if (Number(k.spend28_cents)) out.push("Spent 28d <b>" + money(k.spend28_cents) + "</b>");
+    var ex = k.extra28 || {};
+    Object.keys(ex).slice(0, 4).forEach(function (m) { out.push(esc(m.replace(/_/g, " ")) + " 28d <b>" + num(ex[m]) + "</b>"); });
+    if (!out.length || (c.area === "marketing" && !Number(k.leads28) && !Object.keys(ex).length && !Number(k.spend28_cents))) {
+      return '<div class="ch-kpi"><span class="k">Tracks: ' + esc((c.kpis || []).slice(0, 5).join(", ").replace(/_/g, " ") || "leads") + "</span></div>";
+    }
+    return '<div class="ch-kpi">' + out.map(function (s) { return '<span class="k">' + s + "</span>"; }).join("") + "</div>";
+  }
+
+  function card(c) {
+    var dis = S.canEdit ? "" : " disabled";
+    var p = c.level + "%";
+    return '<div class="card ch' + (c.enabled ? " is-on" : "") + '" data-key="' + esc(c.key) + '">' +
+      '<div><div class="ch-name">' + esc(c.name) + '</div><div class="ch-blurb">' + esc(c.blurb) + "</div>" +
+      (c.agent ? '<div class="ch-agent">Run by: ' + esc(c.agent) + "</div>" : "") + "</div>" +
+      '<button class="sw" role="switch" aria-checked="' + !!c.enabled + '" aria-label="' + esc(c.name) + ' on or off"' + dis + "></button>" +
+      '<div class="ch-ctl"><div class="lv"><label><span>Level</span><b class="lvw">' + lvlWord(c.enabled ? c.level : 0) + " · " + (c.enabled ? c.level : 0) + "</b></label>" +
+      '<input type="range" min="0" max="100" step="5" value="' + (c.enabled ? c.level : 0) + '" style="--p:' + (c.enabled ? p : "0%") + '" aria-label="' + esc(c.name) + ' level"' + dis + ">" +
+      '<div class="ticks"><span>Off</span><span>Low</span><span>Med</span><span>High</span></div></div>' +
+      dial(c) + "</div>" + kpiChips(c) + '<div class="saved" aria-live="polite"></div></div>';
+  }
+
+  function dial(c) {
+    var v = c.weekly_budget_cents || 0, f = Math.min(1, v / DIAL_MAX);
+    var r = 38, cx = 48, cy = 48, a0 = 135, sweep = 270;
+    function pt(a) { var t = a * Math.PI / 180; return [cx + r * Math.cos(t), cy + r * Math.sin(t)]; }
+    function arc(a1, a2) { var s = pt(a1), e = pt(a2), large = a2 - a1 > 180 ? 1 : 0; return "M" + s[0].toFixed(2) + " " + s[1].toFixed(2) + " A" + r + " " + r + " 0 " + large + " 1 " + e[0].toFixed(2) + " " + e[1].toFixed(2); }
+    var end = a0 + sweep * Math.max(f, 0.0001), knob = pt(end);
+    return '<div class="dial" tabindex="' + (S.canEdit ? 0 : -1) + '" role="slider" aria-label="' + esc(c.name) + ' weekly budget" aria-valuemin="0" aria-valuemax="' + DIAL_MAX / 100 +
+      '" aria-valuenow="' + Math.round(v / 100) + '" aria-valuetext="' + money(v) + ' a week"' + (S.canEdit ? "" : ' aria-disabled="true"') + ">" +
+      '<svg width="96" height="96" viewBox="0 0 96 96" aria-hidden="true"><path d="' + arc(a0, a0 + sweep) + '" stroke="#E3E9F3" stroke-width="8" fill="none" stroke-linecap="round"/>' +
+      (v > 0 ? '<path d="' + arc(a0, end) + '" stroke="#004AAD" stroke-width="8" fill="none" stroke-linecap="round"/>' : "") +
+      '<circle cx="' + knob[0].toFixed(2) + '" cy="' + knob[1].toFixed(2) + '" r="7" fill="#fff" stroke="#004AAD" stroke-width="2.5"/></svg>' +
+      '<div class="v"><b>' + money(v) + "</b><span>a week</span></div></div>";
+  }
+
+  function wire(el) {
+    var key = el.getAttribute("data-key"), c = S.chans.filter(function (x) { return x.key === key; })[0];
+    if (!S.canEdit) return;
+    var sw = el.querySelector(".sw"), rg = el.querySelector("input[type=range]"), dl = el.querySelector(".dial");
+    function paint() {
+      el.classList.toggle("is-on", c.enabled); sw.setAttribute("aria-checked", String(!!c.enabled));
+      var lv = c.enabled ? c.level : 0; rg.value = lv; rg.style.setProperty("--p", lv + "%");
+      el.querySelector(".lvw").textContent = lvlWord(lv) + " · " + lv;
+      var nd = document.createElement("div"); nd.innerHTML = dial(c); dl.innerHTML = nd.firstChild.innerHTML;
+      dl.setAttribute("aria-valuenow", Math.round(c.weekly_budget_cents / 100)); dl.setAttribute("aria-valuetext", money(c.weekly_budget_cents) + " a week");
+    }
+    sw.addEventListener("click", function () {
+      c.enabled = !c.enabled; if (c.enabled && !c.level) c.level = 50;
+      paint(); save(c, el);
+    });
+    rg.addEventListener("input", function () {
+      var v = Number(rg.value); c.level = v; c.enabled = v > 0; paint(); save(c, el);
+    });
+    function fromPoint(ev) {
+      var b = dl.getBoundingClientRect(), x = ev.clientX - (b.left + b.width / 2), y = ev.clientY - (b.top + b.height / 2);
+      var a = Math.atan2(y, x) * 180 / Math.PI; a = (a + 360) % 360;
+      var rel = (a - 135 + 360) % 360; if (rel > 270) rel = rel > 315 ? 0 : 270;
+      var v = Math.round((rel / 270) * DIAL_MAX / DIAL_STEP) * DIAL_STEP;
+      c.weekly_budget_cents = v; paint(); save(c, el);
+    }
+    var dragging = false;
+    dl.addEventListener("pointerdown", function (ev) { dragging = true; dl.setPointerCapture(ev.pointerId); fromPoint(ev); });
+    dl.addEventListener("pointermove", function (ev) { if (dragging) fromPoint(ev); });
+    dl.addEventListener("pointerup", function () { dragging = false; });
+    dl.addEventListener("pointercancel", function () { dragging = false; });
+    dl.addEventListener("keydown", function (ev) {
+      var d = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1, PageUp: 4, PageDown: -4 }[ev.key];
+      if (ev.key === "Home") d = -1e9; if (ev.key === "End") d = 1e9;
+      if (!d) return; ev.preventDefault();
+      c.weekly_budget_cents = Math.max(0, Math.min(DIAL_MAX, c.weekly_budget_cents + d * DIAL_STEP)); paint(); save(c, el);
+    });
+  }
+
+  function save(c, el) {
+    var msg = el.querySelector(".saved"); msg.textContent = "Saving…"; msg.style.color = "";
+    clearTimeout(S.timers[c.key]);
+    S.timers[c.key] = setTimeout(function () {
+      api.setChannel(c.key, { enabled: c.enabled, level: c.level, weekly_budget_cents: c.weekly_budget_cents }).then(function (row) {
+        if (row) { c.enabled = row.enabled; c.level = row.level; c.weekly_budget_cents = row.weekly_budget_cents; }
+        msg.textContent = "Saved · every app sees this now"; S.changes = null; renderStats();
+        setTimeout(function () { if (msg.textContent.indexOf("Saved") === 0) msg.textContent = ""; }, 2500);
+      }).catch(function (e) { msg.style.color = "var(--t-ink-2)"; msg.textContent = "Not saved yet: " + (e.message || "try again"); });
+    }, 600);
+  }
+
+  // ------------------------------------------------------------------ outreach + Emily (from the Mac, read-only)
+  function renderMac(pane, which) {
+    if (!S.mac && !S.macErr) {
+      pane.innerHTML = '<div class="card empty">Asking the Mac for the latest…</div>';
+      if (!S.canEdit) { S.macErr = "Only the owner can ask the Mac for this."; return renderMac(pane, which); }
+      api.macStatus().then(function (r) { S.mac = r || {}; }).catch(function (e) { S.macErr = e.message || String(e); }).then(function () { if (S.tab === which) render(); });
+      return;
+    }
+    var refresh = '<div class="bar"><button class="chip" id="mac-refresh">Refresh from the Mac</button>' +
+      (S.mac && S.mac.at ? '<span class="note" style="margin:0">As of ' + esc(when(S.mac.at)) + "</span>" : "") + "</div>";
+    if (S.macErr) {
+      pane.innerHTML = refresh + '<div class="card empty">' + esc(S.macErr) + "</div>";
+    } else if (which === "outreach") pane.innerHTML = refresh + outreachHtml((S.mac || {}).outreach);
+    else pane.innerHTML = refresh + emilyHtml((S.mac || {}).emily);
+    $("mac-refresh").addEventListener("click", function () { S.mac = null; S.macErr = ""; renderMac(pane, which); });
+  }
+  function state(on, onWord, offWord) { return '<span class="state' + (on ? " on" : "") + '">' + (on ? (onWord || "On") : (offWord || "Off")) + "</span>"; }
+
+  function outreachHtml(o) {
+    if (!o) return '<div class="card empty">The Mac didn\'t send the outreach schedule this time.</div>';
+    var seq = (o.sequence || []).map(function (s) { var p = String(s.label || "").split(":"); return '<span class="step">' + esc(p[0]) + "<i>" + esc((p[1] || s.channel || "").trim()) + "</i></span>"; }).join("");
+    var holds = (o.email_holds || []).map(function (h) { return dateOnly(h.from) + " – " + dateOnly(h.to); }).join("<br>") || "None";
+    var ch = o.channels || {}, rows = Object.keys(ch).map(function (k) {
+      var x = ch[k] || {}; return "<dt>" + esc(x.label || k) + "</dt><dd>" + state(!!x.on) + (k === "emily_outbound_calls_on" ? ' <span class="note">answers only, never calls</span>' : "") + "</dd>";
+    }).join("");
+    var w = o.this_week || {};
+    return '<div class="card pad"><h3>Every new lead gets</h3><div class="seq">' + seq + "</div>" +
+      (o.then ? '<p class="note" style="margin:10px 0 0">Then ' + esc(o.then) + ".</p>" : "") + "</div>" +
+      '<div class="card pad"><h3>Email timing</h3><dl class="rows">' +
+      "<dt>Email days</dt><dd>" + esc(o.email_days || "") + "</dd><dt>Send window</dt><dd>" + esc(o.email_window || "") + "</dd>" +
+      "<dt>Emails allowed today</dt><dd>" + num(o.email_cap_today) + "</dd><dt>No emails on</dt><dd>" + holds + "</dd>" +
+      "<dt>Pilot</dt><dd>" + (o.pilot ? dateOnly(o.pilot.first) + " – " + dateOnly(o.pilot.last) + (o.pilot.per_inbox_per_day ? " · " + num(o.pilot.per_inbox_per_day) + " per inbox a day" : "") : "") + "</dd>" +
+      "<dt>Launch</dt><dd>" + dateOnly(o.launch) + "</dd></dl></div>" +
+      '<div class="card pad"><h3>This week\'s plan ' + state(w.status === "approved", "Approved", w.status ? w.status.charAt(0).toUpperCase() + w.status.slice(1) : "No plan yet") + "</h3>" +
+      (w.plan ? '<pre class="plan">' + esc(w.plan) + "</pre>" : '<p class="note">No plan for this week yet.</p>') +
+      '<p class="note" style="margin:8px 0 0">Approve the week in the Approve inbox on the Mac.</p></div>' +
+      '<div class="card pad"><h3>Outreach switches</h3><dl class="rows">' + rows + "</dl>" +
+      '<p class="note" style="margin:10px 0 0">Shown here to read. They change on the Mac.</p></div>';
+  }
+
+  function emilyHtml(e) {
+    if (!e) return '<div class="card empty">The Mac didn\'t send Emily\'s panel this time.</div>';
+    var d = e.last_7_days || {};
+    return '<div class="card pad"><h3>Emily · ' + esc(e.line || "") + " " + state(!!e.answering, "Answering", "Not answering") + "</h3>" +
+      '<dl class="rows"><dt>She answers</dt><dd>' + esc((e.answers || []).join(", ")) + "</dd>" +
+      "<dt>Email replies</dt><dd>" + state(!!e.email_replies_on) + "</dd>" +
+      "<dt>Follow-up texts</dt><dd>" + state(!!e.follow_up_texts_on) + "</dd>" +
+      "<dt>Calls people</dt><dd>" + state(false) + ' <span class="note">Emily answers; she doesn\'t call people.</span></dd>' +
+      "<dt>Last contact</dt><dd>" + esc(when(e.last_contact) || "None yet") + "</dd></dl></div>" +
+      '<div class="card pad"><h3>Last 7 days</h3><div class="big">' +
+      "<div><b>" + num(d.calls) + "</b><span>calls</span></div><div><b>" + num(d.texts) + "</b><span>texts</span></div>" +
+      "<div><b>" + num(d.booked) + "</b><span>booked</span></div><div><b>" + num(d.spanish) + "</b><span>in Spanish</span></div></div></div>";
+  }
+
+  // ------------------------------------------------------------------ ideas & workflows
+  var KINDS = { all: "All", idea: "Ideas", workflow: "Workflows", agent: "Agents", spec: "Specs", plan: "Plans", sop: "SOPs" };
+  function renderIdeas(pane) {
+    if (!S.items) { pane.innerHTML = '<div class="card empty">Loading the last 7 weeks…</div>'; return; }
+    var q = S.iq.toLowerCase();
+    var list = S.items.filter(function (i) {
+      return i.kind !== "review_ask" && (S.ikind === "all" || i.kind === S.ikind) && (S.iarea === "all" || i.area === S.iarea) &&
+        (!q || (i.title + " " + i.category + " " + i.detail + " " + i.source).toLowerCase().indexOf(q) >= 0);
+    });
+    var cats = {}, order = [];
+    list.forEach(function (i) { if (!cats[i.category]) { cats[i.category] = []; order.push(i.category); } cats[i.category].push(i); });
+    order.sort(function (a, b) { var ga = /^(Guerrilla|Monthly)/.test(a), gb = /^(Guerrilla|Monthly)/.test(b); return ga !== gb ? (ga ? 1 : -1) : cats[b].length - cats[a].length; });
+    var html = '<div class="bar"><input class="search" id="iq" placeholder="Search ideas, workflows, agents" value="' + esc(S.iq) + '">' +
+      Object.keys(KINDS).map(function (k) { return '<button class="chip' + (S.ikind === k ? " is-on" : "") + '" data-k="' + k + '">' + KINDS[k] + "</button>"; }).join("") +
+      '<button class="chip' + (S.iarea === "hiring" ? " is-on" : "") + '" data-a="hiring">Hiring only</button></div>' +
+      '<p class="note">' + num(list.length) + " items from Oct 1 to today, filed by category. The Mac adds new ones every morning.</p>";
+    if (!S.items.length) html += '<div class="card empty">Nothing synced yet. The Mac sends these once 1Password is open on it.</div>';
+    order.forEach(function (cat) {
+      var its = cats[cat];
+      its.sort(function (a, b) { return (b.made_on || "").localeCompare(a.made_on || "") || (a.rank || 9999) - (b.rank || 9999); });
+      html += '<details class="grp card" data-cat="' + esc(cat) + '"' + (q && order.length < 6 ? " open" : "") + "><summary>" + esc(cat) + '<span class="c">' + num(its.length) + "</span></summary>" +
+        '<div class="items" data-shown="0"></div></details>';
+    });
+    pane.innerHTML = html;
+    var iq = $("iq");
+    iq.addEventListener("input", function () { S.iq = iq.value; var pos = iq.selectionStart; renderIdeas(pane); var n = $("iq"); n.focus(); n.setSelectionRange(pos, pos); });
+    pane.querySelectorAll("[data-k]").forEach(function (b) { b.addEventListener("click", function () { S.ikind = b.getAttribute("data-k"); renderIdeas(pane); }); });
+    pane.querySelectorAll("[data-a]").forEach(function (b) { b.addEventListener("click", function () { S.iarea = S.iarea === "hiring" ? "all" : "hiring"; renderIdeas(pane); }); });
+    pane.querySelectorAll("details.grp").forEach(function (d) {
+      function more() {
+        var box = d.querySelector(".items"), its = cats[d.getAttribute("data-cat")], shown = Number(box.getAttribute("data-shown"));
+        var next = its.slice(shown, shown + 60);
+        var old = box.querySelector(".more"); if (old) old.remove();
+        box.insertAdjacentHTML("beforeend", next.map(itemRow).join("") + (shown + next.length < its.length ? '<button class="more">Show more (' + num(its.length - shown - next.length) + ")</button>" : ""));
+        box.setAttribute("data-shown", shown + next.length);
+        var m = box.querySelector(".more"); if (m) m.addEventListener("click", more);
+      }
+      d.addEventListener("toggle", function () { if (d.open && d.querySelector(".items").getAttribute("data-shown") === "0") more(); });
+      if (d.open) more();
+    });
+  }
+  function itemRow(i) {
+    var sub = [i.detail, i.status, i.made_on ? dateOnly(i.made_on) : "", i.source].filter(Boolean).join(" · ");
+    var t = i.link ? '<a href="' + esc(i.link) + '" target="_blank" rel="noopener">' + esc(i.title) + "</a>" : esc(i.title);
+    return '<div class="it"><span class="kind">' + esc(i.kind.replace("_", " ")) + "</span><div>" + t + "<small>" + esc(sub) + "</small></div></div>";
+  }
+
+  // ------------------------------------------------------------------ Review Hub
+  function renderHub(pane) {
+    var asks = (S.items || []).filter(function (i) { return i.kind === "review_ask"; });
+    asks.sort(function (a, b) { return (a.rank || 9999) - (b.rank || 9999) || (b.made_on || "").localeCompare(a.made_on || ""); });
+    pane.innerHTML = '<div class="card pad"><h3>Review Hub</h3><p class="note">Your one place for everything waiting on your eyes: designs, copy, scripts and answers. ' +
+      "The hub stays a single page; this tab shows what's on it, best first.</p>" +
+      '<div class="bar"><a class="hubbtn" href="' + HUB_URL + '#clicker" target="_blank" rel="noopener">Start clicker review →</a>' +
+      '<a class="chip" href="' + HUB_URL + '" target="_blank" rel="noopener">Open the Review Hub</a></div>' +
+      '<p class="note" style="margin:0">Opens the hub straight into Clicker mode: everything, emails first, then designs. Every tap and voice note saves in the hub ' +
+      "as always, and goes to tonight's run. If it opens on Today instead, tap the big Clicker mode button at the top.</p></div>" +
+      (S.items === null ? '<div class="card empty">Loading…</div>' : asks.length ? '<div class="card"><div class="items">' + asks.slice(0, 40).map(function (i) {
+        return '<div class="it"><span class="kind">' + (i.rank ? "#" + i.rank : "ask") + '</span><div><a href="' + esc(i.link || HUB_URL) + '" target="_blank" rel="noopener">' + esc(i.title) + "</a><small>" +
+          esc([i.status, i.made_on ? dateOnly(i.made_on) : ""].filter(Boolean).join(" · ")) + "</small></div></div>";
+      }).join("") + "</div>" + (asks.length > 40 ? '<p class="note" style="padding:0 14px 12px">' + num(asks.length - 40) + " more on the hub.</p>" : "") + "</div>"
+        : '<div class="card empty">Nothing synced yet.</div>');
+  }
+
+  // ------------------------------------------------------------------ log
+  function renderLog(pane) {
+    if (!S.changes) {
+      pane.innerHTML = '<div class="card empty">Loading…</div>';
+      api.changes().then(function (r) { S.changes = r; if (S.tab === "log") renderLog(pane); }).catch(function () { S.changes = []; renderLog(pane); });
+      return;
+    }
+    var name = {}; S.chans.forEach(function (c) { name[c.key] = c.name; });
+    function desc(b, a) {
+      var p = [];
+      if (b.enabled !== a.enabled) p.push(a.enabled ? "turned on" : "turned off");
+      if (b.level !== a.level) p.push("level " + b.level + " → " + a.level);
+      if (b.weekly_budget_cents !== a.weekly_budget_cents) p.push("budget " + money(b.weekly_budget_cents) + " → " + money(a.weekly_budget_cents) + " a week");
+      return p.join(", ");
+    }
+    pane.innerHTML = S.changes.length ? '<div class="card log">' + S.changes.map(function (x) {
+      return "<div><b>" + esc(name[x.channel_key] || x.channel_key) + "</b> " + esc(desc(x.before || {}, x.after || {})) + ' <span class="note">' + esc(when(x.changed_at)) + "</span></div>";
+    }).join("") + "</div>" : '<div class="card empty">No changes yet. Every move of a switch, slider or dial shows up here.</div>';
+  }
+
+  try { var t = localStorage.getItem("chc-tab"); if (t && document.querySelector('[data-tab="' + t + '"]')) setTimeout(function () { document.querySelector('[data-tab="' + t + '"]').click(); }, 0); } catch (e) { /* private window */ }
+  start();
+})();
+</script>
+</body>
+</html>
