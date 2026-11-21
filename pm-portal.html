@@ -107,6 +107,27 @@
   var FN = SUPABASE_URL + '/functions/v1/pm-portal';
   var TEXT_NUMBER = '(763) 227-9124'; // the one company number (Jack, 2026-11-02)
   var token = new URLSearchParams(location.search).get('t') || '';
+  // Demo mode (?demo=1, for walkthroughs, like account.html): a made-up building and turnovers, every call answered here, nothing
+  // reaches the server.
+  if (new URLSearchParams(location.search).get('demo') === '1') (function () {
+    var plus = function (n) { var x = new Date(Date.now() + n * 86400000); return x.getFullYear() + '-' + ('0' + (x.getMonth() + 1)).slice(-2) + '-' + ('0' + x.getDate()).slice(-2); };
+    var crew = [{ first_name: 'Tatiana', photo_url: null }, { first_name: 'Maria', photo_url: null }];
+    var D = {
+      account: { name: 'Lakeview Apartments' }, viewer: { name: 'Pat Demo' }, gate: { ok: true }, terms: { accepted: true, available: true },
+      plan: { name: 'Property Elevation Plan', done: 5, total: 13, target_date: plus(40), focus: ['Hallway carpets', 'Laundry room'] },
+      buildings: [{ id: 'b1', label: '1200 Lake St' }],
+      requests: [{ unit: '204', building_id: 'b1', date: plus(new Date(Date.now() + 3 * 86400000).getDay() === 0 ? 4 : 3), size: '2 bed', est_cents: 18900, state: 'booked', crew: crew },
+        { unit: '311', building_id: 'b1', date: plus(-6), size: '1 bed', est_cents: 15900, state: 'cleaned', report_token: '0123456789abcdef0123456789abcdef', crew: crew }],
+      service: { per_visit_cents: 18900, how_often: 'Each turnover' }, videos: [], team: [], host: null, scopes: null, loyalty: null, rewards_card: null
+    };
+    token = '0123456789abcdef0123456789abcdef';
+    var real = window.fetch.bind(window);
+    window.fetch = function (url, opt) {
+      if (String(url).indexOf('/functions/v1/') < 0) return real(url, opt);
+      var out = !opt || !opt.method || opt.method === 'GET' ? D : { ok: true };
+      return Promise.resolve(new Response(JSON.stringify(out), { headers: { 'content-type': 'application/json' } }));
+    };
+  })();
   var root = document.getElementById('root');
   var LABEL = { cleaned: 'Cleaned', booked: 'Booked', waiting: 'Waiting for your yes', cancelled: 'Cancelled', problem: 'Needs attention' };
   var RSTATUS = { requested: 'Waiting for approval', approved: 'Approved', applied: 'Credit applied', fulfilled: 'Done', declined: 'Not approved (points returned)', cancelled: 'Cancelled (points returned)', to_order: 'Approved', ordered: 'On its way', delivered: 'Done' };
@@ -255,7 +276,7 @@
   function requestHtml(d) {
     if (!(d.buildings || []).length) return '<div class="card"><h2>Book a turnover</h2><p>Add your building below first, then you can book a turnover here.</p></div>';
     var blocked = d.gate && !d.gate.ok, auto = d.auto_book && d.auto_book.on;
-    return '<div class="card" id="req-card"><h2>Book a turnover</h2>' +
+    return '<div class="card" id="req-card">' + (blocked ? '<h2>Book a turnover</h2>' : '') +
       (blocked ? '<p class="err">' + esc((d.gate.error === 'terms_required' && d.terms && !d.terms.available) ? 'We are finishing your service agreement. We will text you the moment it is ready, and then you can book here or by text.' : (GATE_MSG[d.gate.error] || 'Accept our service agreement above before you book.')) + '</p>' : '<button type="button" class="cta" id="rq-open">Book a turnover</button>') +
       '<div id="rq-form" hidden>' +
       '<label class="f">Building<select id="rq-b">' + d.buildings.map(function (b) { return '<option value="' + esc(b.id) + '">' + esc(b.label) + (b.address ? ' - ' + esc(b.address) : '') + '</option>'; }).join('') + '</select></label>' +
@@ -540,7 +561,7 @@
       (extras.length ? '<div class="sub" style="margin-top:8px"><b>Extras you asked for</b></div><div class="chips">' + extras.map(function (x) { return '<span class="chip">' + esc(x) + '</span>'; }).join('') + '</div>' : '') + '</div>';
   }
   function noteHtml() {
-    return '<div class="card" id="note-card"><h2>Anything you want done?</h2><textarea id="nt-text" maxlength="1000" placeholder="Tell us here. We read every one."></textarea>' +
+    return '<div class="card" id="note-card"><h2>Anything you want done?</h2><p class="small textline">Rather text? <a href="sms:' + TEXT_NUMBER.replace(/[^0-9]/g, '') + '">' + TEXT_NUMBER + '</a></p><textarea id="nt-text" maxlength="1000" placeholder="Tell us here. We read every one."></textarea>' +
       '<div class="btns"><label class="ghost" style="border-radius:10px;padding:9px 12px;font-weight:700;cursor:pointer">&#128247; Add a photo<input type="file" id="nt-photo" accept="image/*" hidden></label>' +
       '<button type="button" id="nt-send">Send</button> <span id="nt-msg" class="small"></span></div></div>';
   }
@@ -552,33 +573,6 @@
       return '<tr><td>' + esc(shortDate(r.date)) + '</td><td><a href="report.html?t=' + encodeURIComponent(r.token) + '">' + esc(KIND[r.kind] || 'Cleaning report') + '</a>' +
         '<div class="sub">' + (r.unit ? 'Unit ' + esc(r.unit) : '') + (r.unit && r.building ? ' &middot; ' : '') + esc(r.building || '') + '</div></td></tr>';
     }).join('') + '</table></div>';
-  }
-  // Your units (0710): maintenance the crew spotted (mark it seen or fixed here) and the units signed off as ready for move-in. Wording is the
-  // office's approved rows; photos are signed links.
-  function unitNotesTitle(u) {
-    if (!u || (!u.move_ins.length && !u.maintenance.length)) return '';
-    return 'Your units' + (u.open_count ? ' &middot; ' + u.open_count + ' maintenance ' + (u.open_count === 1 ? 'item' : 'items') + ' open' : '');
-  }
-  function mtButtons(m) {
-    if (m.status === 'fixed') return '';
-    return '<div style="margin-top:8px">' + (m.status === 'open' ? '<button type="button" class="alt" data-mtset="seen">Mark seen</button> ' : '') + '<button type="button" data-mtset="fixed">Mark fixed</button></div>';
-  }
-  function unitNotesHtml(u) {
-    if (!unitNotesTitle(u)) return '';
-    var pics = function (urls) { var ok = (urls || []).filter(safeUrl); return ok.length ? '<div class="photos">' + ok.map(function (x) { return '<a href="' + esc(x) + '" target="_blank" rel="noopener"><img src="' + esc(x) + '" alt="Photo from our crew"></a>'; }).join('') + '</div>' : ''; };
-    var maint = '<h3>' + esc(u.title_maintenance) + '</h3>' + (u.maintenance.length ? u.maintenance.map(function (m) {
-      return '<div class="claim" data-mt="' + esc(m.id) + '"><div class="unit">Unit ' + esc(m.unit) + (m.building ? ' &middot; ' + esc(m.building) : '') + ': ' + esc(m.category) + '</div>' +
-        '<div class="sub">' + esc(m.note) + '</div>' +
-        '<div class="sub">' + esc(pretty(m.job_date)) + (m.reported_by ? ' &middot; spotted by ' + esc(m.reported_by) : '') + ' &middot; <b class="mt-st">' + esc(u.status_words[m.status] || m.status) + '</b></div>' +
-        pics(m.photos) + '<span class="mt-btns">' + mtButtons(m) + '</span><span class="mt-msg small"></span></div>';
-    }).join('') : '<p class="sub">' + esc(u.none_text) + '</p>');
-    var ready = u.move_ins.length ? '<h3>' + esc(u.title_ready) + '</h3>' + u.move_ins.map(function (s) {
-      return '<div class="claim"><div class="unit">Unit ' + esc(s.unit) + (s.building ? ' &middot; ' + esc(s.building) : '') + '</div>' +
-        '<div class="sub">' + esc(s.text) + ' &middot; ' + esc(pretty(s.job_date)) + (s.signed_by ? ' &middot; ' + esc(s.signed_by) : '') + '</div>' +
-        (s.confirmed || []).map(function (c) { return '<div class="sub">&#10003; ' + esc(c) + '</div>'; }).join('') +
-        (s.note ? '<div class="sub">' + esc(s.note) + '</div>' : '') + pics(s.photo ? [s.photo] : []) + '</div>';
-    }).join('') : '';
-    return '<div class="card">' + maint + ready + '</div>';
   }
   function serviceHtml(sv) {
     if (!sv || !sv.per_visit_cents) return '';
@@ -610,18 +604,13 @@
     var who = d.viewer && d.viewer.name ? esc(d.viewer.name) : '';
     var gateOpen = !(d.gate && !d.gate.ok);
     var more = function (title, inner) { return inner ? '<details class="more"><summary>' + title + '</summary>' + inner + '</details>' : ''; };
-    var sms = 'sms:' + TEXT_NUMBER.replace(/[^0-9]/g, '');
     root.innerHTML =
-      '<div class="card hero"><p class="brand">Facilities by Two Hour Maids</p><h1>' + esc(d.account.name) + '</h1>' + (who ? '<p>Property manager &middot; ' + who + '</p>' : '') +
-        (d.contact || d.reply_promise ? '<p class="small" style="color:inherit;opacity:.9">' + (d.contact ? 'Your contact: <b>' + esc(d.contact.first_name) + '</b> &middot; ' : '') + esc(d.reply_promise || '') + '</p>' : '') + '</div>' +
-      '<a class="card textus" href="' + sms + '"><span class="ic" aria-hidden="true">&#128172;</span><span><b>Text us anytime</b><span>Instant quote, instant booking &middot; ' + TEXT_NUMBER + '</span></span></a>' +
+      '<div class="card hero"><p class="brand">Facilities by Two Hour Maids</p><h1>' + esc(d.account.name) + '</h1>' + (who ? '<p>Property manager &middot; ' + who + '</p>' : '') + '</div>' +
       (gateOpen ? '' : termsHtml(d)) +
-      planHtml(d.plan) +
       nextHtml(d) +
+      planHtml(d.plan) +
       noteHtml() +
       reportsHtml(d, byB) +
-      more(unitNotesTitle(d.unit_notes), unitNotesHtml(d.unit_notes)) +
-      '<div class="sec">Book more</div>' +
       requestHtml(d) +
       hostHtml(d.host, byB) +
       more('Deeper cleaning items', scopesHtml(d)) +
@@ -651,21 +640,6 @@
     }
   }
 
-  // Mark a maintenance item seen or fixed (pm-portal action maintenance_status; logged as the portal).
-  document.addEventListener('click', function (e) {
-    var t = e.target, btn = t && t.closest && t.closest('[data-mtset]');
-    if (!btn) return;
-    var box = btn.closest('[data-mt]'), msg = box.querySelector('.mt-msg'), want = btn.getAttribute('data-mtset');
-    btn.disabled = true; msg.textContent = '';
-    postJson({ action: 'maintenance_status', item: box.getAttribute('data-mt'), status: want }).then(function (res) {
-      if (!res.ok || !res.j.ok) { btn.disabled = false; msg.textContent = 'Not saved. Please try again.'; return; }
-      var u = data && data.unit_notes, m = u && u.maintenance.filter(function (x) { return x.id === box.getAttribute('data-mt'); })[0];
-      if (m) { if (m.status === 'open') u.open_count--; m.status = want; }
-      box.querySelector('.mt-st').textContent = (u && u.status_words[want]) || want;
-      box.querySelector('.mt-btns').innerHTML = m ? mtButtons(m) : '';
-    }).catch(function () { btn.disabled = false; msg.textContent = 'Not saved. Please try again.'; });
-  });
-
   // The note box: text and one photo (shrunk on the phone first) to the office.
   function shrink(file) {
     return new Promise(function (ok, bad) {
@@ -690,7 +664,7 @@
       t.disabled = true; msg.className = 'small'; msg.textContent = 'Sending...';
       (f ? shrink(f) : Promise.resolve(null)).then(function (photo) { return postJson({ action: 'note', text: text, photo: photo, for_crew: document.getElementById('nt-text').getAttribute('data-crew') === '1' }); }).then(function (res) {
         t.disabled = false;
-        if (res && res.ok) { msg.className = 'ok'; msg.textContent = res.j && res.j.reply_by ? 'Sent. We will reply ' + res.j.reply_by + '.' : 'Sent. Thank you!'; document.getElementById('nt-text').value = ''; document.getElementById('nt-photo').value = ''; }
+        if (res && res.ok) { msg.className = 'ok'; msg.textContent = 'Sent. Thank you!'; document.getElementById('nt-text').value = ''; document.getElementById('nt-photo').value = ''; }
         else { msg.className = 'err'; msg.textContent = ERR.server_error; }
       }).catch(function () { t.disabled = false; msg.className = 'err'; msg.textContent = ERR.server_error; });
     }

@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Explore your home</title>
+<!-- Rebuilt 2026-11-20 (Jack, design preview approved): the room tiles and their steppers stay; the hours picker and the Basic / Extra /
+     Deluxe levels are gone (retired 2026-11-06). The page ends on the two cleans with this home's prices. Only the Two Hour Clean shows
+     hours. The suggestion is the booking page's own rule (twoHourFitsFor + "kept up"; _shared/intake.ts fitsTwoHour). -->
 <style>
   :root { --brand:#004aad; --ink:#15121f; --muted:#5b5870; --bg:#f6f7fb; --card:#fff; --line:#e3e5ee; --ok:#0a7a3d; --soft:#e8f0ff; }
   @media (prefers-color-scheme: dark) { :root { --ink:#f3f2f8; --muted:#a9a6bd; --bg:#12111a; --card:#1b1a26; --line:#2b2a3a; --soft:#1d2a47; } }
@@ -15,16 +18,18 @@
   .tile.on { border-color:var(--brand); background:var(--soft) } .tile b { font-size:14px; overflow-wrap:anywhere } .step { display:flex; align-items:center; gap:6px } .step button { width:34px; height:34px; border-radius:50%; border:1px solid var(--line); background:var(--card); color:var(--ink); font-size:18px; cursor:pointer } .step span { min-width:18px; text-align:center; font-weight:700 }
   .chips { display:flex; flex-wrap:wrap; gap:8px } .chip { padding:9px 14px; border:1px solid var(--line); border-radius:999px; background:var(--card); color:var(--ink); cursor:pointer; font:inherit; font-size:14px } .chip.on { background:var(--brand); border-color:var(--brand); color:#fff; font-weight:700 }
   label.row { display:flex; gap:8px; align-items:center; margin-top:8px; font-size:15px }
-  .lv { border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:10px; background:var(--card) } .lv.rec { border:2px solid var(--brand) } .badge { display:inline-block; background:var(--brand); color:#fff; border-radius:999px; font-size:12px; padding:2px 10px; margin-left:6px }
-  .big { font-size:26px; font-weight:800 } ul { margin:6px 0 0; padding-left:18px } li { font-size:14px; margin:2px 0 } details { margin-top:8px } summary { cursor:pointer; font-weight:700; font-size:14px }
-  .ok { color:var(--ok); font-weight:700 } a.btn, button.btn { display:inline-block; margin-top:12px; padding:13px 20px; border-radius:10px; background:var(--brand); color:#fff; text-decoration:none; font:inherit; font-weight:700; border:0; cursor:pointer }
-  .later { color:var(--muted) }
+  .clean { border:1px solid var(--line); border-radius:12px; padding:12px; margin-top:10px; background:var(--card) } .clean.rec { border:2px solid var(--brand) }
+  .badge { display:inline-block; background:var(--brand); color:#fff; border-radius:999px; font-size:12px; padding:2px 10px; margin-left:6px; vertical-align:2px }
+  .big { font-size:26px; font-weight:800; margin-top:4px } ul { margin:6px 0 0; padding-left:18px } li { font-size:14px; margin:2px 0 }
+  details { margin-top:10px } summary { cursor:pointer; font-weight:700; font-size:14px; color:var(--brand) } h3 { font-size:14px; margin:10px 0 0 }
+  .ok { color:var(--ok); font-weight:700; font-size:14px } .later { color:var(--muted); font-size:14px; margin:8px 0 0 }
+  a.btn { display:block; text-align:center; margin-top:12px; padding:13px 20px; border-radius:10px; background:var(--brand); color:#fff; text-decoration:none; font-weight:700 }
 </style>
 </head>
 <body>
 <main>
   <h1>Explore your home</h1>
-  <p class="muted">Tap the parts of your house, tell us a little about it, and see what two cleaners can do in the time you have.</p>
+  <p class="muted">Tap the parts of your home and see which clean fits it, and its price.</p>
 
   <div class="card"><h2>1. Which parts of your home?</h2><div class="tiles" id="tiles"></div></div>
 
@@ -36,32 +41,29 @@
     <label class="row"><input type="checkbox" id="isnew" checked> I have not booked with you before</label>
   </div>
 
-  <div class="card"><h2>3. How much time do you want to spend?</h2>
-    <div class="chips" id="hours"></div>
-    <div id="fit" style="margin-top:10px"></div>
-  </div>
-
-  <div class="card"><h2>4. The three levels</h2><div id="levels"></div><div id="detail"></div></div>
-
-  <div class="card" id="cta"></div>
+  <div class="card"><h2>3. Your clean</h2><div id="cleans"></div></div>
 </main>
 <script src="home-explorer-core.js"></script>
 <script>
 (function () {
   var FN = 'https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/home-explorer';
+  var BOOK = 'https://www.twohourmaids.com/book-now';
+  // The Two Hour Clean's flat prices, as on the booking page: $222 one time, $33 off every 2 weeks, $22 off monthly.
+  var TWO_HOUR = { one_time: 22200, every_other_week: 18900, every_4_weeks: 20000 };
   var q = new URLSearchParams(location.search);
   var counts = {};
   HomeExplorer.ROOMS.forEach(function (r) { counts[r.key] = r.start; });
   if (q.get('beds') != null && q.get('beds') !== '') counts.bed = Math.max(0, Math.min(6, Math.round(Number(q.get('beds')) || 0)));
   if (q.get('baths')) { var b = Number(q.get('baths')) || 1; counts.bath = Math.max(1, Math.floor(b)); counts.half = b - Math.floor(b) >= 0.5 ? 1 : 0; }
-  var state = { last: 'recent', hours: 3, level: null, server: null };
+  var state = { last: 'recent', server: null };
   var LASTS = [['recent', 'Within a month'], ['1to6', '1 to 6 months ago'], ['over6', 'Over 6 months'], ['never', 'Never / not sure']];
-  var HOURS = [2, 3, 4];
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function usd(c) { return c == null ? null : '$' + Math.round(c / 100).toLocaleString('en-US'); }
-  function hrs(h) { return (h % 1 === 0 ? h : h.toFixed(2).replace(/0$/, '')) + ' hr'; }
   function opts() { return { last: state.last, pets: document.getElementById('pets').checked, kids: document.getElementById('kids').checked, isNew: document.getElementById('isnew').checked }; }
   function bathsParam() { return (counts.bath || 1) + (counts.half ? 0.5 : 0); }
+  // The booking page's rule (twoHourFitsFor in booking-widget.html, fitsTwoHour in _shared/intake.ts): up to 4 bedrooms and 3 baths.
+  function twoHourFitsFor(beds, baths) { return Number(baths) <= 3 && Number(beds) <= 4; }
+  function suggested() { return twoHourFitsFor(counts.bed || 0, bathsParam()) && state.last === 'recent' ? 'two_hour' : 'checklist'; }
   var loadTimer = null;
   function loadServer() {
     clearTimeout(loadTimer);
@@ -87,52 +89,41 @@
       b.onclick = function () { set(it[0]); chips(id, items, it[0], set); render(); }; box.appendChild(b);
     });
   }
-  // the tasks a level covers in a room, built from the server's guide (basic list, plus what Extra adds, plus what Deluxe adds)
-  function tasksFor(levelKey, room) {
-    var g = (state.server && state.server.guide) || {}; var order = ['basic', 'extra', 'deluxe']; var upto = order.indexOf(levelKey); var out = [];
-    for (var i = 0; i <= upto; i++) (g[order[i]] || []).forEach(function (t) { if (room.match.test(t.room || '')) out.push(t.label); });
-    return out;
+  // The Checklist Clean's tasks in a room: the booking form's own checklist (the server's guide, basic list).
+  function tasksFor(room) {
+    var g = (state.server && state.server.guide && state.server.guide.basic) || [];
+    return g.filter(function (t) { return room.match.test(t.room || ''); }).map(function (t) { return t.label; });
   }
+  function bookHref(service) { return BOOK + '?beds=' + (counts.bed || 0) + '&baths=' + bathsParam() + '&service=' + service; }
   function render() {
     var res = HomeExplorer.compute(counts, opts());
-    var rec = res.recommended;
-    if (!state.level) state.level = rec;
-    // time budget
-    var f = HomeExplorer.fit(res, state.level, state.hours);
-    var fitHtml = '<p style="margin:0 0 6px"><b>' + hrs(state.hours) + ' with two cleaners, ' + esc(res.levels.filter(function (l) { return l.key === state.level; })[0].name) + ' level</b></p>';
-    fitHtml += f.done.length ? '<ul>' + f.done.map(function (l) { return '<li class="ok">' + esc(l.label) + (l.count > 1 ? ' (' + l.count + ')' : '') + '</li>'; }).join('') + '</ul>' : '<p class="muted">Not enough time for even the kitchen. Try a longer visit.</p>';
-    if (f.later.length) fitHtml += '<p class="later" style="margin:8px 0 0">Needs more time: ' + f.later.map(function (l) { return esc(l.label); }).join(', ') + '. Pick a longer visit to include them' + (res.detailing ? ', or the Four Hour Home Detailing.' : '.') + '</p>';
-    else fitHtml += '<p class="ok" style="margin:8px 0 0">Everything you picked fits.</p>';
-    document.getElementById('fit').innerHTML = fitHtml;
-    // levels
-    var s = state.server || {};
-    var html = '';
-    res.levels.forEach(function (l, i) {
-      var isRec = l.key === rec;
-      var price = l.key === 'basic' ? (usd(s.basic_one_time_cents) ? 'From ' + usd(s.basic_one_time_cents) + ' one time' + (usd(s.basic_recurring_cents) ? ', ' + usd(s.basic_recurring_cents) + ' on a plan' : '') : '') : 'Priced by the items you choose at checkout';
-      html += '<div class="lv' + (isRec ? ' rec' : '') + '"><div><b>Level ' + (i + 1) + ': ' + esc(l.name) + '</b>' + (isRec ? '<span class="badge">Recommended</span>' : '') + '</div><div class="muted">' + esc(l.tag) + '</div>' +
-        '<div class="big">about ' + hrs(l.clock_hours) + '</div><div class="muted">with two cleaners' + (price ? ' · ' + esc(price) : '') + '</div>' +
-        '<div style="margin-top:8px"><button type="button" class="chip' + (state.level === l.key ? ' on' : '') + '" data-lv="' + l.key + '">See what it covers</button></div></div>';
-    });
-    if (res.detailing) html += '<div class="lv"><b>Four Hour Home Detailing</b><div class="muted">' + esc(res.detailing_note) + '</div>' + (usd(s.four_hour_cents) ? '<div class="big">' + usd(s.four_hour_cents) + '</div>' : '') + '</div>';
-    html += '<p class="muted" style="margin-top:10px">' + esc(res.reason) + '</p>';
-    document.getElementById('levels').innerHTML = html;
-    Array.prototype.forEach.call(document.querySelectorAll('[data-lv]'), function (b) { b.onclick = function () { state.level = b.getAttribute('data-lv'); render(); document.getElementById('detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }; });
-    // room by room for the chosen level
-    var d = '<h2 style="margin-top:16px">Room by room: ' + esc(res.levels.filter(function (l) { return l.key === state.level; })[0].name) + '</h2>';
+    var rec = suggested(), fits = twoHourFitsFor(counts.bed || 0, bathsParam()), s = state.server || {};
+    // The Two Hour Clean: what two cleaners reach in two hours, in order (kitchen first), for the rooms picked.
+    var f = HomeExplorer.fit(res, 'basic', 2);
+    var two = '<div class="clean' + (rec === 'two_hour' ? ' rec' : '') + '"><b>Two Hour Clean</b>' + (rec === 'two_hour' ? '<span class="badge">Suggested for your home</span>' : '') +
+      '<p class="muted" style="margin:2px 0 0">A team of two, two hours. Kitchen, floors, baths and bedrooms, in order.</p>' +
+      (fits ? '<div class="ok">Fits your home</div>' : '<div class="later">More than two hours covers (up to 4 bedrooms and 3 baths).</div>') +
+      '<div class="big">' + usd(TWO_HOUR.every_4_weeks) + '</div><div class="muted">a visit, monthly · ' + usd(TWO_HOUR.every_other_week) + ' every 2 weeks · ' + usd(TWO_HOUR.one_time) + ' one time</div>' +
+      '<details><summary>What we do in 2 hours</summary>' + (f.done.length ? '<ul>' + f.done.map(function (l) { return '<li>' + esc(l.label) + (l.count > 1 ? ' (' + l.count + ')' : '') + '</li>'; }).join('') + '</ul>' : '') +
+      (f.later.length ? '<p class="later">If time runs out: ' + f.later.map(function (l) { return esc(l.label); }).join(', ') + '. At two hours the team moves on and sends photos of anything left.</p>' : '<p class="ok" style="margin-top:8px">Everything you picked fits.</p>') + '</details>' +
+      '<a class="btn" href="' + bookHref('two_hour') + '" target="_top">Book the Two Hour Clean</a></div>';
+    var rooms = '';
     HomeExplorer.ROOMS.forEach(function (r) {
       if (!(counts[r.key] > 0)) return;
-      var tasks = tasksFor(state.level, r);
-      d += '<details><summary>' + esc(r.label) + (counts[r.key] > 1 ? ' (' + counts[r.key] + ')' : '') + (tasks.length ? ' · ' + tasks.length + ' tasks' : '') + '</summary>' + (tasks.length ? '<ul>' + tasks.slice(0, 14).map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + (tasks.length > 14 ? '<li class="muted">and ' + (tasks.length - 14) + ' more</li>' : '') + '</ul>' : '<p class="muted">Covered in your walk-through checklist.</p>') + '</details>';
+      var tasks = tasksFor(r);
+      rooms += '<h3>' + esc(r.label) + (counts[r.key] > 1 ? ' (' + counts[r.key] + ')' : '') + '</h3>' + (tasks.length ? '<ul>' + tasks.slice(0, 14).map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul>' : '<p class="muted" style="margin:2px 0 0">Dusted, surfaces wiped, floors done.</p>');
     });
-    document.getElementById('detail').innerHTML = d;
-    // call to action
-    var href = 'book.html?beds=' + (counts.bed || 0) + '&baths=' + bathsParam() + '&level=' + encodeURIComponent(res.detailing ? 'four_hour' : rec);
-    document.getElementById('cta').innerHTML = '<h2>Ready?</h2><p style="margin:0">' + (res.detailing ? 'We suggest the Four Hour Home Detailing for this home.' : 'We suggest ' + esc(res.levels.filter(function (l) { return l.key === rec; })[0].name) + ' for your home.') + '</p><a class="btn" href="' + esc(href) + '">Book it</a>';
+    var one = usd(s.basic_one_time_cents), plan = usd(s.basic_recurring_cents);
+    var chk = '<div class="clean' + (rec === 'checklist' ? ' rec' : '') + '"><b>The Checklist Clean</b>' + (rec === 'checklist' ? '<span class="badge">Suggested for your home</span>' : '') +
+      '<p class="muted" style="margin:2px 0 0">Every room on our checklist. Priced by our time estimate for your home.</p>' +
+      (plan ? '<div class="big">' + plan + '</div><div class="muted">a visit, every 2 weeks' + (one ? ' · ' + one + ' one time' : '') + '</div>' : one ? '<div class="big">' + one + '</div><div class="muted">one time</div>' : '<div class="muted" style="margin-top:4px">Getting your price…</div>') +
+      '<details><summary>What we do, room by room</summary>' + rooms + '</details>' +
+      '<a class="btn" href="' + bookHref('checklist') + '" target="_top">Book the Checklist Clean</a></div>';
+    document.getElementById('cleans').innerHTML = (rec === 'two_hour' ? two + chk : chk + two) +
+      (document.getElementById('isnew').checked ? '<p class="muted" style="margin:10px 0 0">Your first 2 cleans are Catch-Up Cleans.</p>' : '');
   }
-  chips('last', LASTS, state.last, function (v) { state.last = v; state.level = null; });
-  chips('hours', HOURS.map(function (h) { return [h, h + ' hours']; }), state.hours, function (v) { state.hours = Number(v); });
-  ['pets', 'kids', 'isnew'].forEach(function (id) { document.getElementById(id).onchange = function () { state.level = null; render(); }; });
+  chips('last', LASTS, state.last, function (v) { state.last = v; });
+  ['pets', 'kids', 'isnew'].forEach(function (id) { document.getElementById(id).onchange = render; });
   tiles(); render(); loadServer();
 })();
 </script>

@@ -132,6 +132,10 @@
   .plan-top { display: flex; gap: 14px; align-items: center; }
   details.more { background: rgba(255,255,255,.6); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,.7); border-radius: 16px; padding: 12px 16px; margin: 0 0 16px; }
   details.more > summary { cursor: pointer; font-weight: 700; }
+  .howgo details.hgrow { border-top: 1px solid rgba(16,21,30,.12); padding: 12px 0; }
+  .howgo details.hgrow > summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; justify-content: space-between; }
+  .howgo details.hgrow > summary::-webkit-details-marker { display: none; }
+  .howgo details.hgrow > summary::after { content: '›'; color: #9c99ab; font-size: 20px; line-height: 1; } .howgo details.hgrow[open] > summary::after { transform: rotate(90deg); }
   .pm-actions { margin-top: 10px; } body.pm .pm-actions .ghost { display: inline-block; width: auto; margin: 0 6px 0 0; background: rgba(255,255,255,.9); color: #004aad; border: 0; border-radius: 10px; padding: 8px 14px; font-weight: 700; }
   h3.fg-our_damage { color: #b91c1c; } h3.fg-pre_existing { color: #92400e; }
   table.sum { width: 100%; border-collapse: collapse; font-size: 14px; } table.sum td { padding: 8px 0; border-bottom: 1px solid rgba(16,21,30,.08); } table.sum td:last-child { text-align: right; font-weight: 700; }
@@ -152,6 +156,39 @@
   var FN = SUPABASE_URL + '/functions/v1';
   var root = document.getElementById('root');
   var token = (new URLSearchParams(location.search).get('t') || '').trim();
+  // Demo mode (?demo=1, for walkthroughs and screenshots, like account.html): fake data, every call answered here, nothing reaches the
+  // server. &gate=1 shows the rating gate first; &pm=1 a property manager's report.
+  if (new URLSearchParams(location.search).get('demo') === '1') (function () {
+    var q = new URLSearchParams(location.search), gate = q.get('gate') === '1', pm = q.get('pm') === '1';
+    var y = new Date(Date.now() - 86400000), ymd = y.getFullYear() + '-' + ('0' + (y.getMonth() + 1)).slice(-2) + '-' + ('0' + y.getDate()).slice(-2);
+    var t = function (label, done, reason) { return { label: label, done: done !== false, reason: reason || null }; };
+    var D = {
+      gated: gate, rating: gate ? null : 5,
+      job: { service_label: pm ? 'Turnover clean' : 'Checklist Clean', scheduled_date: ymd, checklist_tier: pm ? null : 'basic', rotational: false, pm_report: pm, status: 'completed' },
+      crew: ['Tatiana', 'Maria'],
+      tasks: { completed: 11, total: 12, rooms: [
+        { room: 'Kitchen', tasks: [t('Counters and backsplash wiped'), t('Sink scrubbed and shined'), t('Outside of appliances'), t('Floor vacuumed and mopped')] },
+        { room: 'Bathroom', tasks: [t('Toilet, tub and shower'), t('Mirror and vanity'), t('Floor mopped')] },
+        { room: 'Bedrooms and living areas', tasks: [t('Dusted reachable surfaces'), t('Beds made'), t('Floors vacuumed'), t('Mirrors and glass'), t('Under the bed', false, 'Storage boxes under the bed')] }] },
+      extras: pm ? [] : ['cleaned inside the fridge'], requests: pm ? [] : [{ number: 1, text: 'Unscented spray in the nursery', status: 'done', done_at: null }],
+      final_touch: 'Towels folded and the throw pillows set on the couch', we_fixed: null,
+      photos: { before: [], after: [] }, videos: [], org: { name: 'Two Hour Maids', three_rs_video_url: null }, portal_token: null,
+      review_ask: pm ? null : { text: 'Glad it went well! A Google review helps a small local team more than anything.', url: 'https://www.google.com/search?q=Two+Hour+Maids' },
+      referral: { gift_cents: 3300, made: [] }, kudos: '', feedback: { can_report_issue: true, issues_reported: 0 },
+      missed: pm ? null : { can_claim: true, claim: null, items: [{ id: 'm1', room: 'Kitchen', label: 'Inside the microwave' }, { id: 'm2', room: 'Bathroom', label: 'Shower glass' }] },
+      survey: pm ? null : { done: false, gift_cents: 1000, questions: [{ kind: 'scale', prompt: 'How likely are you to recommend us to a friend?' }, { kind: 'text', prompt: 'What could we do better?' }] },
+      home_detail: null, pm: pm ? { kind: 'turnover', found: [], plan: { done: 3, total: 12, focus: ['Hallway carpets'], target_date: null } } : null, review_token: null, activity: [], ideas: [], rooms: [], progress: { done: 7, total: 7 }
+    };
+    token = '0123456789abcdef0123456789abcdef';
+    var real = window.fetch.bind(window);
+    window.fetch = function (url, opt) {
+      if (String(url).indexOf('/functions/v1/') < 0) return real(url, opt);
+      var get = !opt || !opt.method || opt.method === 'GET';
+      if (get) { var d = JSON.parse(JSON.stringify(D)); if (gate && !window.__rated) d.gated = true; else d.gated = false; return Promise.resolve(new Response(JSON.stringify(d), { headers: { 'content-type': 'application/json' } })); }
+      if (/submit-review/.test(String(url))) { window.__rated = true; D.rating = 5; }
+      return Promise.resolve(new Response(JSON.stringify({ ok: true }), { headers: { 'content-type': 'application/json' } }));
+    };
+  })();
   var DATA = null;
 
   function esc(s) {
@@ -160,6 +197,32 @@
     });
   }
   function card(inner) { return '<div class="card">' + inner + '</div>'; }
+  // The line under the date: the checklist level (a retired Extra / Deluxe) and the Rotating Detail Plan, never a repeat of the title.
+  function headLine(d) {
+    var j = d.job || {}, parts = [];
+    if (j.checklist_tier === 'extra' || j.checklist_tier === 'deluxe') parts.push((j.checklist_tier === 'extra' ? 'Extra ' : 'Deluxe ') + 'Checklist Clean');
+    if (j.rotational) parts.push((d.home_detail && d.home_detail.product_name) || 'Rotating Detail Plan');
+    parts = parts.filter(function (p) { return p !== j.service_label; });
+    return parts.length ? '<p class="meta">' + esc(parts.join(' · ')) + '</p>' : '';
+  }
+  // "How did it go?" (Jack, 2026-11-18): kudos, the quick questions, something missed and the issue report sit in one box as folded rows
+  // instead of four boxes. Each block keeps its own ids and wiring; only its card becomes a row.
+  function hg(html) { return html ? '<div data-hg="1">' + html + '</div>' : ''; }
+  function groupHowItWent() {
+    var parts = Array.prototype.slice.call(root.querySelectorAll('[data-hg]'));
+    if (!parts.length) return;
+    var box = document.createElement('div'); box.className = 'card howgo';
+    box.innerHTML = '<h2>How did it go?</h2>';
+    parts[0].parentNode.insertBefore(box, parts[0]);
+    parts.forEach(function (w) {
+      var c = w.querySelector('.card'); if (!c) { w.remove(); return; }
+      var h = c.querySelector('h2'), row = document.createElement('details'); row.className = 'hgrow';
+      var s = document.createElement('summary'); s.textContent = h ? h.textContent : 'More'; row.appendChild(s);
+      if (h) h.remove();
+      while (c.firstChild) row.appendChild(c.firstChild);
+      box.appendChild(row); w.remove();
+    });
+  }
   function money(cents) { return '$' + Math.round((cents || 0) / 100); }
 
   function expired() {
@@ -761,26 +824,6 @@
       return done.length ? { room: r.room, items: done.map(function (t) { return t.label; }) } : null;
     }).filter(function (x) { return x; });
   }
-  // The building's numbered requests with the time each was done (keychain or by hand), and the lock-up check with its photo.
-  function pmRequestsCard(d) {
-    var rs = d.requests || [];
-    if (!rs.length) return '';
-    return card('<h2>Your requests</h2><ul>' + rs.map(function (r) {
-      return r.status === 'done'
-        ? '<li><span class="tick">&#10003;</span><span>' + esc(requestLine(r)) + '</span></li>'
-        : '<li><span class="na">&mdash;</span><span class="na-text">' + esc(requestLine(r)) + '<span class="reason">' +
-          (r.status === 'could_not' ? 'Not done this visit. We do it on the next visit or sooner, at no charge.' : 'Not marked done this visit. We do it on the next visit or sooner, at no charge.') + '</span></span></li>';
-    }).join('') + '</ul>');
-  }
-  function pmLockupCard(p) {
-    var l = p.lockup;
-    if (!l) return '';
-    return card('<h2>Locked up</h2><p class="meta">Checked ' + esc(requestTime(l.done_at)) + ' before the crew left</p><ul>' +
-      (l.items || []).map(function (t) { return '<li><span class="tick">&#10003;</span><span>' + esc(t) + '</span></li>'; }).join('') + '</ul>' +
-      (l.photo ? '<div class="grid"><figure><img src="' + esc(l.photo) + '" alt="Locked door"><figcaption>Locked door</figcaption></figure></div>' : ''));
-  }
-  function pmRequestsDone(d) { var rs = d.requests || []; return rs.filter(function (r) { return r.status === 'done'; }).length + ' of ' + rs.length; }
-
   function renderPm(d) {
     var p = d.pm || {};
     document.body.className = 'pm';
@@ -830,10 +873,8 @@
       '<tr><td>Maintenance needed</td><td>' + count('maintenance') + '</td></tr>' +
       '<tr><td>Items left behind</td><td>' + count('left_behind') + '</td></tr>' +
       '<tr><td>Running low</td><td>' + count('running_low') + '</td></tr>' +
-      ((d.requests || []).length ? '<tr><td>Your requests done</td><td>' + pmRequestsDone(d) + '</td></tr>' : '') +
-      (p.lockup ? '<tr><td>Locked up</td><td>' + esc(requestTime(p.lockup.done_at)) + '</td></tr>' : '') +
       (p.plan && p.plan.total ? '<tr><td>Elevation Plan</td><td>' + p.plan.done + ' of ' + p.plan.total + '</td></tr>' : '') + '</table>');
-    root.innerHTML = head + ba + pmRequestsCard(d) + found + plan + what + pmLockupCard(p) + videos + summary + '<p class="foot">Facilities by Two Hour Maids</p>';
+    root.innerHTML = head + ba + found + plan + what + videos + summary + '<p class="foot">Facilities by Two Hour Maids</p>';
     document.title = (PM_KIND[p.kind] || 'Cleaning report') + (where ? ': ' + where : '');
     document.getElementById('pdf').addEventListener('click', function () { buildPmPdf(d, this); });
     document.getElementById('pm-print').addEventListener('click', function () { window.print(); });
@@ -846,7 +887,6 @@
     btn.disabled = true; btn.textContent = 'Building…';
     var shots = d.photos.before.concat(d.photos.after);
     (p.found || []).forEach(function (g) { g.items.forEach(function (f) { (f.photos || []).forEach(function (u) { shots.push({ url: u }); }); }); });
-    if (p.lockup && p.lockup.photo) shots.push({ url: p.lockup.photo });
     Promise.all(shots.map(function (s) { return asDataUrl(s.url); })).then(function (datas) {
       var img = {}; shots.forEach(function (s, i) { if (datas[i]) img[s.url] = datas[i]; });
       var doc = new window.jspdf.jsPDF({ unit: 'pt', format: 'letter' });
@@ -871,28 +911,15 @@
       var byRoom = {}, order = [];
       ['before', 'after'].forEach(function (k) { (d.photos[k] || []).forEach(function (ph) { var r = ph.room || 'Other'; if (!byRoom[r]) { byRoom[r] = {}; order.push(r); } if (!byRoom[r][k]) byRoom[r][k] = ph.url; }); });
       if (order.length) { heading('Before and after'); order.forEach(function (r) { line(r + ' (before, after)', true); pics([byRoom[r].before, byRoom[r].after]); }); }
-      if ((d.requests || []).length) {
-        heading('Your requests');
-        d.requests.forEach(function (r) { line((r.status === 'done' ? '[x] ' : '[ ] ') + requestLine(r) + (r.status === 'done' ? '' : ' (we do it on the next visit or sooner, at no charge)')); });
-      }
       heading('What the crew found');
       if (!(p.found || []).length) line('Nothing to report: no damage, nothing left behind.');
       (p.found || []).forEach(function (g) { line(g.label, true); g.items.forEach(function (f) { line('- ' + (f.room ? f.room + ': ' : '') + f.text + (f.status ? ' (' + f.status + ')' : '')); if ((f.photos || []).length) pics(f.photos); }); });
       if (p.plan && p.plan.total) { heading('Property Elevation Plan'); line(p.plan.done + ' of ' + p.plan.total + ' done' + (p.plan.target_date ? ', expected done by ' + prettyDate(p.plan.target_date) : '')); if ((p.plan.focus || []).length) line('Next: ' + p.plan.focus.join(', ')); }
       heading('What we cleaned');
       pmCleaned(d).forEach(function (r) { line(r.room, true); r.items.forEach(function (t) { line('[x] ' + t); }); });
-      if (p.lockup) {
-        heading('Locked up');
-        line('Checked ' + requestTime(p.lockup.done_at) + ' before the crew left');
-        (p.lockup.items || []).forEach(function (t) { line('[x] ' + t); });
-        if (p.lockup.photo) pics([p.lockup.photo]);
-      }
       heading('Summary');
       var count = function (g) { var x = (p.found || []).filter(function (z) { return z.group === g; })[0]; return x ? x.items.length : 0; };
-      var sumRows = [['Checklist items done', d.tasks.completed + ' of ' + d.tasks.total], ['Damage that was already there', count('pre_existing')], ['Damage our team caused', count('our_damage')], ['Maintenance needed', count('maintenance')], ['Items left behind', count('left_behind')], ['Running low', count('running_low')]];
-      if ((d.requests || []).length) sumRows.push(['Your requests done', pmRequestsDone(d)]);
-      if (p.lockup) sumRows.push(['Locked up', requestTime(p.lockup.done_at)]);
-      sumRows
+      [['Checklist items done', d.tasks.completed + ' of ' + d.tasks.total], ['Damage that was already there', count('pre_existing')], ['Damage our team caused', count('our_damage')], ['Maintenance needed', count('maintenance')], ['Items left behind', count('left_behind')], ['Running low', count('running_low')]]
         .forEach(function (r) { room(16); doc.setFont('helvetica', 'normal').setFontSize(10); doc.text(String(r[0]), M, y); doc.text(String(r[1]), W - M, y, { align: 'right' }); y += 15; });
       doc.save(clean((PM_KIND[p.kind] || 'Cleaning report') + ' ' + (p.unit || p.building || '') + ' ' + d.job.scheduled_date).trim().replace(/\s+/g, '-') + '.pdf');
       btn.disabled = false; btn.textContent = label;
@@ -906,7 +933,7 @@
     var head = card(
       '<h1>' + esc(d.job.service_label || 'Your cleaning') + '</h1>' +
       '<p class="meta">' + esc(prettyDate(d.job.scheduled_date)) + '</p>' +
-      (d.job.checklist_tier ? '<p class="meta">' + esc(({ basic: '', extra: 'Extra ', deluxe: 'Deluxe ' })[d.job.checklist_tier] || '') + 'Checklist Clean' + (d.job.rotational ? ' · ' + esc((d.home_detail && d.home_detail.product_name) || 'Rotating Detail Plan') : '') + '</p>' : '') +
+      headLine(d) +
       (d.rating ? '<p class="rated">' + '★'.repeat(d.rating) + '</p>' : '') +
       (d.crew.length
         ? '<div class="crew">' + d.crew.map(function (n) { return '<span class="who">' + esc(n) + '</span>'; }).join('') + '</div>'
@@ -971,13 +998,13 @@
 
     // A property manager's report has no referral gift and no star rating.
     var pm = !!(d.job && d.job.pm_report);
-    root.innerHTML = head + summary + reviewAskBlock(d) + requestsCard + extrasCard + card(list) + (pm ? '' : kudosBlock(d)) + (pm ? '' : homeDetailBlock(d)) + (pm ? '' : surveyBlock(d)) + (pm ? '' : missedBlock(d)) + (pm ? '' : issueBlock(d)) + (pm ? '' : feedbackBlock(d)) + (pm ? '' : ideasBlock(d)) + photos + videos + (pm ? '' : referralBlock(d)) + pdf +
+    root.innerHTML = head + summary + reviewAskBlock(d) + requestsCard + extrasCard + card(list) + (pm ? '' : homeDetailBlock(d)) + (pm ? '' : hg(kudosBlock(d)) + hg(surveyBlock(d)) + hg(missedBlock(d)) + hg(issueBlock(d))) + (pm ? '' : feedbackBlock(d)) + (pm ? '' : ideasBlock(d)) + photos + videos + (pm ? '' : referralBlock(d)) + pdf +
       (d.portal_token ? card('<h2>Your account</h2><p>Your records, photos, invoices and a direct line to us, all in one place that stays yours.</p><a class="btn" href="account.html?t=' + esc(d.portal_token) + '">Open your account</a>') : '') +
       (!pm && d.org.three_rs_video_url && /^https:\/\//i.test(d.org.three_rs_video_url) ? card('<h2>One minute: referrals, reviews and recurring</h2><p>Three easy ways to get the most from us.</p><a class="btn" href="' + esc(d.org.three_rs_video_url) + '" target="_blank" rel="noopener">Watch the video</a>') : '') +
       '<p class="foot">' + esc(d.org.name) + '</p>';
 
     document.title = d.org.name + ' — your clean report';
-    if (!pm) { wireRotation(d); wireReferral(d); wireMissed(d); wireIssue(d); wireFeedback(d); wireSurvey(); wireKudos(d); }
+    if (!pm) { groupHowItWent(); wireRotation(d); wireReferral(d); wireMissed(d); wireIssue(d); wireFeedback(d); wireSurvey(); wireKudos(d); }
     document.getElementById('pdf').addEventListener('click', function () { buildPdf(d, this); });
   }
 

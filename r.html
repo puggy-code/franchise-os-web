@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Leave a review</title>
+<!-- Staff review keycard (0557): the NFC card holds this page with ?k=<card code>. It asks review-tap for the Google review link and opens
+     it straight away; the tap is logged so the cleaner is credited. -->
+<style>
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f4f5f7; color: #10151e; }
+  main { max-width: 420px; margin: 0 auto; padding: 48px 20px; text-align: center; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p { color: #5e6776; font-size: 15px; line-height: 1.5; }
+  a.btn { display: inline-block; margin-top: 16px; background: #0a47a8; color: #fff; text-decoration: none; padding: 14px 22px; border-radius: 12px; font-weight: 700; font-size: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Thank you!</h1>
+  <p id="msg">Opening Google reviews…</p>
+  <a class="btn" id="go" href="#" hidden>Leave a Google review</a>
+</main>
+<script>
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  var code = new URLSearchParams(location.search).get('k') || '';
+  var msg = document.getElementById('msg'), go = document.getElementById('go');
+  fetch(SUPABASE_URL + '/functions/v1/review-tap?k=' + encodeURIComponent(code))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d.url) throw new Error('none');
+      go.href = d.url; go.hidden = false;
+      msg.textContent = 'A short Google review means a lot to your cleaner.';
+      location.replace(d.url);
+    })
+    .catch(function () { msg.textContent = 'This card is not set up yet. Thank you for thinking of us!'; });
+</script>
+</body>
+</html>

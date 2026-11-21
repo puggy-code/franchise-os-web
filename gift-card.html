@@ -37,10 +37,11 @@
     <label for="pname">Your name</label><input id="pname" autocomplete="name">
     <label for="pemail">Your email (for the receipt)</label><input id="pemail" type="email" autocomplete="email">
     <label for="rname">Who is it for?</label><input id="rname">
-    <label for="remail">Their email (we send the code to them)</label><input id="remail" type="email">
+    <label for="remail">Their email (optional)</label><input id="remail" type="email" aria-describedby="remail-hint">
+    <p class="note" id="remail-hint">Leave blank to give it in person; we'll email the code to you.</p>
     <label for="msg">A short message (optional)</label><textarea id="msg" rows="3" maxlength="400"></textarea>
     <button class="go" id="go" type="button">Continue to payment</button>
-    <p class="note">You pay on Stripe's secure page. The code is emailed to the person you name as soon as the payment goes through.</p>
+    <p class="note">You pay on Stripe's secure page. We email the code as soon as the payment goes through. It goes to the person you name, or to you if you left their email blank.</p>
   </div>
 </div>
 <script>
@@ -50,7 +51,7 @@
   var cents = 10000;
   var q = new URLSearchParams(location.search);
   var status = document.getElementById('status'), go = document.getElementById('go');
-  if (q.get('done')) status.innerHTML = '<div class="msg ok">Thank you! The gift card is on its way to your recipient by email.</div>';
+  if (q.get('done')) status.innerHTML = '<div class="msg ok">Thank you! The gift card code is on its way by email: to your recipient, or to you if you left their email blank.</div>';
   if (q.get('cancelled')) status.innerHTML = '<div class="msg bad">Checkout was cancelled. Nothing was charged.</div>';
   var box = document.getElementById('amts');
   [2500, 5000, 10000, 20000].forEach(function (c) {
@@ -63,11 +64,12 @@
     status.innerHTML = '';
     if (!v('pname') || !v('pemail')) { status.innerHTML = '<div class="msg bad">Please add your name and email.</div>'; return; }
     go.disabled = true; go.textContent = 'One moment...';
-    fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ org_slug: ORG, amount_cents: cents, purchaser_name: v('pname'), purchaser_email: v('pemail'), recipient_name: v('rname'), recipient_email: v('remail'), message: v('msg') }) })
+    fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ org_slug: ORG, amount_cents: cents, purchaser_name: v('pname'), purchaser_email: v('pemail'), recipient_name: v('rname'), recipient_email: v('remail'), message: v('msg'), return_url: location.href }) })
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
       .then(function (x) {
         if (x.ok && x.d.url) { location.href = x.d.url; return; }
-        var m = x.d && x.d.error === 'test_mode_only' ? 'Gift cards are not open yet. Please check back soon.' : (x.d && x.d.message) || 'Something went wrong. Please try again.';
+        // test_mode_only: real gift-card sales wait on Jack's switch (gift_cards_live).
+        var m = x.d && x.d.error === 'test_mode_only' ? 'Gift cards open soon. Call (763) 227-9124.' : (x.d && x.d.message) || 'Something went wrong. Please try again.';
         status.innerHTML = '<div class="msg bad">' + m.replace(/[<>&]/g, '') + '</div>'; go.disabled = false; go.textContent = 'Continue to payment';
       })
       .catch(function () { status.innerHTML = '<div class="msg bad">Something went wrong. Please try again.</div>'; go.disabled = false; go.textContent = 'Continue to payment'; });

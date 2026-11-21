@@ -66,6 +66,16 @@
   var FN = SUPABASE_URL + '/functions/v1/submit-review';
   var root = document.getElementById('root');
   var token = (new URLSearchParams(location.search).get('t') || '').trim();
+  // Demo mode (?demo=1, for walkthroughs, like account.html): fake data, nothing reaches the server.
+  if (new URLSearchParams(location.search).get('demo') === '1') (function () {
+    token = '0123456789abcdef0123456789abcdef';
+    var real = window.fetch.bind(window);
+    window.fetch = function (url, opt) {
+      if (String(url).indexOf('/functions/v1/') < 0) return real(url, opt);
+      var out = !opt || !opt.method || opt.method === 'GET' ? { org: { name: 'Two Hour Maids' }, existing: null } : { ok: true, google_review_url: 'https://www.google.com/search?q=Two+Hour+Maids' };
+      return Promise.resolve(new Response(JSON.stringify(out), { headers: { 'content-type': 'application/json' } }));
+    };
+  })();
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {

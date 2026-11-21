@@ -87,6 +87,10 @@
   details.inner { margin: 10px 0 0; border-top: 1px solid var(--line); padding-top: 8px; }
   details.inner > summary { cursor: pointer; font-weight: 700; color: var(--brand); font-size: 14px; }
   /* Folded rows at the bottom */
+  .mgroup { background: var(--card); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border: 1px solid rgba(16,21,30,.18); border-radius: 16px; padding: 14px 16px 4px; margin: 0 0 12px; }
+  .mgroup > h2 { margin: 0 0 4px; }
+  .mgroup details.more { background: none; -webkit-backdrop-filter: none; backdrop-filter: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 12px 0; margin: 0; }
+  #ask .textline { margin: -4px 0 10px; }
   details.more { background: var(--card); -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border: 1px solid rgba(255,255,255,.7); border-radius: 16px; padding: 12px 16px; margin: 0 0 8px; }
   details.more > summary { cursor: pointer; font-weight: 700; color: var(--ink); list-style: none; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
   details.more > summary::-webkit-details-marker { display: none; }
@@ -133,6 +137,7 @@
         : body.action === 'plan_options' ? { ok: true, current: { frequency: 'biweekly', price_cents: PRICES.biweekly }, pending: null, options: Object.keys(PRICES).map(function (f) { return { frequency: f, price_cents: PRICES[f], current: f === 'biweekly' }; }) }
         // The server lists Checklist Clean visits only (customer-portal extras_options); a Two Hour Clean customer gets none.
         : body.action === 'extras_options' ? { ok: true, addons: [{ key: 'fridge-emptied', label: 'Fridge (emptied)', cents: 3300, max_qty: 1 }, { key: 'blinds-room', label: 'Blinds in one room', cents: 1000, max_qty: 6 }], visits: checklist ? [{ id: 'j2', date: plus(14), time: '09:00:00', service: 'Checklist Clean', extras: null }] : [] }
+        : body.action === 'photo_consent' ? { ok: true, consent: !!body.yes, credit_given: !!body.yes, credit_applied: false }
         : body.action === 'idea_check' ? { ok: true, deadline: null, two_hour: !checklist, requests_left: checklist ? null : 2 }
         : body.action === 'punch_list' ? { ok: true, items: [], bounties_on: false, two_hour_next: !checklist, requests_left: checklist ? null : 2, max_requests: 2 }
         : body.action === 'asks_get' ? { ok: true, extra_time: [], choices: [], items: [], two_hour: !checklist, max_requests: 2 }
@@ -183,9 +188,23 @@
   var REQ = { book_again: 'Book again', reschedule: 'Change a date', add_service: 'Add a service', question: 'A question', problem: 'Something is not right', other: 'Something else' };
   var KIND = { agreement: 'Agreement', quote: 'Quote', receipt: 'Receipt', care_notes: 'Your cleaning plan', other: 'Document', from_customer: 'You sent' };
   var STATE = { planned: ['Coming up', ''], invoiced: ['Invoiced', 'warn'], paid: ['Paid', 'good'] };
-  var FREQ = { weekly: 'Every week', biweekly: 'Every 2 weeks', every_3_weeks: 'Every 3 weeks', every_4_weeks: 'Every 4 weeks', every_5_weeks: 'Every 5 weeks', every_6_weeks: 'Every 6 weeks' };
+  var FREQ = { weekly: 'Every week', biweekly: 'Every 2 weeks', every_3_weeks: 'Every 3 weeks', every_4_weeks: 'Monthly', every_5_weeks: 'Every 5 weeks', every_6_weeks: 'Every 6 weeks' };
 
   // A folded row at the bottom (pm-portal.html's details.more). The content stays in the page, so the loaders below fill it while closed.
+  // The folded rows under More, in four titled boxes. Rows the page did not draw (no Perks yet, say) are skipped; an empty box is not shown.
+  var MORE_GROUPS = [['Your home', ['home', 'needs', 'extra', 'choices', 'openings', 'explore']], ['Billing and perks', ['billing', 'perks', 'request', 'agreements']],
+    ['Messages and privacy', ['texts', 'notify', 'callpref', 'photopref', 'photoshare']], ['About you', ['details', 'household', 'occasions']]];
+  function groupMore() {
+    var sec = document.getElementById('more-sec'); if (!sec) return;
+    var at = sec;
+    MORE_GROUPS.forEach(function (g) {
+      var box = document.createElement('section'); box.className = 'mgroup';
+      var t = document.createElement('h2'); t.textContent = g[0]; box.appendChild(t);
+      g[1].forEach(function (id) { var f = document.getElementById('f-' + id); if (f) box.appendChild(f); });
+      if (box.children.length > 1) { at.parentNode.insertBefore(box, at.nextSibling); at = box; }
+    });
+    sec.remove();
+  }
   function fold(id, title, inner, hint) { return '<details class="more" id="f-' + id + '"><summary><span>' + title + '</span>' + (hint ? '<span class="hint">' + hint + '</span>' : '') + '</summary>' + inner + '</details>'; }
   // Open the folded row (or inner fold) that holds an element, then scroll to it: links like #home still land.
   window.openTo = function (id) {
@@ -307,9 +326,6 @@
     }
     h += '</div>';
 
-    // 3. Text us anytime.
-    h += '<a class="card textus" href="' + sms + '"><span class="ic" aria-hidden="true">&#128172;</span><span><b>Text us anytime</b><span>A question, a change, a new booking · ' + TEXT_NUMBER + '</span></span></a>';
-
     // 4. Cleaning reports: date | clean | report, tips on the ones that take one; photos folded underneath.
     h += '<div class="card" id="reports"><h2>Cleaning reports</h2>' + (d.past.length ? '<table class="rep">' + d.past.map(function (j) {
       var st2 = STATUS[j.status] || [j.status, ''];
@@ -322,7 +338,7 @@
 
     // 5. Anything you want done? One box: a message to us, the next-visit list (the punch list, with a photo), or a last-minute idea for
     // today's team (0602, shown only while it is open). Same server actions as before: message, punch_add, idea_chat / idea_submit.
-    h += '<div class="card" id="ask"><h2>Anything you want done?</h2>' +
+    h += '<div class="card" id="ask"><h2>Anything you want done?</h2><p class="sub textline">Rather text? <a href="' + sms + '">' + TEXT_NUMBER + '</a></p>' +
       '<div class="seg" role="group" aria-label="Who it is for"><button type="button" class="on" data-mode="msg">Message us</button><button type="button" data-mode="punch">Next visit</button><button type="button" data-mode="idea" id="mode-idea" hidden>Today\'s team</button></div>' +
       '<p class="sub" id="askhint"></p><div id="ichat"></div>' +
       '<textarea id="asktext" maxlength="1000" placeholder="Tell us here. We read every one."></textarea>' +
@@ -369,7 +385,7 @@
     h += '<div class="card" id="addextras"><h2>Extras for a coming clean</h2><p class="sub" id="xintro">Up to 48 hours before. Added to that clean\'s price (plus tax) and charged the usual way.</p><div id="xtra-slot"></div></div>';
 
     // 8. Everything else, folded.
-    h += '<div class="sec">More</div>';
+    h += '<div class="sec" id="more-sec">More</div>';
     h += fold('details', 'Your details', '<div class="card" id="details"><div id="details-slot"><p class="sub">Loading...</p></div></div>');
     // About your home (2026-10-16): staff read it before every clean. Pets (0529) and key tag numbers (0531, number only).
     h += fold('home', 'Home and pets', '<div class="card" id="home"><p class="sub">Our team reads this before every clean.</p>' +
@@ -436,6 +452,9 @@
     // Photos (0590): before/after photos of the clean, or none. Faces are blurred automatically either way.
     h += fold('photopref', 'Photo privacy', '<div class="card" id="photopref"><p>' + (d.customer.photos_opt_out ? 'Your team does not take before and after photos in your home.' : 'Your team takes before and after photos for your report. Faces, mail and screens are kept out or blurred.') +
       '</p><button id="photobtn" data-on="' + (d.customer.photos_opt_out ? 'false' : 'true') + '">' + (d.customer.photos_opt_out ? 'Take photos again' : 'No photos, please') + '</button> <span id="photonote"></span></div>', d.customer.photos_opt_out ? 'No photos' : '');
+    var ps = d.customer.photo_share;
+    h += fold('photoshare', 'Can we share photos of your clean?', '<div class="card" id="photoshare"><p>We\'d like to post before and after photos of the rooms we clean. Never faces, names, your address or anything personal. Say yes and get $5 off your next clean. You can change your mind any time on this page.</p>' +
+      '<button id="psyes"' + (ps === true ? ' disabled' : '') + '>Yes, share them</button> <button id="psno" class="btn alt"' + (ps === false ? ' disabled' : '') + '>No thanks</button> <span id="psnote" class="sub"></span></div>', ps === true ? 'Yes' : ps === false ? 'No' : '');
     // Call instead of text (0564): for customers who do not use text.
     h += fold('callpref', 'Calls or texts', '<div class="card" id="callpref"><p>' + (d.customer.contact_pref === 'call' ? 'We call you instead of texting (reminders, on the way, reports). Calls are between 9 AM and 7 PM.' : 'We text you about your cleans. Don\'t use text? We can call you instead.') +
       '</p><button id="cpref" data-pref="' + (d.customer.contact_pref === 'call' ? 'text' : 'call') + '">' + (d.customer.contact_pref === 'call' ? 'Switch back to texts' : 'Call me instead') + '</button> <span id="cprefnote"></span></div>', d.customer.contact_pref === 'call' ? 'Calls' : 'Texts');
@@ -443,9 +462,10 @@
       '<label class="sub">Birthday (month and day)</label><div class="pair"><select id="obm" aria-label="Birthday month"><option value="">Month</option>' + ['January','February','March','April','May','June','July','August','September','October','November','December'].map(function (m, i) { return '<option value="' + (i + 1) + '">' + m + '</option>'; }).join('') + '</select> <select id="obd" aria-label="Birthday day"><option value="">Day</option>' + Array.apply(null, Array(31)).map(function (_, i) { return '<option value="' + (i + 1) + '">' + (i + 1) + '</option>'; }).join('') + '</select></div>' +
       '<label class="sub" for="omv">When did you move in?</label><input type="date" id="omv">' +
       '<label class="sub" for="ohh">Pets, kids and anything the team should know</label><textarea id="ohh" maxlength="300" placeholder="Biscuit the beagle, Maya (6) and Leo (3)"></textarea><button id="osave">Save</button> <span id="onote"></span></div>');
-    h += fold('explore', 'Explore your home', '<div class="card" id="explore"><p>Tap the parts of your home and see what two cleaners can do in the time you have, and which level fits best.</p><a class="btn alt" href="explore.html">Open the home explorer</a></div>');
 
+    h += fold('explore', 'Explore your home', '<div class="card" id="explore"><p>Tap the parts of your home and see what two cleaners can do in the time you have, and which level fits best.</p><a class="btn alt" href="explore.html">Open the home explorer</a></div>');
     root.innerHTML = h;
+    groupMore();
     var rr = document.getElementById('rotreq');
     if (rr) rr.addEventListener('click', function () {
       rr.disabled = true;
@@ -464,6 +484,18 @@
       var pb = document.getElementById('photobtn');
       if (pb) pb.addEventListener('click', function () {
         pPost({ action: 'photos_opt_out', on: pb.getAttribute('data-on') === 'true' }).then(function (res) { var n = document.getElementById('photonote'); if (n) n.textContent = res.ok ? 'Saved.' : 'Not saved, try again.'; if (res.ok) setTimeout(function () { location.reload(); }, 600); });
+      });
+      ['psyes', 'psno'].forEach(function (id) {
+        var b = document.getElementById(id); if (!b) return;
+        b.addEventListener('click', function () {
+          var yes = id === 'psyes', n = document.getElementById('psnote');
+          b.disabled = true;
+          pPost({ action: 'photo_consent', yes: yes, version: 1 }).then(function (res) {
+            if (!res.ok) { b.disabled = false; if (n) n.textContent = 'Not saved, try again.'; return; }
+            if (n) n.textContent = yes ? (res.j.credit_given ? 'Thank you. $5 comes off your next clean.' : 'Thank you. Saved.') : 'Saved. We will not post photos of your home.';
+            var other = document.getElementById(yes ? 'psno' : 'psyes'); if (other) other.disabled = false;
+          }).catch(function () { b.disabled = false; if (n) n.textContent = 'Not saved, try again.'; });
+        });
       });
       var cp = document.getElementById('cpref');
       if (cp) cp.addEventListener('click', function () {
@@ -1067,7 +1099,7 @@
   // How often we come (decision 558, 0934), extras on a coming Checklist Clean (559, 0933), household phones (561, 0932). Same server
   // actions as the phone app; every price comes from customer-portal.
   (function () {
-    var FREQ = { weekly: 'Every week', biweekly: 'Every 2 weeks', every_3_weeks: 'Every 3 weeks', every_4_weeks: 'Every 4 weeks', every_5_weeks: 'Every 5 weeks', every_6_weeks: 'Every 6 weeks' };
+    var FREQ = { weekly: 'Every week', biweekly: 'Every 2 weeks', every_3_weeks: 'Every 3 weeks', every_4_weeks: 'Monthly', every_5_weeks: 'Every 5 weeks', every_6_weeks: 'Every 6 weeks' };
     var XERR = { too_long: 'That is more than one visit holds. Pick fewer.', has_extras: 'This clean already has extras. Message us to change them.', too_close: 'Inside 48 hours: please message us.', billed: 'Already billed. Please message us.' };
     var PICKS = {}, VISIT = null, PLANS = [];
     function cp(body) { body.t = token; return fetch(FN + '/customer-portal', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }); }
@@ -1081,20 +1113,27 @@
           if (pr && o.current && o.current.price_cents != null) { pr.textContent = money(o.current.price_cents); if (ps) ps.textContent = 'a visit, before tax'; }
           if (!el) return;
           if (o.pending) el.innerHTML = '<p>Asked: ' + esc(FREQ[o.pending.to_frequency] || o.pending.to_frequency) + ' at ' + esc(money(o.pending.to_price_cents)) + ' a visit. We confirm it soon; your next visit stays as it is.</p><button class="btn alt" data-wd="' + esc(p.id) + '">Cancel my request</button>';
-          else el.innerHTML = (o.options || []).map(function (x) { return '<div class="row"><div><b>' + esc(FREQ[x.frequency] || x.frequency) + '</b><div class="sub">' + esc(money(x.price_cents)) + '</div></div>' + (x.current ? '<span class="tag blue">Now</span>' : '<button class="btn alt" data-fs="' + esc(p.id) + '" data-ff="' + esc(x.frequency) + '">Ask for this</button>') + '</div>'; }).join('') + '<p class="sub">Prices are before tax. Any special rate you have stays.</p>';
+          else el.innerHTML = planChoices(o.options).map(function (x) { return '<div class="row"><div><b>' + esc(FREQ[x.frequency] || x.frequency) + '</b><div class="sub">' + esc(money(x.price_cents)) + '</div></div>' + (x.current ? '<span class="tag blue">Now</span>' : '<button class="btn alt" data-fs="' + esc(p.id) + '" data-ff="' + esc(x.frequency) + '">Ask for this</button>') + '</div>'; }).join('') + '<p class="sub">Prices are before tax. Any special rate you have stays.</p>';
         });
       });
+    }
+    // The plans a customer can ask for are the ones the booking page sells (weekly, every 2 weeks, monthly), plus their own plan if it is
+    // another (Jack, 2026-11-19). Same rule as src/lib/planChoices.ts.
+    function planChoices(options) {
+      var rank = { weekly: 0, biweekly: 1, every_4_weeks: 2 };
+      return (options || []).filter(function (x) { return x.current || x.frequency in rank; })
+        .sort(function (a, b) { return (a.frequency in rank ? rank[a.frequency] : 2) - (b.frequency in rank ? rank[b.frequency] : 2); });
     }
     function drawExtras(o) {
       var el = document.getElementById('xtra-slot'); if (!el) return;
       // The Two Hour Clean takes no extras (Jack, 2026-11-01): never offer one on it, whatever the list says. Only Checklist Cleans are offered.
       var intro = document.getElementById('xintro');
       var visits = window.extrasVisits ? window.extrasVisits(o.visits, window.TWO_HOUR_IDS) : (o.visits || []);
-      if (window.TWO_HOUR_ONLY) {
-        if (intro) intro.hidden = true;
-        el.innerHTML = '<p class="sub" style="margin:0">' + esc(window.twoHourRuleLine ? window.twoHourRuleLine(window.MAX_REQUESTS) : 'The Two Hour Clean takes no extras.') + '</p>';
+      if (window.TWO_HOUR_ONLY) { // no extras box for a Two Hour Clean customer (Jack, 2026-11-18)
+        var xc = document.getElementById('addextras'); if (xc) xc.style.display = 'none';
         return;
       }
+      var xcard = document.getElementById('addextras'); if (xcard) xcard.style.display = '';
       if (intro) intro.hidden = false;
       o = { addons: o.addons, visits: visits };
       if (!o.visits.length) { el.innerHTML = '<p class="sub">No Checklist Clean more than 2 days away. Extras can be added to a Checklist Clean.</p>'; return; }
