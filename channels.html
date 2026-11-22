@@ -70,6 +70,13 @@
   .tile b { display: block; font-size: 27px; font-weight: 600; margin: 4px 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tile small { font-size: 12px; opacity: .78; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .up { color: #7FB2FF; } .flat { opacity: .8; }
+  .spark { display: block; margin-top: 6px; width: 100%; height: 26px; }
+  .spark path.l { fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .tile .spark path.l { stroke: #7FB2FF; } .tile .spark path.a { fill: rgba(127,178,255,.16); }
+  .card .spark path.l { stroke: var(--blue); } .card .spark path.a { fill: color-mix(in srgb, var(--blue) 12%, transparent); }
+  .ch-trend { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--muted); }
+  .ch-trend .spark { width: 140px; height: 22px; margin: 0; flex: none; }
+  .plan { font-size: 12.5px; color: var(--muted); margin: -6px 0 12px; }
   @media (max-width: 1100px) { .stats { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 560px) { .stats { grid-template-columns: repeat(2, 1fr); gap: 8px; } .tile b { font-size: 22px; } .tile small { white-space: normal; } .who .nm { display: none; } }
 
@@ -255,7 +262,7 @@
     <div class="wrap">
       <div class="top">
         <div class="logo">2HM</div>
-        <div class="brand">TWO HOUR MAIDS<h1>Channel Control <span class="live"><i></i>Live</span></h1></div>
+        <div class="brand">TWO HOUR MAIDS<h1>Channel Control <span class="live" id="live"><i></i>Loading</span></h1></div>
         <div class="who"><span class="nm" id="who"></span><button id="signout" type="button">Sign out</button></div>
       </div>
       <div id="demo-note" class="demo" hidden>Demo: sample numbers, nothing is saved.</div>
@@ -329,6 +336,7 @@
       me: function (uid) { return sb.from("profiles").select("id, full_name, role").eq("id", uid).maybeSingle().then(ok); },
       channels: function () { return sb.from("channel_control").select("*").order("sort").then(ok); },
       kpis: function () { return sb.from("channel_kpis").select("*").then(ok); },
+      weeks: function () { return sb.from("channel_kpi_weeks").select("key, week, leads, spend_cents, bookings, revenue_cents, applicants, calls").order("week").then(ok); },
       items: function () { return all("channel_items", "ext_id, area, category, channel_key, kind, title, detail, source, link, made_on, status, rank", "ext_id"); },
       // Emily's after-call form (emily_calls, reason 'job'): only the date, language and area are read, for counts. No names or numbers.
       jobCalls: function () {
@@ -392,6 +400,13 @@
       signIn: function () { return delay(); }, signOut: function () { return delay(); },
       me: function () { return delay({ id: "demo", full_name: role === "manager" ? "Demo Manager" : "Demo Owner", role: role }); },
       channels: function () { return delay(chans); }, kpis: function () { return delay(kp); }, items: function () { return delay(items); },
+      weeks: function () {
+        var out = [], mon = new Date(); mon.setHours(12, 0, 0, 0); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7));
+        chans.forEach(function (c, i) { if (!c.enabled) return; for (var w = 11; w >= 0; w--) { var d = new Date(mon - w * 7 * 864e5);
+          out.push({ key: c.key, week: d.toISOString().slice(0, 10), leads: c.area === "marketing" ? Math.max(0, Math.round(3 + 2 * Math.sin(w + i) + (11 - w) / 3)) : 0,
+            spend_cents: c.weekly_budget_cents, bookings: (w + i) % 3 === 0 ? 1 : 0, revenue_cents: (w + i) % 3 === 0 ? 18900 : 0, applicants: c.area === "hiring" ? 2 + (w % 3) : 0, calls: 0 }); } });
+        return delay(out);
+      },
       changes: function () { return delay(changes); },
       jobCalls: function () {
         var now = Date.now();
@@ -425,14 +440,39 @@
         S.me = me; S.canEdit = me.role === "hq_admin";
         $("signin-wrap").hidden = true; $("app").hidden = false; $("demo-note").hidden = !DEMO;
         $("who").textContent = (me.full_name || "") + (S.canEdit ? "" : " · view only");
-        return Promise.all([api.channels(), api.kpis()]).then(function (r) {
-          S.chans = r[0]; S.kpi = {}; r[1].forEach(function (k) { S.kpi[k.key] = k; });
-          renderStats(); render();
+        return loadData().then(function () {
+          render();
+          setInterval(function () { if (!document.hidden && !S.mixing && !Object.keys(S.timers).some(function (k) { return S.timers[k]; })) loadData().then(function () { if (S.tab === "overview") refreshOverviewCharts(); }); }, 300000);
           api.items().then(function (it) { S.items = it; renderCounts(); if (S.tab === "ideas" || S.tab === "hub") render(); })
             .catch(function () { S.items = []; renderCounts(); });
         });
       });
     }).catch(function (e) { fail(e.message || String(e)); });
+  }
+  function loadData() {
+    return Promise.all([api.channels(), api.kpis(), api.weeks().catch(function () { return []; })]).then(function (r) {
+      var keep = {}; (S.chans || []).forEach(function (c) { keep[c.key] = c; });
+      S.chans = r[0].map(function (c) { var old = keep[c.key]; if (old) { Object.assign(old, c); return old; } return c; });
+      S.kpi = {}; r[1].forEach(function (k) { S.kpi[k.key] = k; });
+      S.weeks = {}; r[2].forEach(function (w) { (S.weeks[w.key] = S.weeks[w.key] || {})[w.week] = w; });
+      S.loadedAt = new Date();
+      $("live").innerHTML = "<i></i>" + (DEMO ? "Demo" : "Updated " + S.loadedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }));
+      renderStats();
+    });
+  }
+  // weekly series (last 12 Mondays) for one channel, or summed over channels; field = leads | bookings | revenue_cents | applicants | calls
+  function mondays() { var out = [], m = new Date(); m.setHours(12, 0, 0, 0); m.setDate(m.getDate() - ((m.getDay() + 6) % 7));
+    for (var w = 11; w >= 0; w--) out.push(new Date(m - w * 7 * 864e5).toISOString().slice(0, 10)); return out; }
+  function series(keys, field) {
+    return mondays().map(function (d) { return keys.reduce(function (s, k) { var w = (S.weeks || {})[k]; return s + Number((w && w[d] && w[d][field]) || 0); }, 0); });
+  }
+  function spark(vals, label) {
+    var max = Math.max.apply(null, vals), n = vals.length;
+    if (!max) return "";
+    var pts = vals.map(function (v, i) { return [(i / (n - 1)) * 100, 24 - (v / max) * 20]; });
+    var line = pts.map(function (p, i) { return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" ");
+    return '<svg class="spark" viewBox="0 0 100 26" preserveAspectRatio="none" role="img" aria-label="' + esc(label) + ": " + vals.join(", ") + '">' +
+      '<path class="a" d="' + line + ' L100 26 L0 26 Z"/><path class="l" d="' + line + '" vector-effect="non-scaling-stroke"/></svg>';
   }
   function fail(msg) { $("si-err").hidden = !msg; $("si-err").textContent = msg || ""; }
 
@@ -470,12 +510,14 @@
     var t = totals(), avg = t.leads28 / 4, d = t.leads7 - avg;
     var trend = !t.leads28 ? '<small class="flat">No leads counted yet</small>' : d >= 0.5 ? '<small class="up">▲ ' + num(Math.round(d)) + " over the 4-week average</small>"
       : d <= -0.5 ? '<small class="flat">▼ ' + num(Math.round(-d)) + " under the 4-week average</small>" : '<small class="flat">Level with the 4-week average</small>';
-    function tile(label, val, sub) { return '<div class="tile"><span>' + label + "</span><b>" + val + "</b>" + sub + "</div>"; }
+    function tile(label, val, sub, sp) { return '<div class="tile"><span>' + label + "</span><b>" + val + "</b>" + sub + (sp || "") + "</div>"; }
+    var mk = S.chans.filter(function (c) { return c.area === "marketing"; }).map(function (c) { return c.key; });
+    var hk = S.chans.filter(function (c) { return c.area === "hiring"; }).map(function (c) { return c.key; });
     $("stats").innerHTML =
       tile("Weekly budget dialed in", money(t.budget), "<small>≈ " + money(t.budget * 52 / 12) + " a month · " + t.funded + " funded</small>") +
-      tile("Leads · last 7 days", num(t.leads7), trend) +
-      tile("Booked · last 28 days", num(t.book28), "<small>website + tracked channels</small>") +
-      tile("Revenue · last 28 days", money(t.rev28), "<small>from booked visits</small>") +
+      tile("Leads · last 7 days", num(t.leads7), trend, spark(series(mk, "leads"), "Leads a week, last 12 weeks")) +
+      tile("Booked · last 28 days", num(t.book28), "<small>website + tracked channels</small>", spark(series(mk, "bookings"), "Bookings a week, last 12 weeks")) +
+      tile("Revenue · last 28 days", money(t.rev28), "<small>from booked visits</small>", spark(series(mk, "revenue_cents"), "Revenue a week, last 12 weeks")) +
       tile("Cost per lead · 28 days", t.spend28 && t.leads28 ? money(t.spend28 / t.leads28) : "—", "<small>" + (t.spend28 ? money(t.spend28) + " spent" : "Spend feeds come next") + "</small>") +
       tile("Channels on", num(t.on), "<small>of " + S.chans.length + " · " + t.mOn + " marketing · " + t.hOn + " hiring</small>");
     renderCounts();
@@ -580,7 +622,14 @@
       '<div class="ch-ctl"><div class="lv"><label><span>Level</span><b class="lvw">' + lvlWord(c.enabled ? c.level : 0) + " · " + (c.enabled ? c.level : 0) + "</b></label>" +
       '<input type="range" min="0" max="100" step="5" value="' + (c.enabled ? c.level : 0) + '" style="--p:' + (c.enabled ? p : "0%") + '" aria-label="' + esc(c.name) + ' level"' + dis + ">" +
       '<div class="ticks"><span>Off</span><span>Low</span><span>Med</span><span>High</span></div></div>' +
-      dial(c) + "</div>" + kpiChips(c) + '<div class="saved" aria-live="polite"></div></div>';
+      dial(c) + "</div>" + kpiChips(c) + trendRow(c) + '<div class="saved" aria-live="polite"></div></div>';
+  }
+
+  function trendRow(c) {
+    var f = c.area === "hiring" ? "applicants" : c.key === "emily_inbound" ? "calls" : "leads", vals = series([c.key], f);
+    if (!vals.some(Boolean)) { vals = series([c.key], "bookings"); f = "bookings"; }
+    var sp = spark(vals, c.name + " " + f + " a week");
+    return sp ? '<div class="ch-trend">' + sp + "<span>" + esc(f) + " a week · last 12 weeks</span></div>" : "";
   }
 
   function dial(c) {
@@ -639,6 +688,7 @@
     msg = msg || { style: {} }; msg.textContent = "Saving…"; msg.style.color = "";
     clearTimeout(S.timers[c.key]);
     S.timers[c.key] = setTimeout(function () {
+      S.timers[c.key] = null;
       api.setChannel(c.key, { enabled: c.enabled, level: c.level, weekly_budget_cents: c.weekly_budget_cents }).then(function (row) {
         if (row) { c.enabled = row.enabled; c.level = row.level; c.weekly_budget_cents = row.weekly_budget_cents; }
         msg.textContent = "Saved · every app sees this now"; S.changes = null; renderStats(); if (after) after();
@@ -654,7 +704,8 @@
 
   function mixList() {
     if (!S.mixKeys) {
-      S.mixKeys = S.chans.filter(function (c) { return c.area === "marketing" && (c.weekly_budget_cents > 0 || (c.enabled && /spend/.test((c.kpis || []).join(",")))); })
+      var saved = []; try { saved = JSON.parse(localStorage.getItem("chc-mix") || "[]"); } catch (e) { saved = []; }
+      S.mixKeys = S.chans.filter(function (c) { return c.weekly_budget_cents > 0 || saved.indexOf(c.key) >= 0 || (c.area === "marketing" && c.enabled && /spend/.test((c.kpis || []).join(","))); })
         .sort(function (a, b) { return (b.weekly_budget_cents || 0) - (a.weekly_budget_cents || 0) || (b.enabled - a.enabled); })
         .map(function (c) { return c.key; });
     }
@@ -695,9 +746,11 @@
     var on = list.filter(function (c) { return c.enabled && c.weekly_budget_cents > 0; });
     if ($("mix-total")) {
       var t = totals();
-      $("mix-total").innerHTML = '<div><span>Marketing, a week</span><b class="num">' + money(tot) + "</b></div>" +
+      $("mix-total").innerHTML = '<div><span>All channels, a week</span><b class="num">' + money(tot) + "</b></div>" +
         '<div><span>Monthly run rate</span><b class="num">' + money(tot * 52 / 12) + "</b></div>" +
         '<div><span>Cost per lead now</span><b class="num">' + (t.spend28 && t.leads28 ? money(t.spend28 / t.leads28) : "—") + "</b><em>" + (t.spend28 ? "28-day" : "no spend feed yet") + "</em></div>";
+      if (!$("mix-plan")) $("mix-total").insertAdjacentHTML("afterend", '<p class="plan" id="mix-plan"></p>');
+      $("mix-plan").textContent = planLine();
       $("mix-stack").innerHTML = on.length ? on.map(function (c) { return '<i title="' + esc(c.name) + " " + money(c.weekly_budget_cents) + '" style="flex:' + c.weekly_budget_cents + " 1 0;background:" + colorOf(c.key) + '"></i>'; }).join("") : "";
       $("mix-legend").innerHTML = on.map(function (c) { return '<span style="--c:' + colorOf(c.key) + '">' + esc(c.name) + " " + Math.round(100 * c.weekly_budget_cents / tot) + "%</span>"; }).join("") ||
         '<span style="--c:var(--off)">No channel has a budget yet</span>';
@@ -709,6 +762,14 @@
     if ($("donut")) $("donut").innerHTML = donut(on, tot);
     if ($("leads")) $("leads").innerHTML = leadBars();
     if ($("cov")) $("cov").innerHTML = coverage();
+  }
+
+  // Jack 2026-11-18 (memory channel-budget-and-sessions): new channels get $2,000 in December 2026, then $1,000 more each month.
+  function planLine() {
+    var now = new Date(), m = (now.getFullYear() - 2026) * 12 + now.getMonth() - 11;   // 0 = Dec 2026
+    var month = function (k) { var d = new Date(2026, 11 + k, 1); return d.toLocaleDateString("en-US", { month: "short", year: "numeric" }); };
+    if (m < 0) return "Plan for new channels: " + money(200000) + " a month from Dec 2026, then " + money(100000) + " more each month (set Nov 18).";
+    return "Plan for new channels this month (" + month(m) + "): " + money(200000 + m * 100000) + "; next month " + money(300000 + m * 100000) + " (set Nov 18).";
   }
 
   function donut(on, tot) {
@@ -788,7 +849,9 @@
       });
     });
     var add = $("mix-add");
-    if (add) add.addEventListener("change", function () { if (!add.value) return; S.mixKeys.push(add.value); renderOverview(pane); });
+    if (add) add.addEventListener("change", function () { if (!add.value) return; S.mixKeys.push(add.value);
+      try { var sv = JSON.parse(localStorage.getItem("chc-mix") || "[]"); if (sv.indexOf(add.value) < 0) sv.push(add.value); localStorage.setItem("chc-mix", JSON.stringify(sv)); } catch (e) { /* private window */ }
+      renderOverview(pane); });
   }
 
   // ------------------------------------------------------------------ outreach + Emily (from the Mac, read-only)
