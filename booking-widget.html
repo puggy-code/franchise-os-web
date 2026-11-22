@@ -543,6 +543,19 @@
     <!-- Every first clean is a triage clean (Jack, 2026-10-19: "the first is the worst"), one line right under the price (prc-0029, cus-0045),
          same price as later visits (prc-0025). Plain copy for everyone, no lookup; hidden once the page knows this is a returning customer. -->
     <div id="bw-triage" class="bw-triage"><b>Your first 2 cleans are Catch-Up Cleans.</b> <details class="bw-whats"><summary>What's that?</summary><p>We get your home up to speed, kitchen and baths first. What we can't reach is done free next visit. We promise excellence, not perfection.</p></details></div>
+    <!-- The Catch-Up explainer (Jack, walkthrough R3 22: "one line on the booking page plus an explainer that pops up when they book"): once,
+         when a first-time visitor holds a time. The words are the line's own. -->
+    <div id="bw-catchup-pop" class="bw-cu-pop" hidden role="dialog" aria-modal="true" aria-labelledby="bw-catchup-h">
+      <div class="bw-cu-card">
+        <h3 id="bw-catchup-h">Your first 2 cleans are Catch-Up Cleans</h3>
+        <ul class="bw-cu-list">
+          <li><b>We get your home up to speed,</b> kitchen and baths first.</li>
+          <li><b>What we can't reach</b> is done free next visit.</li>
+          <li><b>We promise excellence,</b> not perfection.</li>
+        </ul>
+        <button type="button" class="bw-cu-ok" id="bw-catchup-ok">Got it</button>
+      </div>
+    </div>
     <!-- Quick booking (?quick=1: the Two Hour Clean from the website's time buttons). The plan chips, "Have a code?", the total and the
          agreements move up here, above the short form; access notes, pets and requests come after booking. In the normal flow (since the
          three-screen flow, 2026-11-04) only the pay block shows: the plan agreement, the terms and Apple Pay / Google Pay (fullPaySetup). -->
@@ -999,6 +1012,9 @@
     // "Add the card fee you save to your crew's tip" (0676) and the slow-day savings (0677) are switched on the server, not here
     // (organizations.bank_fee_tip_enabled / slow_day_enabled, Pricing > Booking discounts); this page asks booking-availability.
     PAY_BY_BANK: false,
+    // Repeat plans billed per visit (migration 1301, CHARGING.md). Flip together with organizations.plans_bill_per_visit: the first visit is
+    // paid now and each later visit is charged after it, instead of "before each visit" by a Stripe subscription. Wording only; the server decides.
+    PLANS_BILL_PER_VISIT: false,
     // The booking page's "No photos in my home, please" box (cus-0026): ON since 2026-11-04, when confirm-booking went live with 79e1bcb
     // (create-booking keeps the request, confirm-booking sets customers.photos_opt_out, the field the account page switches). Off: the box
     // stays hidden and the notice points to the account page.
@@ -3774,7 +3790,8 @@
     if (eceElements && orderTotalNow > 0) { try { eceElements.update({ amount: orderTotalNow }); } catch (e) { /* the wallet keeps the last amount */ } }
     var html = rows.map(function (r) { return "<div class='bw-order-row'><span>" + r[0] + "</span><span>" + r[1] + "</span></div>"; }).join("");
     var chargedNow = recurring || paysNowNow();
-    var totalInfo = (recurring ? "Charged now, then before each visit. Cancel your plan anytime." : "Charged now. Our cancellation policy applies.") +
+    var planWhen = CONFIG.PLANS_BILL_PER_VISIT ? "after each visit" : "before each visit";
+    var totalInfo = (recurring ? "Charged now, then " + planWhen + ". Cancel your plan anytime." : "Charged now. Our cancellation policy applies.") +
       (SALES_TAX.enabled && !(tax > 0) ? "<br><span>Enter your ZIP to see taxes and fees.</span>" : "") + (tip > 0 ? "<br><span>Tips are not taxed.</span>" : "");
     html += "<div class='bw-order-row bw-order-total'><span>Total" + infoBtn("About this charge", totalInfo) + "</span><span>" + (total == null ? "—" : formatPrice(total)) + "</span></div>";
     renderPayMethod();
@@ -3796,8 +3813,8 @@
       var tipNote = bankTip > 0 ? " (paid by bank, including your " + formatPrice(bankTip) + " tip for the crew)" : "";
       document.getElementById("bw-recurring-consent-text").textContent = recurring
         ? (today === each && !tipNote
-            ? "Yes, charge " + today + " today and before each visit, " + every + ". I can cancel my plan anytime."
-            : "Yes, charge " + today + " today, then " + each + tipNote + " before each visit, " + every + ". I can cancel my plan anytime.")
+            ? "Yes, charge " + today + " today and " + planWhen + ", " + every + ". I can cancel my plan anytime."
+            : "Yes, charge " + today + " today, then " + each + tipNote + " " + planWhen + ", " + every + ". I can cancel my plan anytime.")
         : "";
     }
     var sl = document.getElementById("bw-submit-label");
@@ -4294,7 +4311,15 @@
   });
 
   // ---------- step switching ----------
+  var catchUpShown = false;
+  function showCatchUp() {
+    var pop = document.getElementById("bw-catchup-pop"), ok = document.getElementById("bw-catchup-ok");
+    if (catchUpShown || visitStatus === "returning" || !pop || !ok) return;
+    catchUpShown = true; pop.hidden = false; ok.focus();
+    ok.onclick = function () { pop.hidden = true; };
+  }
   function selectSlot(dStr, slot) {
+    showCatchUp();
     var slotKey = slot.key, slotLabel = slot.label;
     selected = {
       dateStr: dStr, slotKey: slotKey, slotLabel: slotLabel,
@@ -6458,6 +6483,14 @@
   #bw-root .bw-triage { margin: -6px 0 14px; padding: 12px 14px; border-radius: 14px; background: rgba(255,255,255,.74); border: 1px solid rgba(255,255,255,.9);
     box-shadow: 0 1px 2px rgba(11,26,51,.05), 0 8px 20px rgba(31,94,255,.08); font-size: 0.8125rem; line-height: 1.45; color: var(--t-ink-2); }
   #bw-root .bw-triage[hidden] { display: none; }
+  #bw-root .bw-cu-pop { position: fixed; inset: 0; z-index: 2147483000; display: flex; align-items: flex-end; justify-content: center; padding: 16px; background: rgba(10,25,45,.45); }
+  #bw-root .bw-cu-pop[hidden] { display: none; }
+  #bw-root .bw-cu-card { width: 100%; max-width: 420px; background: #fff; border-radius: 22px; padding: 22px 20px 18px; box-shadow: 0 18px 40px rgba(10,25,45,.25); }
+  #bw-root .bw-cu-card h3 { margin: 0 0 12px; font: 800 1.2rem/1.3 Poppins, var(--mac-font); color: #0a2f51; }
+  #bw-root .bw-cu-list { margin: 0 0 18px; padding: 0; list-style: none; }
+  #bw-root .bw-cu-list li { padding: 10px 0; border-top: 1px solid #e6ebf2; font-size: 1rem; line-height: 1.45; color: #3d4b63; }
+  #bw-root .bw-cu-list b { color: #0a2f51; }
+  #bw-root .bw-cu-ok { width: 100%; border: 0; border-radius: 16px; background: #ffed00; color: #0a2f51; font: 800 1.125rem Poppins, var(--mac-font); min-height: 52px; cursor: pointer; }
   #bw-root .bw-triage b { color: var(--t-ink); }
   #bw-root .bw-triage a { display: block; margin-top: 6px; color: #0B4AA8; font-weight: 600; text-decoration: none; }
   #bw-root .bw-2h-prio { margin: 4px 0 16px; display: grid; gap: 10px; }
