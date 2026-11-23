@@ -89,12 +89,17 @@
       '<p>This review link is no longer valid.</p>';
   }
 
-  function thanks(googleUrl) {
+  // Everyone gets the Google link (no review gating: Google policy and FTC rules). A 1 to 3 star rating sees a private "what should we fix"
+  // step first (Jack 2026-11-23 conflict decision); the link stays, below it.
+  function thanks(googleUrl, rating) {
+    var low = rating && rating <= 3;
     root.innerHTML =
-      '<h1>Thank you!</h1>' +
-      '<p>We appreciate your feedback.</p>' +
+      (low
+        ? '<h1>Sorry it wasn\'t right.</h1>' +
+          '<p>What should we fix? Reply to our text or call (763) 230-6795, and a manager will set up a free touch-up. Tell us within 24 hours of your clean.</p>'
+        : '<h1>Thank you!</h1><p>We appreciate your feedback.</p>') +
       (googleUrl
-        ? '<p>Would you share that on Google? It helps our local team a lot.</p>' +
+        ? (low ? '<p>You are also welcome to share your experience on Google.</p>' : '<p>Would you share that on Google? It helps our local team a lot.</p>') +
           '<a class="btn" href="' + esc(googleUrl) + '">Leave a Google review</a>'
         : '');
   }
@@ -150,7 +155,7 @@
         })
       })
         .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-        .then(function (res) { thanks(res.google_review_url); })
+        .then(function (res) { thanks(res.google_review_url, Number(picked.value)); })
         .catch(function () {
           go.disabled = false;
           go.textContent = 'Send';

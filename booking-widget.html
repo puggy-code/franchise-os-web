@@ -153,6 +153,9 @@
           <option value="dirty">Really dirty</option>
         </select>
       </label>
+      <!-- Jack 2026-11-23 (conflict decision): the Checklist Clean is BookingKoala's list for regular homes; a really dirty or very large home starts
+           with Four Hour Home Detailing, and after that visit we set its regular time and price. -->
+      <p id="bw-cond-steer" class="bw-menu-small" hidden>For a home that's really dirty or very large, we start with Four Hour Home Detailing. After that visit we set your regular time and price.</p>
     </div>
     <!-- "Want help finding the right option?" (Jack, 2026-11-05): four one-tap questions that end on the Two Hour Clean or the Checklist
          Clean, by the cards' own rule (chooserPick, twoHourFitsFor = _shared/intake.ts fitsTwoHour). Optional; /book-now#help opens it. -->
@@ -7271,3 +7274,12 @@
 <!-- Measurement (Meta, Google Analytics 4, Google Ads, Clarity; every ID empty = off), the notice, "No thanks" and the booking's first
      and last touch: pixel.js, next to this page. On twohourmaids.com the page layout adds it instead (scripts/build-site.cjs). -->
 <script src="pixel.js" defer></script>
+<script>
+  // Steer note for a really dirty home (Jack 2026-11-23): shown under the condition question, wording only; nothing is changed in the booking.
+  (function () {
+    var c = document.getElementById("bw-gate-condition"), n = document.getElementById("bw-cond-steer");
+    if (!c || !n) return;
+    var paint = function () { n.hidden = c.value !== "dirty"; };
+    c.addEventListener("change", paint); paint();
+  })();
+</script>
