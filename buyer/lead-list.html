@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Sell your lead list</title>
+<meta name="description" content="Sell your lead list. We buy cleaning company client lists and lead lists and pay a share of the revenue."><link rel="stylesheet" href="site.css"></head>
+<body><div id="app"><main><p class="muted">Loading…</p></main></div>
+<template id="content">
+<h1 id="page-title">Sell your lead list</h1>
+<p class="lead">Leads you stopped working are not doing anything for you. If they are sitting in a spreadsheet, a quote tool or an old inbox, we will buy them.</p>
+<div class="card"><h2>What we pay</h2><p>For a lead list, {brand} pays {royalty} percent of what the customers who book from it pay us, every month, {term}. You can also ask about a flat price for the list.</p></div>
+<div class="card"><h2>What we need to see</h2><ul><li>How many leads and how old they are</li><li>Whether the people agreed to be contacted (we only use lists that were collected properly)</li><li>Any service area or service type limits</li></ul></div>
+<div class="card"><h2>How we treat the people on your list</h2><p>We tell people who we are. We follow text and email consent rules. Anyone who says stop is never contacted again.</p></div>
+<div class="card"><h2>Tell us a little about your company</h2><form id="f">
+<label>Your name</label><input name="name" autocomplete="name" required>
+<label>Company</label><input name="company" autocomplete="organization">
+<label>Phone</label><input name="phone" type="tel" autocomplete="tel">
+<label>Email</label><input name="email" type="email" autocomplete="email">
+<label>Anything you would like us to know?</label><textarea name="message" maxlength="600"></textarea>
+<div class="hp"><label>Website</label><input name="website" tabindex="-1" autocomplete="off"></div>
+<button id="go" type="submit">Send</button><p id="msg" class="muted"></p></form></div></template>
+<script src="site.js"></script></body></html>

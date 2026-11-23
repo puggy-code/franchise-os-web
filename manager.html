@@ -400,7 +400,7 @@
 
   // Prices: _shared/housePrice.ts. Keep in step with it, the booking page CONFIG and the text agent.
   var PRICE = {
-    base: 22200, fourHour: 38500, sponge: 18900,
+    base: 22200, fourHour: 37800, sponge: 18900,
     freq: { one_time: 0, weekly: 3300, every_other_week: 3300, every_4_weeks: 2200, every_6_weeks: 2200 },
     bed: { "0": 0, "1": 0, "2": 1000, "3": 2000, "4": 3000, "5": 4000 },
     bath: { "1": 0, "1.5": 500, "2": 1000, "2.5": 1500, "3": 2000, "3.5": 2500, "4": 3500, "4.5": 4500, "5": 5500, "5.5": 6500, "6": 9000,
@@ -421,10 +421,10 @@
   var SERVICE_NAMES = { two_hour: "Two Hour Clean", works: "Checklist Clean", checklist: "Checklist Clean", four_hour: "4-Hr Home Detailing" };
   var STATUS = { scheduled: ["Booked", ""], on_the_way: ["On the way", "ok"], in_progress: ["In progress", "ok"], completed: ["Done", "ok"], cancelled: ["Cancelled", "bad"] };
   var JOB_SELECT = "id, org_id, customer_id, scheduled_date, start_time, end_time, service, service_label, status, team_id, address, notes, is_test, " +
-    "cancellation_reason, estimated_minutes, customer:customers(full_name, phone, address), team:teams(name, color), " +
+    "cancellation_reason, estimated_minutes, customer:customers(full_name, address), team:teams(name, color), " +
     "assignments:job_assignments(profile_id, profile:profiles!job_assignments_profile_id_fkey(full_name))";
   var CUSTOMER_STATUS_COLUMNS = "booking_blocked_at, booking_blocked_reason, archived_at"; // 0321
-  var CUSTOMER_COLUMNS ="id, full_name, phone, email, address, zip, bedrooms, bathrooms, access_notes, parking_notes, pets, do_notes, dont_notes, " +
+  var CUSTOMER_COLUMNS ="id, full_name, address, zip, bedrooms, bathrooms, access_notes, parking_notes, pets, do_notes, dont_notes, " +
     "special_instructions, notes, created_at";
 
   var params = new URLSearchParams(location.search);
@@ -524,6 +524,32 @@
     var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "tdm-manager-portal" } });
     function ok(r) { if (r.error) throw r.error; return r.data; }
     function like(q) { return "%" + q.replace(/[%,()*]/g, " ").trim() + "%"; }
+    // Customer phone, email and account link are not readable columns for app users (0620 + the hide-customer-contact lock, Jack
+    // 2026-11-22 #1570 U1896 "Yes, lock them down"). Owners and managers get them through customer_contacts(ids) and search by phone
+    // through customer_ids_by_phone(term); for anyone else both return nothing.
+    function contactsFor(ids) {
+      ids = ids.filter(function (v, i, a) { return v && a.indexOf(v) === i; });
+      if (!ids.length) return Promise.resolve({});
+      return sb.rpc("customer_contacts", { p_ids: ids }).then(function (r) { var m = {}; (r.data || []).forEach(function (x) { m[x.id] = x; }); return m; });
+    }
+    function jobsWithPhones(rows) {
+      rows = rows || [];
+      return contactsFor(rows.map(function (j) { return j.customer_id; })).then(function (m) {
+        rows.forEach(function (j) { if (j.customer) j.customer.phone = (m[j.customer_id] || {}).phone || null; });
+        return rows;
+      });
+    }
+    function customersWithContacts(rows) {
+      var list = Array.isArray(rows) ? rows : rows ? [rows] : [];
+      return contactsFor(list.map(function (c) { return c.id; })).then(function (m) {
+        list.forEach(function (c) { var x = m[c.id] || {}; c.phone = x.phone || null; c.email = x.email || null; });
+        return rows;
+      });
+    }
+    function idsByPhone(q) {
+      if (digits(q).length < 3) return Promise.resolve([]);
+      return sb.rpc("customer_ids_by_phone", { p_term: q }).then(function (r) { return r.data || []; }, function () { return []; });
+    }
     // Customer status (0321: Don't book, Archive). Read when the columns exist; before 0321 is pushed, the same query without them.
     var hasStatus = true;
     function withStatus(build) {
@@ -548,15 +574,15 @@
       teams: function () { return sb.from("teams").select("id, name, color").eq("is_active", true).order("name").then(ok); },
       jobsBetween: function (from, to) {
         return sb.from("jobs").select(JOB_SELECT).gte("scheduled_date", from).lte("scheduled_date", to).neq("status", "cancelled")
-          .order("scheduled_date").order("start_time").then(ok);
+          .order("scheduled_date").order("start_time").then(ok).then(jobsWithPhones);
       },
       search: function (q, from) {
         var term = like(q);
-        return sb.from("customers").select("id").or("full_name.ilike." + term + ",phone.ilike." + term + ",address.ilike." + term).limit(40).then(ok)
-          .then(function (cs) {
-            var ids = cs.map(function (c) { return c.id; });
+        return Promise.all([sb.from("customers").select("id").or("full_name.ilike." + term + ",address.ilike." + term).limit(40).then(ok), idsByPhone(q)])
+          .then(function (res) {
+            var ids = res[0].map(function (c) { return c.id; }).concat(res[1]).filter(function (v, i, a) { return a.indexOf(v) === i; });
             var or = "address.ilike." + term + (ids.length ? ",customer_id.in.(" + ids.join(",") + ")" : "");
-            return sb.from("jobs").select(JOB_SELECT).or(or).gte("scheduled_date", from).order("scheduled_date").order("start_time").limit(60).then(ok);
+            return sb.from("jobs").select(JOB_SELECT).or(or).gte("scheduled_date", from).order("scheduled_date").order("start_time").limit(60).then(ok).then(jobsWithPhones);
           });
       },
       money: function (ids) {
@@ -578,25 +604,31 @@
       deleteRequest: function (id) { return sb.from("job_special_requests").delete().eq("id", id).then(ok); },
       payState: function (jobId) { return sb.from("job_money").select("payment_status, stripe_payment_intent_id").eq("job_id", jobId).maybeSingle().then(function (r) { return r.data || {}; }); },
       refund: function (jobId) { return sb.functions.invoke("refund-job", { body: { job_id: jobId } }).then(function (r) { if (r.error) throw r.error; return r.data || {}; }); },
-      card: function (customerId) { return sb.from("customers").select("stripe_customer_id, stripe_payment_method_id, full_name, email").eq("id", customerId).maybeSingle().then(function (r) { return r.data; }); },
+      card: function (customerId) { return sb.from("customers").select("id, stripe_customer_id, stripe_payment_method_id, full_name").eq("id", customerId).maybeSingle().then(function (r) { return r.data; }).then(customersWithContacts); },
       outbox: function (row) { return sb.from("outbox").insert(row).then(function (r) { return !r.error; }); },
       customers: function (q) {
-        return withStatus(function (cols) {
-          var b = sb.from("customers").select(cols);
-          if (q) { var t = like(q); b = b.or("full_name.ilike." + t + ",phone.ilike." + t + ",address.ilike." + t + ",email.ilike." + t).order("full_name"); }
-          else b = b.order("created_at", { ascending: false });
-          return b.limit(50);
-        });
+        return (q ? idsByPhone(q) : Promise.resolve([])).then(function (pids) {
+          return withStatus(function (cols) {
+            var b = sb.from("customers").select(cols);
+            if (q) { var t = like(q); b = b.or("full_name.ilike." + t + ",address.ilike." + t + (pids.length ? ",id.in.(" + pids.join(",") + ")" : "")).order("full_name"); }
+            else b = b.order("created_at", { ascending: false });
+            return b.limit(50);
+          });
+        }).then(customersWithContacts);
       },
-      customer: function (id) { return withStatus(function (cols) { return sb.from("customers").select(cols).eq("id", id).maybeSingle(); }); },
+      customer: function (id) { return withStatus(function (cols) { return sb.from("customers").select(cols).eq("id", id).maybeSingle(); }).then(customersWithContacts); },
       customerByPhone: function (p) {
-        return withStatus(function (cols) { return sb.from("customers").select(cols).in("phone", phoneVariants(p)).limit(1); }).then(function (r) { return r[0] || null; });
+        var last10 = digits(p).slice(-10);
+        return idsByPhone(last10).then(function (ids) {
+          if (!ids.length) return [];
+          return withStatus(function (cols) { return sb.from("customers").select(cols).in("id", ids).limit(10); }).then(customersWithContacts);
+        }).then(function (rows) { return rows.filter(function (c) { return digits(c.phone).slice(-10) === last10; })[0] || null; });
       },
       series: function (customerId) {
         return sb.from("recurring_series").select("id, frequency, start_date, start_time, service, service_label, price_cents, team_id, status, paused_until")
           .eq("customer_id", customerId).in("status", ["active", "paused"]).order("start_date").then(function (r) { return r.data || []; });
       },
-      customerJobs: function (id) { return sb.from("jobs").select(JOB_SELECT).eq("customer_id", id).order("scheduled_date", { ascending: false }).limit(40).then(ok); },
+      customerJobs: function (id) { return sb.from("jobs").select(JOB_SELECT).eq("customer_id", id).order("scheduled_date", { ascending: false }).limit(40).then(ok).then(jobsWithPhones); },
       insertCustomer: function (row) { return sb.from("customers").insert(row).select("id").single().then(ok).then(function (r) { return r.id; }); },
       updateCustomer: function (id, patch) { return sb.from("customers").update(patch).eq("id", id).then(ok); },
       insertSeries: function (row) { return sb.from("recurring_series").insert(row).select("id").single().then(ok).then(function (r) { return r.id; }); },

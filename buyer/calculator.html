@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Estimate your share</title>
+<meta name="description" content="Estimate your share. We buy cleaning company client lists and lead lists and pay a share of the revenue."><link rel="stylesheet" href="site.css"></head>
+<body><div id="app"><main><p class="muted">Loading…</p></main></div>
+<template id="content">
+<h1 id="page-title">Estimate your monthly share</h1>
+<p class="lead">A quick illustration of {royalty} percent of what your customers pay, every month.</p>
+<div class="card" id="calc"><label>Recurring customers you would include</label><input id="cn" type="number" min="0" value="60" inputmode="numeric">
+<label>What each customer pays per month, on average ($)</label><input id="cr" type="number" min="0" value="180" inputmode="numeric"><div id="co" style="margin-top:14px"></div></div>
+<p class="muted">An estimate is not a quote. Customers come and go and the real terms are whatever a signed agreement says.</p>
+<div class="card"><h2>Tell us a little about your company</h2><form id="f">
+<label>Your name</label><input name="name" autocomplete="name" required>
+<label>Company</label><input name="company" autocomplete="organization">
+<label>Phone</label><input name="phone" type="tel" autocomplete="tel">
+<label>Email</label><input name="email" type="email" autocomplete="email">
+<label>Anything you would like us to know?</label><textarea name="message" maxlength="600"></textarea>
+<div class="hp"><label>Website</label><input name="website" tabindex="-1" autocomplete="off"></div>
+<button id="go" type="submit">Send</button><p id="msg" class="muted"></p></form></div></template>
+<script src="site.js"></script></body></html>

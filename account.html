@@ -123,7 +123,7 @@
       two_hour: !checklist, max_requests: 2, photos: [], documents: [], balance: { owed_cents: 0, due_now_cents: 0 }, plans: [], invoices: [],
       messages: [{ from: 'customer', kind: 'message', body: 'Can you use the unscented spray in the nursery?', at: plus(-10) }, { from: 'staff', kind: 'message', body: 'Yes, noted for every clean.', at: plus(-10) }]
     };
-    var PRICES = checklist ? { weekly: 27000, biweekly: 28200, every_4_weeks: 29900, every_6_weeks: 29900 } : { biweekly: 18900, every_4_weeks: 20000 };
+    var PRICES = checklist ? { weekly: 21900, biweekly: 21900, every_4_weeks: 23000 } : { biweekly: 18900, every_4_weeks: 20000 };
     var TRIP = phase === 'arrived' ? { phase: 'arrived', rooms_done: 3, rooms_total: 7 } : phase === 'leaving' ? { phase: 'on_the_way', driver: 'Tatiana', eta_min: null, position: null, dest: { lat: 44.948, lng: -93.29 }, waiting: 'leaving' }
       : { phase: 'on_the_way', driver: 'Tatiana', eta_min: 12, position: { lat: 44.975, lng: -93.262 }, dest: { lat: 44.948, lng: -93.29 }, waiting: null };
     var real = window.fetch.bind(window);
@@ -360,6 +360,7 @@
       } else if (p.status === 'paused') {
         body = '<p>Paused' + (p.paused_until ? ' until ' + esc(day(p.paused_until)) : '') + '. Message us below to change it.</p>';
       }
+      if (p.price_notice) body += '<p class="sub" style="margin:4px 0 0">Price change: from ' + esc(day(p.price_notice.effective_date)) + ', ' + esc(money(p.price_notice.new_cents)) + ' a visit + tax (now ' + esc(money(p.price_notice.old_cents)) + ').</p>';
       return '<div class="room"><div class="row" style="border:0;padding:0 0 6px"><div><b>' + esc(p.label || 'Cleaning') + '</b><div class="sub">' + esc(FREQ[p.frequency] || 'Regular') + (p.status === 'active' ? ' · usually ' + esc(time(p.time)) : '') + '</div></div>' +
         '<div style="text-align:right"><b id="price-' + esc(p.id) + '"></b><div class="sub" id="pricesub-' + esc(p.id) + '"></div></div></div>' + body +
         '<details class="inner"><summary>Change how often</summary><div id="fo-' + esc(p.id) + '" style="margin-top:6px"><p class="sub">Loading...</p></div></details>' +

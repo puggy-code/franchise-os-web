@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<title>Job reference</title>
+<!--
+  Job reference questions (UNBUILT-SPEC B3, migration 0672). Linked from the one text a reference may get:
+      https://<public web host>/reference.html?t=<token>
+  That text goes out only when the owner has switched reference texts on AND recorded the employment attorney's approval of the exact
+  wording, and only to a reference the applicant said expects to hear from us (hiring_settings, reference_texts_tick).
+
+  It calls two database functions over the Supabase REST endpoint with the publishable anon key (publishable by design):
+    reference_form(p_token)                                          -> { ok, applicant_first, company } or { ok: false, done | stopped }
+    reference_submit(p_token, p_answers, p_would_rehire, p_stop)     -> { ok }
+  The token in the URL is the only credential: good for 14 days and one answer. "Do not contact me" puts the number on the do-not-contact
+  list. The question keys must match REFERENCE_QUESTIONS in src/lib/references.ts (a test checks). English only, like every customer page.
+  Publish next to report.html and review.html in the public web repo.
+-->
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #f4f5f7; color: #10151e; margin: 0; padding: 24px 16px 48px; line-height: 1.5;
+  }
+  .card { background: #fff; border-radius: 18px; padding: 24px; max-width: 520px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  p { color: #5e6776; margin: 0 0 16px; }
+  label.q { display: block; font-weight: 700; margin: 16px 0 6px; }
+  textarea {
+    width: 100%; border: 1px solid #e3e6eb; border-radius: 12px; padding: 12px; font-size: 16px;
+    font-family: inherit; color: #10151e; background: #fff; min-height: 70px; resize: vertical;
+  }
+  .choices { display: flex; gap: 8px; flex-wrap: wrap; }
+  .choices label { border: 1px solid #e3e6eb; border-radius: 999px; padding: 8px 14px; cursor: pointer; font-weight: 600; }
+  .choices input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .choices input:checked + span { color: #0a47a8; }
+  .choices label:has(input:checked) { border-color: #0a47a8; background: #e7effb; }
+  .choices input:focus-visible + span { outline: 2px solid #0a47a8; outline-offset: 3px; border-radius: 4px; }
+  button {
+    display: block; width: 100%; background: #0a47a8; color: #fff; border: 0;
+    border-radius: 12px; padding: 14px; font-size: 17px; font-weight: 700; margin-top: 20px; cursor: pointer;
+  }
+  button[disabled] { opacity: .5; cursor: default; }
+  .stop { background: none; color: #5e6776; font-size: 14px; font-weight: 600; text-decoration: underline; margin-top: 14px; padding: 6px; }
+  .err { color: #b42318; font-weight: 700; margin-top: 10px; }
+  .fine { font-size: 13px; color: #8a93a1; margin-top: 18px; }
+</style>
+</head>
+<body>
+<div class="card" id="root"><p>Loading…</p></div>
+
+<script>
+  // ---- configure this once, to match your Supabase project (the anon key is publishable) ----
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzYmhsbWloYmliZG5hanZpY3JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MzU4NDMsImV4cCI6MjEwNTAxMTg0M30.VOKtXSF8z8A9_NiaI6zq1w_qXcrgHdW4DjiT-C4haK0";
+  // ------------------------------------------------------------------------------------------
+
+  // Same keys and words as REFERENCE_QUESTIONS in src/lib/references.ts.
+  var QUESTIONS = [
+    { key: 'how_known', ask: 'How do you know {first}, and how long did you work together?' },
+    { key: 'reliable', ask: 'How reliable were they about showing up on time and finishing the work?' },
+    { key: 'quality', ask: 'How careful was their work? Is there an example that comes to mind?' },
+    { key: 'anything_else', ask: 'Anything that would help them do well with us?' }
+  ];
+
+  var root = document.getElementById('root');
+  var token = (new URLSearchParams(location.search).get('t') || '').trim();
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function rpc(fn, args) {
+    return fetch(SUPABASE_URL + '/rest/v1/rpc/' + fn, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: SUPABASE_ANON_KEY, authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+      body: JSON.stringify(args)
+    }).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); });
+  }
+
+  function message(title, text) {
+    root.innerHTML = '<h1>' + esc(title) + '</h1><p>' + esc(text) + '</p>';
+  }
+
+  function form(d) {
+    var first = d.applicant_first || 'the applicant';
+    var qs = QUESTIONS.map(function (q) {
+      return '<label class="q" for="' + q.key + '">' + esc(q.ask.split('{first}').join(first)) + '</label>' +
+             '<textarea id="' + q.key + '" name="' + q.key + '" maxlength="500"></textarea>';
+    }).join('');
+    root.innerHTML =
+      '<h1>A reference for ' + esc(first) + '</h1>' +
+      '<p>' + esc(first) + ' applied to clean homes with ' + esc(d.company || 'us') + ' and gave your name. About 2 minutes. Skip anything you prefer not to answer.</p>' +
+      '<form id="f">' + qs +
+      '<label class="q">Would you hire them or work with them again?</label>' +
+      '<div class="choices">' +
+        '<label><input type="radio" name="rehire" value="yes"><span>Yes</span></label>' +
+        '<label><input type="radio" name="rehire" value="unsure"><span>Not sure</span></label>' +
+        '<label><input type="radio" name="rehire" value="no"><span>No</span></label>' +
+      '</div>' +
+      '<button type="submit" id="go">Send</button>' +
+      '<div class="err" id="err" hidden></div>' +
+      '<button type="button" class="stop" id="stop">Do not contact me again</button>' +
+      '<p class="fine">Your answers go only to the hiring manager. Please do not include health, family or other personal details.</p>' +
+      '</form>';
+
+    var f = document.getElementById('f');
+    var go = document.getElementById('go');
+    var err = document.getElementById('err');
+
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var answers = {};
+      QUESTIONS.forEach(function (q) { var v = f[q.key].value.trim(); if (v) answers[q.key] = v; });
+      var picked = f.querySelector('input[name=rehire]:checked');
+      if (!Object.keys(answers).length && !picked) {
+        err.hidden = false; err.textContent = 'Please answer at least one question.'; return;
+      }
+      err.hidden = true; go.disabled = true; go.textContent = 'Sending…';
+      rpc('reference_submit', { p_token: token, p_answers: answers, p_would_rehire: picked ? picked.value : null, p_stop: false })
+        .then(function (res) {
+          if (res && res.ok) message('Thank you!', 'That really helps. We will not contact you again about this.');
+          else message('This link is no longer valid', 'It may have been used already. Thank you anyway.');
+        })
+        .catch(function () {
+          go.disabled = false; go.textContent = 'Send';
+          err.hidden = false; err.textContent = 'That did not send. Please try again.';
+        });
+    });
+
+    document.getElementById('stop').addEventListener('click', function () {
+      rpc('reference_submit', { p_token: token, p_answers: {}, p_would_rehire: null, p_stop: true })
+        .then(function () { message('Done', 'We will not contact you again.'); })
+        .catch(function () { err.hidden = false; err.textContent = 'That did not go through. Please try again, or reply STOP to our text.'; });
+    });
+  }
+
+  if (!/^[0-9a-f]{32}$/.test(token)) {
+    message('This link is no longer valid', 'Thank you for your time.');
+  } else {
+    rpc('reference_form', { p_token: token })
+      .then(function (d) {
+        if (d && d.ok) form(d);
+        else if (d && d.done) message('Already answered', 'Thank you, we have your answers.');
+        else if (d && d.stopped) message('Done', 'We will not contact you again.');
+        else message('This link is no longer valid', 'Thank you for your time.');
+      })
+      .catch(function () { message('This link is no longer valid', 'Thank you for your time.'); });
+  }
+</script>
+</body>
+</html>

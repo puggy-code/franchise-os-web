@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Last cleaned</title>
+<!--
+  On-site QR sign (migration 0587): site.html?k=<sign token>. Shows the property and when it was last cleaned. Reads site-sign; nothing
+  else is sent or shown (no staff names, prices or codes). Print the QR from the app (qr.html).
+-->
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; margin: 0; padding: 24px 16px; color: #15121f; background: #f4f5f7; }
+  .card { max-width: 480px; margin: 0 auto; background: #fff; border-radius: 16px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,.06); text-align: center; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .big { font-size: 26px; font-weight: 800; color: #0a47a8; margin: 18px 0 6px; }
+  .sub { color: #5e6776; font-size: 15px; }
+</style>
+</head>
+<body>
+<div class="card" id="root"><p class="sub">Loading...</p></div>
+<script>
+  var FN = 'https://isbhlmihbibdnajvicrj.supabase.co/functions/v1';
+  var root = document.getElementById('root');
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var k = new URLSearchParams(location.search).get('k') || '';
+  fetch(FN + '/site-sign?k=' + encodeURIComponent(k)).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); }).then(function (res) {
+    if (!res.ok) { root.innerHTML = '<p class="sub">This sign is no longer active.</p>'; return; }
+    var d = res.j;
+    root.innerHTML = '<h1>' + esc(d.property) + '</h1><p class="sub">Cleaned by ' + esc(d.company) + '</p>' +
+      (d.last_clean ? '<div class="big">Last cleaned</div><p class="sub" style="font-size:18px;color:#15121f">' + esc(d.last_clean) + '</p>' : '<p class="sub">No clean recorded yet.</p>');
+  }).catch(function () { root.innerHTML = '<p class="sub">Could not load. Try again in a moment.</p>'; });
+</script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What our customers say</title>
+<style>
+  :root { --ink:#0b1220; --muted:#5b6475; --card:#ffffff; --line:#e3e7ee; --accent:#2563eb; --star:#f5a623; --bg:transparent; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ink:#f1f4fa; --muted:#a3adc2; --card:#161c2b; --line:#262f45; --accent:#7aa2ff; } }
+  html, body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width:960px; margin:0 auto; padding:16px; }
+  .head { display:flex; flex-wrap:wrap; align-items:baseline; gap:10px; margin-bottom:12px; }
+  .head h2 { margin:0; font-size:20px; }
+  .score { color:var(--muted); }
+  .stars { color:var(--star); letter-spacing:2px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .card p { margin:8px 0 10px; }
+  .who { color:var(--muted); font-size:13px; }
+  .more { display:inline-block; margin-top:14px; color:var(--accent); text-decoration:none; font-weight:600; }
+  .empty { color:var(--muted); }
+</style>
+</head>
+<body>
+<!-- Embed: <iframe src="https://YOUR-HOST/reviews-widget.html" style="width:100%;border:0;height:520px" title="Customer reviews"></iframe>
+     Data: the public-reviews function (Google reviews only, 4 stars and up, first name and last initial). Add ?limit=3 for fewer cards. -->
+<div class="wrap" id="root"><p class="empty">Loading reviews...</p></div>
+<script>
+(function () {
+  var FN = 'https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/public-reviews';
+  var ORG = 'two-hour-maids';
+  var q = new URLSearchParams(location.search);
+  var limit = Math.min(12, Math.max(1, parseInt(q.get('limit') || '6', 10) || 6));
+  var root = document.getElementById('root');
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function stars(n) { var s = ''; for (var i = 0; i < 5; i++) s += i < n ? '★' : '☆'; return s; }
+  fetch(FN + '?org=' + encodeURIComponent(ORG) + '&limit=' + limit).then(function (r) { if (!r.ok) throw new Error('bad'); return r.json(); }).then(function (d) {
+    var html = '<div class="head"><h2>What our customers say</h2>';
+    if (d.rating) html += '<span class="score"><span class="stars">' + stars(Math.round(d.rating)) + '</span> ' + esc(d.rating) + (d.count ? ' from ' + esc(d.count) + ' Google reviews' : '') + '</span>';
+    html += '</div>';
+    if (!d.reviews || !d.reviews.length) { root.innerHTML = html + '<p class="empty">Reviews will show here soon.</p>'; return; }
+    html += '<div class="grid">' + d.reviews.map(function (r) {
+      return '<div class="card"><div class="stars">' + stars(r.rating) + '</div><p>' + esc(r.text) + '</p><div class="who">' + esc(r.name) + '</div></div>';
+    }).join('') + '</div>';
+    if (d.review_url) html += '<a class="more" href="' + esc(d.review_url) + '" target="_blank" rel="noopener">See all reviews on Google</a>';
+    root.innerHTML = html;
+  }).catch(function () { root.innerHTML = '<p class="empty">Reviews are unavailable right now.</p>'; });
+})();
+</script>
+</body>
+</html>

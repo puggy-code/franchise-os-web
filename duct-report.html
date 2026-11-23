@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Air duct cleaning report · Two Hour Maids</title>
+<!-- Air duct job report (migration 2001, enterprise gap #9). Renders job-report JSON for an air_ducts visit, which the server returns
+     only after the owner approved the report. "Save as PDF" prints this page on Letter. ?demo=1 shows sample data, nothing is fetched. -->
+<style>
+  :root { --blue: #004AAD; --yellow: #FFED00; --ink: #10151E; --muted: #5E6776; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: var(--ink); background: #f3f5f9; }
+  .page { max-width: 820px; margin: 0 auto; background: #fff; min-height: 100vh; }
+  header { background: var(--blue); color: #fff; padding: 22px 28px; border-bottom: 6px solid var(--yellow); }
+  header h1 { margin: 0; font-size: 22px; } header p { margin: 4px 0 0; opacity: .9; font-size: 14px; }
+  main { padding: 22px 28px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+  .stat { border: 1px solid #e3e6eb; border-radius: 10px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 24px; color: var(--blue); } .stat span { font-size: 12px; color: var(--muted); }
+  h2 { font-size: 16px; color: var(--blue); margin: 18px 0 8px; }
+  ul { margin: 0; padding-left: 18px; } li { margin: 3px 0; }
+  .photos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .photos figure { margin: 0; } .photos figcaption { font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 700; text-transform: none; }
+  .photos img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 8px; border: 1px solid #e3e6eb; }
+  .note { color: var(--muted); font-size: 14px; }
+  .actions { padding: 0 28px 24px; } button { background: var(--blue); color: #fff; border: 0; border-radius: 8px; padding: 10px 16px; font-size: 15px; cursor: pointer; }
+  footer { padding: 14px 28px 26px; color: var(--muted); font-size: 12px; border-top: 1px solid #e3e6eb; }
+  @media (max-width: 560px) { .stats { grid-template-columns: 1fr 1fr; } .photos { grid-template-columns: 1fr; } }
+  @page { size: letter; margin: 0.4in; }
+  @media print { body { background: #fff; } .actions { display: none; } .page { max-width: none; } header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .photos img { break-inside: avoid; } }
+</style>
+</head>
+<body>
+<div class="page" id="root"><main><p class="note">Loading your report…</p></main></div>
+<script>
+  var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
+  var FN = SUPABASE_URL + '/functions/v1';
+  var root = document.getElementById('root');
+  var q = new URLSearchParams(location.search);
+  var token = (q.get('t') || '').trim();
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function safeUrl(u) { return /^https:\/\//.test(String(u || '')) ? String(u) : ''; }
+  function when(d) { if (!d) return ''; var x = new Date(String(d).length === 10 ? d + 'T12:00:00' : d); return x.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); }
+  function pairs(before, after) {
+    var n = Math.max(before.length, after.length), out = '';
+    for (var i = 0; i < n; i++) {
+      out += '<figure>' + (before[i] ? '<figcaption>Before</figcaption><img alt="Before" src="' + esc(safeUrl(before[i])) + '">' : '') + '</figure>';
+      out += '<figure>' + (after[i] ? '<figcaption>After</figcaption><img alt="After" src="' + esc(safeUrl(after[i])) + '">' : '') + '</figure>';
+    }
+    return out;
+  }
+  function render(d) {
+    var r = d.duct;
+    document.title = 'Air duct cleaning report · ' + (d.org && d.org.name || 'Two Hour Maids');
+    root.innerHTML =
+      '<header><h1>Air duct cleaning report</h1><p>' + esc(d.org && d.org.name || 'Two Hour Maids') + ' · ' + esc(when(d.job.completed_at || d.job.scheduled_date)) + '</p></header>' +
+      '<main><div class="stats">' +
+        '<div class="stat"><b>' + esc(r.systems) + '</b><span>system' + (r.systems === 1 ? '' : 's') + '</span></div>' +
+        '<div class="stat"><b>' + esc(r.vents) + '</b><span>supply vents cleaned</span></div>' +
+        '<div class="stat"><b>' + esc(r.returns) + '</b><span>returns cleaned</span></div>' +
+        '<div class="stat"><b>' + (r.filter_replaced ? 'Yes' : 'No') + '</b><span>filter replaced</span></div></div>' +
+      (r.findings && r.findings.length ? '<h2>What we found</h2><ul>' + r.findings.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '<h2>What we found</h2><p class="note">Nothing unusual.</p>') +
+      (r.notes ? '<h2>Notes from your technician</h2><p>' + esc(r.notes) + '</p>' : '') +
+      ((r.before.length || r.after.length) ? '<h2>Before and after</h2><div class="photos">' + pairs(r.before, r.after) + '</div>' : '') +
+      '</main><div class="actions"><button onclick="window.print()">Save as PDF</button></div>' +
+      '<footer>Thank you for choosing ' + esc(d.org && d.org.name || 'Two Hour Maids') + '. Questions about your report? Reply to the message this link came in.</footer>';
+  }
+  function fail(msg) { root.innerHTML = '<main><p class="note">' + esc(msg) + '</p></main>'; }
+  if (q.get('demo') === '1') {
+    render({ org: { name: 'Two Hour Maids' }, job: { scheduled_date: '2026-11-20' }, duct: { systems: 1, vents: 12, returns: 2, filter_replaced: true,
+      findings: ['Heavy dust buildup', 'Pet hair'], notes: 'Cleaned all supply vents and both returns. The new filter is a MERV 8.', before: [], after: [] } });
+  } else if (!token) {
+    fail('This link is missing its code. Please use the link from your message.');
+  } else {
+    fetch(FN + '/job-report?t=' + encodeURIComponent(token)).then(function (res) { return res.json().then(function (j) { return { ok: res.ok, j: j }; }); })
+      .then(function (x) {
+        if (x.ok && x.j && x.j.kind === 'duct') return render(x.j);
+        fail(x.j && x.j.error === 'not_ready' ? x.j.message : 'We could not find this report.');
+      }).catch(function () { fail('We could not load your report. Please try again in a minute.'); });
+  }
+</script>
+</body>
+</html>

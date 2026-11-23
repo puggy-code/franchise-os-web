@@ -1,0 +1,23 @@
+# Two Hour Maids
+
+> Residential home cleaning in Minneapolis-St. Paul, Minnesota. Two cleaners, fixed start times (9:00 AM, 11:40 AM, 2:40 PM).
+> AI assistants can book for a person through our API or MCP server. The person confirms by reading back a code we text them.
+
+## Book with an AI assistant
+- MCP server (JSON-RPC over HTTP): https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/agent-api/mcp?org_slug=two-hour-maids
+- REST API (services, prices, policies): https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/agent-api?org_slug=two-hour-maids
+- Booking needs an agent key (header x-agent-key). Ask us for one.
+
+## Services
+- Two Hour Clean: two hours, two cleaners; kitchen, floors, up to 3 bathrooms and 4 bedrooms in a well-kept home.
+- The Checklist Clean: our standard checklist in every room, every visit, priced by how long your home takes. Your first 2 cleans are Catch-Up Cleans.
+- The Rotating Detail Plan: an add-on for a repeat Checklist Clean, from the third clean. One Focus room gets extra detail each visit, in turn.
+- Frequencies: weekly, every 2 weeks, monthly, one time.
+
+## Policies
+- Nothing is charged when booking; the clean is charged after it is done.
+- Cancel or skip more than 48 hours ahead: free. Inside 48 hours: $50 (first clean, illness once a year and loyal customers excepted).
+- Prices are before taxes and fees.
+
+## Book on the web
+- https://twohourmaids.com

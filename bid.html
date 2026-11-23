@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,noarchive">
+<title>Your estimate</title>
+<!--
+  Customer bid page (migration 0423, function photo-bid): the estimate built from the customer's photos, with an Approve button.
+      https://<your-host>/bid.html?t=<token>      The token in the URL is the only credential. Nothing here needs a Supabase key. English only.
+-->
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #f6f5fb; color: #15121f; margin: 0; padding: 20px 16px 48px; line-height: 1.5; }
+  .wrap { max-width: 560px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 18px; padding: 22px; margin: 0 0 16px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  p { color: #6b6880; margin: 0 0 12px; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+  td { padding: 6px 0; border-bottom: 1px solid #eee; }
+  td:last-child { text-align: right; }
+  .total td { font-weight: 800; border-bottom: 0; font-size: 18px; }
+  .btn { display: block; width: 100%; background: #6d4aff; color: #fff; border: 0; border-radius: 12px; padding: 14px; font: inherit; font-weight: 800; margin-top: 12px; cursor: pointer; }
+  .btn.alt { background: #fff; color: #6d4aff; border: 1px solid #6d4aff; }
+  .btn[disabled] { opacity: .55; }
+  textarea { width: 100%; padding: 10px; border: 1px solid #d9d6e8; border-radius: 10px; font: inherit; }
+  .photos { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  .photos img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; }
+  .small { font-size: 12px; color: #6b6880; }
+  .ok { color: #0f7a53; font-weight: 800; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="card"><p>Loading your estimate…</p></div></div>
+<script>
+  var FN = 'https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/photo-bid';
+  var t = new URLSearchParams(location.search).get('t') || '';
+  var app = document.getElementById('app');
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function usd(c) { return '$' + (c / 100).toFixed(0); }
+  function post(o) { o.token = t; return fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(o) }).then(function (r) { return r.json().then(function (j) { j._status = r.status; return j; }); }); }
+  function card(html) { app.innerHTML = '<div class="card">' + html + '</div>'; }
+
+  function timePicker(d) {
+    if (d.preferred_date) return card('<h1>Approved. Thank you!</h1><p class="ok">We have your request for ' + esc(d.preferred_date) + ' (' + esc(d.preferred_window === 'any' ? 'any time of day' : d.preferred_window) + '). We will text you to confirm the exact time.</p>');
+    var min = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10), max = new Date(Date.now() + 42 * 86400000).toISOString().slice(0, 10);
+    card('<h1>Approved. Thank you!</h1><p>When would you like us to come? Pick the day you prefer and we will confirm the exact time by text.</p>' +
+      '<label class="small">Preferred day (Monday to Saturday)</label><input type="date" id="pd" min="' + min + '" max="' + max + '" style="width:100%;padding:10px;border:1px solid #d9d6e8;border-radius:10px;font:inherit">' +
+      '<label class="small" style="display:block;margin-top:10px">Part of the day</label><select id="pw" style="width:100%;padding:10px;border:1px solid #d9d6e8;border-radius:10px;font:inherit"><option value="any">Any time</option><option value="morning">Morning</option><option value="afternoon">Afternoon</option></select>' +
+      '<button class="btn" id="pick">Request this day</button><div id="msg" class="small" style="margin-top:10px"></div>');
+    document.getElementById('pick').onclick = function () {
+      var v = document.getElementById('pd').value; if (!v) { document.getElementById('msg').textContent = 'Please pick a day.'; return; }
+      this.disabled = true;
+      post({ action: 'request_time', date: v, window: document.getElementById('pw').value }).then(function (r) {
+        if (r.ok) card('<h1>Thank you!</h1><p class="ok">We will text you to confirm the exact time.</p>');
+        else { document.getElementById('pick').disabled = false; document.getElementById('msg').textContent = r.error === 'bad_time' ? 'Please choose a weekday at least 3 days from now (Sundays are closed).' : 'We could not save that. Please text us your preferred day.'; }
+      });
+    };
+  }
+  function show(d) {
+    if (d.status === 'collecting' || d.status === 'measuring') return card('<h1>Hi ' + esc(d.first_name) + '</h1><p>We are looking at your photos. Check back in a few minutes, or wait for our text.</p>');
+    if (d.status === 'needs_review' || d.status === 'needs_quote') return card('<h1>Hi ' + esc(d.first_name) + '</h1><p>A team member is double-checking your photos to make sure your estimate is right. We will text you as soon as it is ready.</p>');
+    if (d.status === 'approved') return timePicker(d);
+    if (d.status === 'declined' || d.status === 'closed') return card('<h1>This estimate is closed</h1><p>If you change your mind, just text us and we will take care of you.</p>');
+    if (d.status === 'expired') return card('<h1>This estimate has expired</h1><p>Prices can change. Text us and we will send a fresh one.</p>');
+    var rows = (d.lines || []).map(function (l) { return '<tr><td>' + esc(l.label) + ' &times; ' + l.qty + '</td><td>' + usd(l.line_cents) + '</td></tr>'; }).join('');
+    var photos = (d.photos || []).map(function (u) { return '<img src="' + esc(u) + '" alt="">'; }).join('');
+    var notes = (d.notes || []).map(function (n) { return '<li>' + esc(n) + '</li>'; }).join('');
+    // Carpet stains we saw and what we treat them with (J12).
+    var stains = (d.stains || []).map(function (s) { return '<li><b>' + esc(s.label) + ':</b> ' + esc(s.we_use) + ' Before we come: ' + esc(s.before) + '</li>'; }).join('');
+    card('<h1>Your ' + esc(d.service) + ' estimate</h1><p>' + esc(d.org) + ' · good until ' + esc(d.valid_until) + '</p>' +
+      '<div class="photos">' + photos + '</div>' +
+      '<table>' + rows + '<tr class="total"><td>Total before sales tax</td><td>' + usd(d.subtotal_cents) + '</td></tr></table>' +
+      (notes ? '<p class="small">What we saw:</p><ul class="small">' + notes + '</ul>' : '') +
+      (stains ? '<p class="small">Stains we saw:</p><ul class="small">' + stains + '</ul>' : '') +
+      '<p class="small">This is an estimate from your photos. If the job on site is different we will tell you before we start, and you never pay more without saying yes. You are charged after the service with the card on file; sales tax is added.</p>' +
+      '<button class="btn" id="ok">Approve this estimate</button>' +
+      '<button class="btn alt" id="ask">I have a question</button>' +
+      '<div id="ask-box" style="display:none"><textarea id="q" rows="3" maxlength="400" placeholder="Your question"></textarea><button class="btn" id="send">Send question</button></div>' +
+      '<div id="msg" class="small" style="margin-top:10px"></div>');
+    document.getElementById('ok').onclick = function () {
+      this.disabled = true;
+      post({ action: 'approve' }).then(function (r) { if (r.ok) { d.status = 'approved'; timePicker(d); } else { document.getElementById('msg').textContent = r.error === 'expired' ? 'This estimate has expired. Please text us for a fresh one.' : 'We could not approve this right now. Please text us.'; } });
+    };
+    document.getElementById('ask').onclick = function () { document.getElementById('ask-box').style.display = 'block'; };
+    document.getElementById('send').onclick = function () {
+      var note = document.getElementById('q').value.trim();
+      post({ action: 'question', note: note }).then(function (r) { document.getElementById('msg').textContent = r.ok ? 'Thank you. We will text you back soon.' : 'Please write a few words first.'; });
+    };
+  }
+  if (!/^[0-9a-f]{36}$/.test(t)) card('<h1>This link is not valid</h1><p>Please use the link from your text or email.</p>');
+  else fetch(FN + '?t=' + encodeURIComponent(t)).then(function (r) { return r.ok ? r.json() : Promise.reject(); }).then(show).catch(function () { card('<h1>This link is not valid</h1><p>Please use the link from your text or email.</p>'); });
+</script>
+</body>
+</html>

@@ -6,9 +6,12 @@
 <title>Questions about Two Hour Maids</title>
 <meta name="description" content="Plain answers about our crews, our supplies, our prices and how booking works.">
 <!--
-  Customer FAQ (2026-10-21). Static and mobile first, no scripts, loads in one request. Plain words (fifth grade level) and only claims the company
-  can stand behind. Embed on the website or link to it. English only (public page). No prices are listed here: the booking page shows the price
-  before anyone pays, so this page never goes out of date. FAQPage structured data helps search results.
+  Customer FAQ (2026-10-21; 20 answers 2026-11-02, WEBSITE-PAGES-2026-11-02.md, the same copy as on the Zing site). Static and mobile
+  first, no scripts, loads in one request. Plain words (fifth grade level) and only claims the company can stand behind (DIFFERENTIATORS.md
+  Appendix A: "insured" and "background checks for every new hire" until workers' comp and checks of current staff are on record).
+  English only (public page). The website (scripts/build-site.cjs) builds its FAQ page and FAQPage data from the <details> below, and
+  fails if a number here no longer matches the code: the $40 half hour (housePrice.ts), the 48 hours and $50 (feeRules.ts), the 2
+  special requests (twoHourRules.ts), every 6th clean (loyalty.ts). Links to the website use its full address, so they also work here.
 -->
 <style>
   :root { --brand: #0A47A8; --ink: #10151E; --muted: #4B5563; --bg: #F4F5F7; }
@@ -29,45 +32,100 @@
 <body>
 <div class="wrap">
   <h1>Questions? Here are the answers.</h1>
-  <p class="lead">Two Hour Maids sends a team of two to clean your home, on your schedule. Here is what people ask us most.</p>
+  <p class="lead">We send a team of two to clean your home, when it works for you. Here is what people ask us most.</p>
 
   <details open><summary>Who comes to my home?</summary>
-    <p>A team of two people. Every team member is background checked, insured and trained by us. We teach the same method every time, so your clean looks the same whoever shows up.</p></details>
+    <p>A team of two of our own employees, trained by us. Every new hire gets a background check, and we are insured.</p></details>
 
   <details><summary>What do you use to clean and sanitize?</summary>
-    <p>Each team brings its own kit, with fresh rags, gloves and masks for every home. We disinfect the places hands touch and the places germs live, like bathrooms and kitchen counters. We vacuum with our own vacuum, so you do not need to put anything out.</p></details>
+    <p>Each team brings its own kit, with fresh rags, gloves and masks for every home. We disinfect the places hands touch. We bring our own vacuum.</p></details>
 
   <details><summary>How long does it take, and what gets done?</summary>
-    <p>Our Two Hour Clean is two people for two hours. In that time we focus on the kitchen, the bathrooms and the floors, the things you notice most. Want us to stay until a full checklist is done? Pick the Checklist Clean. We tell you how long we think it will take before you book.</p></details>
+    <p>The Two Hour Clean is two people for two hours. They do the kitchen, 2-3 baths and floors, then dust the bedrooms. The Checklist Clean does more of your home.</p></details>
+
+  <details><summary>Can I add extras to a Two Hour Clean?</summary>
+    <p>No extras. Tell us the one or two things that matter most, and the team starts there. For more, pick the Checklist Clean.</p></details>
 
   <details><summary>What if I need more time?</summary>
-    <p>At the end of checkout you can add an extra half hour. If our team has to leave for another home, we send you photos or a short video of anything left and you can ask us to finish it.</p></details>
+    <p>On a Two Hour Clean, add an extra half hour for $40. Or add an hour for $80. If the team has to leave, we send photos of anything left. You can ask us to finish it.</p></details>
+
+  <details><summary>Is there anything you don't do?</summary>
+    <p>We don't wash dishes, or fold or put away clothes. Clothes on the floor get bagged, hotel style. We don't do move-out cleans for homes; property managers can book turnover cleans. Carpet, air duct, car and window cleaning come back in the spring.</p></details>
 
   <details><summary>How much does it cost?</summary>
-    <p>You see one flat price on the booking page before you pay. No surprise add-ons. Our goal is a fair price for regular homes, not a luxury price tag.</p></details>
+    <p>The Two Hour Clean is from $189 on a repeat plan, or $222 one time. The Checklist Clean is from $222. Four Hour Home Detailing is $378. You see your price, with taxes and fees, before you book.</p></details>
 
   <details><summary>Do I have to sign up for a plan?</summary>
-    <p>No. Book one clean, or book as often as you like. Recurring cleans cost a little less, and you can change or stop whenever you want. We are on demand: pick a day that works and we confirm it by text.</p></details>
+    <p>No. Book once, or as often as you like. Repeat cleans cost a little less, and you can stop any time.</p></details>
 
-  <details><summary>Is my home safe with you?</summary>
-    <p>Yes. Our team is background checked and insured, and we have workers' compensation and liability coverage. Need proof of insurance for your building? Just ask and we will send the certificate.</p></details>
+  <details><summary>When can you come?</summary>
+    <p>Pick 9:00, 11:40 or 2:40. Each has a 30-minute arrival window. Same-day cleans when a team is free.</p></details>
+
+  <details><summary>What happens on my first Checklist Clean?</summary>
+    <p>Your first 2 Checklist Cleans are Catch-Up Cleans. We learn your home and get it up to speed. Anything on the list we can't reach is done free on your next visit.</p></details>
+
+  <details><summary>What are Catch-Up Cleans?</summary>
+    <p>Your first 2 Checklist Cleans are Catch-Up Cleans. It is not likely we can get everything done in them. We get your home up to speed. The first one details the kitchen and bathrooms. The second details the bedrooms, living and dining areas. On a Checklist Clean, what we can't reach is done free on your next visit. We promise excellence, not perfection.</p></details>
+
+  <details><summary>What is the Rotating Detail Plan?</summary>
+    <p>It is an add-on for a repeat Checklist Clean. It starts after your 2 Catch-Up Cleans. Every visit is the full Checklist Clean, plus one area given extra detail. We go in order: the kitchen and eating areas, the bathrooms, the bedrooms, then the living and dining areas. Then it starts again. You can add it when you book, or any time after your second clean.</p></details>
 
   <details><summary>Do I need to be home?</summary>
-    <p>No. Many customers leave a key or a door code with us. We keep access details private and only share them with the team on your job.</p></details>
+    <p>No. Leave us a key or a door code. Only the team on your job gets it.</p></details>
+
+  <details><summary>What about my pets?</summary>
+    <p>Please have them in a crate or a closed room while the team cleans.</p></details>
+
+  <details><summary>What if I need to cancel or reschedule?</summary>
+    <p>Cancel, skip or reschedule more than 48 hours ahead for free. Inside 48 hours, the fee is $50. Moving a clean within the same week is free, and so is moving a new customer's first clean once. We also waive it for an illness once a year, one late skip a year, and loyal customers. If the team cannot get in within 30 minutes, after 2 texts and a call, the visit is a lockout. A fee of 30% of the visit may apply. We waive it for a real emergency.</p></details>
+
+  <details><summary>Is my home safe with you?</summary>
+    <p>Yes. We are insured, and every new hire gets a background check. Need proof of insurance? Just ask.</p></details>
 
   <details><summary>What if I am not happy?</summary>
-    <p>Tell us. Reply to our text or message us and we will make it right. We would rather fix it than lose you.</p></details>
+    <p>Tell us within 48 hours of your clean. On a Checklist Clean, a room on your checklist may not be right. Then we can come back to fix it, or refund that part. The Two Hour Clean is a set two-hour service with no re-cleans or refunds. On Four Hour Home Detailing, tell us within 48 hours and we will review it.</p></details>
+
+  <details><summary>Do I need to tip?</summary>
+    <p>Tips are optional and go 100% to your team. We pay the card fee.</p></details>
+
+  <details><summary>How does Buy six, gift one work?</summary>
+    <p>Every 6th clean earns a free clean to give a friend, automatically, forever.</p></details>
 
   <details><summary>Where do you work?</summary>
-    <p>We clean homes across the Twin Cities. Type your zip code on the booking page to see open times for your area.</p></details>
+    <p>Across the Twin Cities. Type your ZIP code on the booking page to see open times.</p></details>
 
-  <a class="cta" href="book.html">See times and book</a>
+  <details><summary>Do you clean offices and other businesses?</summary>
+    <p>Yes. Facilities by Two Hour Maids cleans offices, stores, gyms, schools, churches and more. Start with a free walkthrough: see <a href="https://www.twohourmaids.com/facilities">Facilities by Two Hour Maids</a>.</p></details>
+
+  <details><summary>I manage rental properties. Can you help?</summary>
+    <p>Yes. Book unit turnovers by text and track them in a private portal. See <a href="https://www.twohourmaids.com/property-managers">Property Manager Portal</a>.</p></details>
+
+  <a class="cta" href="booking-widget.html">Book now</a>
 </div>
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
-{"@type":"Question","name":"Who comes to my home?","acceptedAnswer":{"@type":"Answer","text":"A team of two people. Every team member is background checked, insured and trained by us."}},
-{"@type":"Question","name":"How long does a Two Hour Clean take?","acceptedAnswer":{"@type":"Answer","text":"Two people for two hours, focused on the kitchen, bathrooms and floors. You can add an extra half hour at checkout."}},
-{"@type":"Question","name":"Do I have to sign up for a plan?","acceptedAnswer":{"@type":"Answer","text":"No. Book one clean or book as often as you like. You can change or stop any time."}}
+{"@type":"Question","name":"Who comes to my home?","acceptedAnswer":{"@type":"Answer","text":"A team of two of our own employees, trained by us. Every new hire gets a background check, and we are insured."}},
+{"@type":"Question","name":"What do you use to clean and sanitize?","acceptedAnswer":{"@type":"Answer","text":"Each team brings its own kit, with fresh rags, gloves and masks for every home. We disinfect the places hands touch. We bring our own vacuum."}},
+{"@type":"Question","name":"How long does it take, and what gets done?","acceptedAnswer":{"@type":"Answer","text":"The Two Hour Clean is two people for two hours. They do the kitchen, 2-3 baths and floors, then dust the bedrooms. The Checklist Clean does more of your home."}},
+{"@type":"Question","name":"Can I add extras to a Two Hour Clean?","acceptedAnswer":{"@type":"Answer","text":"No extras. Tell us the one or two things that matter most, and the team starts there. For more, pick the Checklist Clean."}},
+{"@type":"Question","name":"What if I need more time?","acceptedAnswer":{"@type":"Answer","text":"On a Two Hour Clean, add an extra half hour for $40. Or add an hour for $80. If the team has to leave, we send photos of anything left. You can ask us to finish it."}},
+{"@type":"Question","name":"Is there anything you don't do?","acceptedAnswer":{"@type":"Answer","text":"We don't wash dishes, or fold or put away clothes. Clothes on the floor get bagged, hotel style. We don't do move-out cleans for homes; property managers can book turnover cleans. Carpet, air duct, car and window cleaning come back in the spring."}},
+{"@type":"Question","name":"How much does it cost?","acceptedAnswer":{"@type":"Answer","text":"The Two Hour Clean is from $189 on a repeat plan, or $222 one time. The Checklist Clean is from $222. Four Hour Home Detailing is $378. You see your price, with taxes and fees, before you book."}},
+{"@type":"Question","name":"Do I have to sign up for a plan?","acceptedAnswer":{"@type":"Answer","text":"No. Book once, or as often as you like. Repeat cleans cost a little less, and you can stop any time."}},
+{"@type":"Question","name":"When can you come?","acceptedAnswer":{"@type":"Answer","text":"Pick 9:00, 11:40 or 2:40. Each has a 30-minute arrival window. Same-day cleans when a team is free."}},
+{"@type":"Question","name":"What happens on my first Checklist Clean?","acceptedAnswer":{"@type":"Answer","text":"Your first 2 Checklist Cleans are Catch-Up Cleans. We learn your home and get it up to speed. Anything on the list we can't reach is done free on your next visit."}},
+{"@type":"Question","name":"What are Catch-Up Cleans?","acceptedAnswer":{"@type":"Answer","text":"Your first 2 Checklist Cleans are Catch-Up Cleans. It is not likely we can get everything done in them. We get your home up to speed. The first one details the kitchen and bathrooms. The second details the bedrooms, living and dining areas. On a Checklist Clean, what we can't reach is done free on your next visit. We promise excellence, not perfection."}},
+{"@type":"Question","name":"What is the Rotating Detail Plan?","acceptedAnswer":{"@type":"Answer","text":"It is an add-on for a repeat Checklist Clean. It starts after your 2 Catch-Up Cleans. Every visit is the full Checklist Clean, plus one area given extra detail. We go in order: the kitchen and eating areas, the bathrooms, the bedrooms, then the living and dining areas. Then it starts again. You can add it when you book, or any time after your second clean."}},
+{"@type":"Question","name":"Do I need to be home?","acceptedAnswer":{"@type":"Answer","text":"No. Leave us a key or a door code. Only the team on your job gets it."}},
+{"@type":"Question","name":"What about my pets?","acceptedAnswer":{"@type":"Answer","text":"Please have them in a crate or a closed room while the team cleans."}},
+{"@type":"Question","name":"What if I need to cancel or reschedule?","acceptedAnswer":{"@type":"Answer","text":"Cancel, skip or reschedule more than 48 hours ahead for free. Inside 48 hours, the fee is $50. Moving a clean within the same week is free, and so is moving a new customer's first clean once. We also waive it for an illness once a year, one late skip a year, and loyal customers. If the team cannot get in within 30 minutes, after 2 texts and a call, the visit is a lockout. A fee of 30% of the visit may apply. We waive it for a real emergency."}},
+{"@type":"Question","name":"Is my home safe with you?","acceptedAnswer":{"@type":"Answer","text":"Yes. We are insured, and every new hire gets a background check. Need proof of insurance? Just ask."}},
+{"@type":"Question","name":"What if I am not happy?","acceptedAnswer":{"@type":"Answer","text":"Tell us within 48 hours of your clean. On a Checklist Clean, a room on your checklist may not be right. Then we can come back to fix it, or refund that part. The Two Hour Clean is a set two-hour service with no re-cleans or refunds. On Four Hour Home Detailing, tell us within 48 hours and we will review it."}},
+{"@type":"Question","name":"Do I need to tip?","acceptedAnswer":{"@type":"Answer","text":"Tips are optional and go 100% to your team. We pay the card fee."}},
+{"@type":"Question","name":"How does Buy six, gift one work?","acceptedAnswer":{"@type":"Answer","text":"Every 6th clean earns a free clean to give a friend, automatically, forever."}},
+{"@type":"Question","name":"Where do you work?","acceptedAnswer":{"@type":"Answer","text":"Across the Twin Cities. Type your ZIP code on the booking page to see open times."}},
+{"@type":"Question","name":"Do you clean offices and other businesses?","acceptedAnswer":{"@type":"Answer","text":"Yes. Facilities by Two Hour Maids cleans offices, stores, gyms, schools, churches and more. Start with a free walkthrough: see Facilities by Two Hour Maids."}},
+{"@type":"Question","name":"I manage rental properties. Can you help?","acceptedAnswer":{"@type":"Answer","text":"Yes. Book unit turnovers by text and track them in a private portal. See Property Manager Portal."}}
 ]}
 </script>
 <!-- Meta Pixel: consent-aware, off until the pixel ID is set in pixel.js (PAID-ADS.md) -->

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Where we clean</title>
+<!--
+  Public, anonymized "where we have cleaned" map (migration 0415, function public-cleans).
+  Embed:  <iframe src="https://<your-host>/where-we-clean.html?org=two-hour-maids" style="width:100%;height:560px;border:0;border-radius:16px" loading="lazy" title="Where we clean"></iframe>
+  Options: org=<slug> (required), theme=dark|light.
+  City level only. Dots are scattered around each city centre, they are NOT homes. The map cannot be zoomed or moved. A city shows only after 3 cleans,
+  and only cleans finished at least a day ago count. No names, no addresses.
+-->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #f6f5fb; color: #15121f; }
+  body.dark { background: #0e1a30; color: #fff; }
+  .wrap { height: 100%; display: flex; flex-direction: column; }
+  header { padding: 12px 16px 8px; }
+  h1 { font-size: 18px; margin: 0; letter-spacing: -.2px; }
+  .sub { font-size: 13px; opacity: .7; margin-top: 2px; }
+  #map { flex: 1; min-height: 260px; border-radius: 16px; margin: 0 12px; background: #dfe6f1; }
+  ul { list-style: none; margin: 10px 16px 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 4px 16px; font-size: 13px; }
+  li { opacity: .85; }
+  li b { font-weight: 700; }
+  footer { font-size: 11px; opacity: .55; padding: 8px 16px 12px; }
+  .city { background: rgba(15,157,107,.9); color: #fff; border-radius: 999px; padding: 2px 8px; font-size: 11px; font-weight: 800; white-space: nowrap; transform: translate(-50%, -140%); position: absolute; }
+  .leaflet-container { font: inherit; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><h1 id="title">Where we clean</h1><div class="sub" id="sub">Loading…</div></header>
+  <div id="map"></div>
+  <ul id="recent"></ul>
+  <footer>Dots are approximate and are not home locations. We never show names or addresses.</footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+  var FN = 'https://isbhlmihbibdnajvicrj.supabase.co/functions/v1';
+  var q = new URLSearchParams(location.search);
+  var org = (q.get('org') || '').toLowerCase();
+  if (q.get('theme') === 'dark') document.body.classList.add('dark');
+
+  // Locked view: no zoom controls, no dragging, no scroll or pinch zoom, one fixed zoom level, so nothing can be zoomed into a street.
+  var map = L.map('map', { zoomControl: false, dragging: false, scrollWheelZoom: false, doubleClickZoom: false, touchZoom: false, boxZoom: false, keyboard: false, attributionControl: true, minZoom: 10, maxZoom: 10 }).setView([44.98, -93.26], 10);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 10, minZoom: 10, attribution: '&copy; OpenStreetMap' }).addTo(map);
+  var layer = L.layerGroup().addTo(map);
+
+  // Small repeatable pseudo-random numbers so a city's dots do not move on every refresh.
+  function rng(seed) { var s = 0; for (var i = 0; i < seed.length; i++) s = (s * 31 + seed.charCodeAt(i)) >>> 0; return function () { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+  function ago(day) { var d = Math.round((Date.now() - new Date(day + 'T12:00:00').getTime()) / 86400000); return d <= 1 ? 'yesterday' : d + ' days ago'; }
+
+  function draw(d) {
+    layer.clearLayers();
+    var pts = [];
+    d.cities.forEach(function (c) {
+      var r = rng(c.city), n = Math.min(c.count, 30);
+      for (var i = 0; i < n; i++) {
+        var ang = r() * 6.283, rad = Math.sqrt(r()) * 0.028; // about 3 km at most
+        L.circleMarker([c.lat + Math.sin(ang) * rad * 0.8, c.lng + Math.cos(ang) * rad], { radius: 4, color: '#0f9d6b', weight: 1, fillColor: '#0f9d6b', fillOpacity: 0.75, interactive: false }).addTo(layer);
+      }
+      L.marker([c.lat, c.lng], { icon: L.divIcon({ className: '', iconSize: [0, 0], html: '<div class="city">' + c.city.replace(/[<>&]/g, '') + ' · ' + c.count + '</div>' }), interactive: false, keyboard: false }).addTo(layer);
+      pts.push([c.lat, c.lng]);
+    });
+    if (pts.length) map.setView(L.latLngBounds(pts).getCenter(), 10);
+    document.getElementById('sub').textContent = d.total ? d.total + ' homes cleaned across ' + d.cities.length + (d.cities.length === 1 ? ' city' : ' cities') : 'We are just getting started. Check back soon.';
+    document.getElementById('recent').innerHTML = d.recent.map(function (r) { return '<li>Cleaned a home in <b>' + r.city.replace(/[<>&]/g, '') + '</b> · ' + ago(r.day) + '</li>'; }).join('');
+  }
+
+  if (!/^[a-z0-9-]{2,60}$/.test(org)) { document.getElementById('sub').textContent = 'Map unavailable'; }
+  else fetch(FN + '/public-cleans?org=' + encodeURIComponent(org)).then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); }).then(draw).catch(function () { document.getElementById('sub').textContent = 'Map unavailable right now'; });
+</script>
+</body>
+</html>

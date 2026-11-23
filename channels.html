@@ -291,7 +291,16 @@
   </main>
 </div>
 
+<!-- Rules check before a channel is turned on (Jack 2026-11-22 #1075). Same list as src/lib/channelRules.ts; a test keeps them equal. -->
+<script id="channel-rules" type="application/json">{"kinds":{"lead_texts":"texts","winback_texts":"texts","speed_to_lead":"texts","hiring_blast":"texts","recurring_upsell":"texts","callie_ai":"texts","cold_calling":"calls","cold_email":"email","winback_email":"email","newsletter":"email","meta_ads":"ads","google_ads":"ads","bing_ads":"ads","google_lsa":"ads","nextdoor_ads":"ads","pinterest_ads":"ads","reddit_ads":"ads","tiktok_ads":"ads","youtube_ads":"ads","linkedin_ads":"ads","streaming_tv":"ads","indeed":"hiring_ads","ziprecruiter":"hiring_ads","glassdoor":"hiring_ads","snagajob":"hiring_ads","craigslist_jobs":"hiring_ads","facebook_jobs":"hiring_ads","google_jobs":"hiring_ads","nextdoor_jobs":"hiring_ads","instagram_hiring":"hiring_ads","postcards":"mail","letters":"mail","facility_postcards":"mail","clover_mail":"mail","door_hangers":"mail"},"rules":{"texts":["Only numbers that agreed to texts from us (consent on file).","Every text can be stopped: STOP and HELP work, and STOP is honored right away.","The sending number is registered for business texting (10DLC).","Quiet hours: nothing before 8 AM or after 9 PM their time.","The do-not-contact list is checked first.","Texts go through the outbox and your Approve inbox."],"calls":["Numbers are checked against the national Do Not Call list and our do-not-contact list.","Calls only between 8 AM and 9 PM their time.","Caller ID shows our real number.","No recorded or AI voice calls to cell phones without written consent.","If a call is recorded, the caller says so at the start.","Only the approved call script."],"email":["A real From name and an honest subject line.","Our mailing address (535 Sandhill Drive) in every email.","A working unsubscribe link, honored within 10 business days.","SPF, DKIM and DMARC are set on the sending domain.","The do-not-contact list is checked first."],"ads":["Only approved words and pictures (no \"two maids\"; real photos).","Claims are true: insured, prices pre-tax, no promises we cannot keep.","The weekly budget cap is set before it runs.","The landing page and phone number are the live ones."],"hiring_ads":["The job ad is filed as an employment ad (no age, gender or ZIP-only targeting).","Pay range is the real one on the job post.","Equal opportunity employer line is in the ad.","W-2 job, 18+, no fee to apply."],"mail":["Our return address (535 Sandhill Drive) is on it.","Postage or the permit mark is right for the mail type.","Only approved words and pictures (no \"two maids\").","The reply phone line and QR code are the live ones."]},"labels":{"texts":"Texts","calls":"Calls","email":"Email","ads":"Ads","hiring_ads":"Job ads","mail":"Mail"}}</script>
 <script>
+  // Rules check (Jack 2026-11-22 #1075): before a texting, calling, email, ad or mail channel goes ON, show its legal and opt-out checks.
+  var CHANNEL_RULES = (function () { try { return JSON.parse(document.getElementById("channel-rules").textContent); } catch (e) { return { kinds: {}, rules: {}, labels: {} }; } })();
+  function rulesText(key) {
+    var k = CHANNEL_RULES.kinds[key]; if (!k) return null;
+    return "Rules check (" + CHANNEL_RULES.labels[k] + "):\n" + CHANNEL_RULES.rules[k].map(function (r) { return "\u2022 " + r; }).join("\n");
+  }
+  function rulesOk(c) { var t = rulesText(c.key); return !t || window.confirm("Turn on " + c.name + "?\n\n" + t + "\n\nAnything that spends, texts or calls still waits in your Approve inbox."); }
 (function () {
   "use strict";
   var SUPABASE_URL = "https://isbhlmihbibdnajvicrj.supabase.co";
@@ -658,11 +667,12 @@
       dl.setAttribute("aria-valuenow", Math.round(c.weekly_budget_cents / 100)); dl.setAttribute("aria-valuetext", money(c.weekly_budget_cents) + " a week");
     }
     sw.addEventListener("click", function () {
+      if (!c.enabled && !rulesOk(c)) return;
       c.enabled = !c.enabled; if (c.enabled && !c.level) c.level = 50;
       paint(); save(c, el.querySelector(".saved"));
     });
     rg.addEventListener("input", function () {
-      var v = Number(rg.value); c.level = v; c.enabled = v > 0; paint(); save(c, el.querySelector(".saved"));
+      var v = Number(rg.value); if (v > 0 && !c.enabled && !rulesOk(c)) { rg.value = 0; return; } c.level = v; c.enabled = v > 0; paint(); save(c, el.querySelector(".saved"));
     });
     function fromPoint(ev) {
       var b = dl.getBoundingClientRect(), x = ev.clientX - (b.left + b.width / 2), y = ev.clientY - (b.top + b.height / 2);
@@ -705,7 +715,8 @@
   function mixList() {
     if (!S.mixKeys) {
       var saved = []; try { saved = JSON.parse(localStorage.getItem("chc-mix") || "[]"); } catch (e) { saved = []; }
-      S.mixKeys = S.chans.filter(function (c) { return c.weekly_budget_cents > 0 || saved.indexOf(c.key) >= 0 || (c.area === "marketing" && c.enabled && /spend/.test((c.kpis || []).join(","))); })
+      S.mixKeys = S.chans.filter(function (c) { return c.weekly_budget_cents > 0 || saved.indexOf(c.key) >= 0 || (c.area === "marketing" && c.enabled && /spend/.test((c.kpis || []).join(","))) ||
+          (c.area === "hiring" && c.enabled); })   // UA-1373: hiring channels sit in the same mixer (were only on their cards)
         .sort(function (a, b) { return (b.weekly_budget_cents || 0) - (a.weekly_budget_cents || 0) || (b.enabled - a.enabled); })
         .map(function (c) { return c.key; });
     }
@@ -746,7 +757,8 @@
     var on = list.filter(function (c) { return c.enabled && c.weekly_budget_cents > 0; });
     if ($("mix-total")) {
       var t = totals();
-      $("mix-total").innerHTML = '<div><span>All channels, a week</span><b class="num">' + money(tot) + "</b></div>" +
+      var hireTot = list.reduce(function (s, c) { return s + (c.enabled && c.area === "hiring" ? c.weekly_budget_cents || 0 : 0); }, 0);
+      $("mix-total").innerHTML = '<div><span>All channels, a week</span><b class="num">' + money(tot) + "</b><em>marketing " + money(tot - hireTot) + " · hiring " + money(hireTot) + "</em></div>" +
         '<div><span>Monthly run rate</span><b class="num">' + money(tot * 52 / 12) + "</b></div>" +
         '<div><span>Cost per lead now</span><b class="num">' + (t.spend28 && t.leads28 ? money(t.spend28 / t.leads28) : "—") + "</b><em>" + (t.spend28 ? "28-day" : "no spend feed yet") + "</em></div>";
       if (!$("mix-plan")) $("mix-total").insertAdjacentHTML("afterend", '<p class="plan" id="mix-plan"></p>');
@@ -840,11 +852,11 @@
       var c = chanBy(r.getAttribute("data-key")), sw = r.querySelector(".sw"), rg = r.querySelector("input[type=range]"), amt = r.querySelector(".amt input");
       function paint() { sw.setAttribute("aria-checked", String(!!c.enabled)); rg.value = c.weekly_budget_cents; rg.style.setProperty("--p", (100 * c.weekly_budget_cents / DIAL_MAX) + "%");
         if (document.activeElement !== amt) amt.value = Math.round(c.weekly_budget_cents / 100); S.mixing = true; renderStats(); S.mixing = false; refreshOverviewCharts(); }
-      sw.addEventListener("click", function () { c.enabled = !c.enabled; if (c.enabled && !c.level) c.level = 50; paint(); mark(); save(c, msg, done); });
-      rg.addEventListener("input", function () { c.weekly_budget_cents = Number(rg.value); if (c.weekly_budget_cents > 0 && !c.enabled) { c.enabled = true; if (!c.level) c.level = 50; } paint(); mark(); save(c, msg, done); });
+      sw.addEventListener("click", function () { if (!c.enabled && !rulesOk(c)) return; c.enabled = !c.enabled; if (c.enabled && !c.level) c.level = 50; paint(); mark(); save(c, msg, done); });
+      rg.addEventListener("input", function () { c.weekly_budget_cents = Number(rg.value); /* a budget never switches the channel on (Jack 2026-11-22 #98) */ paint(); mark(); save(c, msg, done); });
       amt.addEventListener("change", function () {
         var d = Math.max(0, Math.min(DIAL_MAX / 100, Math.round(Number(String(amt.value).replace(/[^\d.]/g, "")) || 0)));
-        c.weekly_budget_cents = Math.round(d * 100 / DIAL_STEP) * DIAL_STEP; if (c.weekly_budget_cents > 0 && !c.enabled) { c.enabled = true; if (!c.level) c.level = 50; }
+        c.weekly_budget_cents = Math.round(d * 100 / DIAL_STEP) * DIAL_STEP; /* a budget never switches the channel on (Jack 2026-11-22 #98) */
         amt.value = Math.round(c.weekly_budget_cents / 100); paint(); mark(); save(c, msg, done);
       });
     });

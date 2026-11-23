@@ -30,13 +30,14 @@
      The card says only that someone is thinking of the recipient. Anything more is the sender's own message. We never ask why. -->
 <div class="wrap">
   <h1>A gift of a clean home</h1>
-  <p class="lead">When someone you care about is going through a hard time, a clean home is one less thing to carry. Send a Two Hour Maids gift card they can use whenever they are ready. There is no rush, it never expires, and there are no fees.</p>
+  <p class="lead">Is someone you care about going through a hard time? A clean home is one less thing to carry. Send a Two Hour Maids gift card they can use whenever they are ready. There is no rush. It never expires, and there are no fees.</p>
   <div id="status"></div>
   <div class="card" id="form">
     <label>How much would you like to give?</label>
     <div class="amts" id="amts"></div>
     <label for="rname">Who is it for?</label><input id="rname" autocomplete="off">
-    <label for="remail">Their email (we send the card to them, only by email)</label><input id="remail" type="email">
+    <label for="remail">Their email (we send the card to them, only by email)</label><input id="remail" type="email" aria-describedby="remail-hint">
+    <p class="note" id="remail-hint">Leave blank to give it in person; we'll email the card to you.</p>
     <label for="msg">Your message (optional)</label><textarea id="msg" rows="4" maxlength="400" placeholder="Words from you"></textarea>
     <label for="pname">Your name (so they know it is from you)</label><input id="pname" autocomplete="name">
     <label for="pemail">Your email (for your receipt)</label><input id="pemail" type="email" autocomplete="email">
@@ -51,7 +52,7 @@
   var cents = 20000;
   var q = new URLSearchParams(location.search);
   var status = document.getElementById('status'), go = document.getElementById('go');
-  if (q.get('done')) status.innerHTML = '<div class="msg ok">Thank you. Your gift is on its way to them by email.</div>';
+  if (q.get('done')) status.innerHTML = '<div class="msg ok">Thank you. Your gift is on its way by email: to them, or to you if you left their email blank.</div>';
   if (q.get('cancelled')) status.innerHTML = '<div class="msg bad">Checkout was cancelled. Nothing was charged.</div>';
   var box = document.getElementById('amts');
   [10000, 20000, 30000, 50000].forEach(function (c) {
@@ -64,11 +65,12 @@
     status.innerHTML = '';
     if (!v('pname') || !v('pemail') || !v('remail')) { status.innerHTML = '<div class="msg bad">Please add their email, and your name and email.</div>'; return; }
     go.disabled = true; go.textContent = 'One moment...';
-    fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ org_slug: ORG, kind: 'sympathy', amount_cents: cents, purchaser_name: v('pname'), purchaser_email: v('pemail'), recipient_name: v('rname'), recipient_email: v('remail'), message: v('msg') }) })
+    fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ org_slug: ORG, kind: 'sympathy', amount_cents: cents, purchaser_name: v('pname'), purchaser_email: v('pemail'), recipient_name: v('rname'), recipient_email: v('remail'), message: v('msg'), return_url: location.href }) })
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
       .then(function (x) {
         if (x.ok && x.d.url) { location.href = x.d.url; return; }
-        var m = x.d && x.d.error === 'test_mode_only' ? 'This is not open yet. Please check back soon.' : (x.d && x.d.message) || 'Something went wrong. Please try again.';
+        // test_mode_only: real gift-card sales wait on Jack's switch (gift_cards_live).
+        var m = x.d && x.d.error === 'test_mode_only' ? 'Gift cards open soon. Call (763) 230-6795.' : (x.d && x.d.message) || 'Something went wrong. Please try again.';
         status.innerHTML = '<div class="msg bad">' + m.replace(/[<>&]/g, '') + '</div>'; go.disabled = false; go.textContent = 'Continue to payment';
       })
       .catch(function () { status.innerHTML = '<div class="msg bad">Something went wrong. Please try again.</div>'; go.disabled = false; go.textContent = 'Continue to payment'; });

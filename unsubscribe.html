@@ -78,7 +78,23 @@
     });
   }
 
-  if (!/^[0-9a-f]{36}$/.test(token)) invalid();
+  // Review-ask emails (1601): ?ra=<uuid>. One tap stops the reminder at once. The anon key is publishable by design.
+  var ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzYmhsbWloYmliZG5hanZpY3JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MzU4NDMsImV4cCI6MjEwNTAxMTg0M30.VOKtXSF8z8A9_NiaI6zq1w_qXcrgHdW4DjiT-C4haK0';
+  var ra = (new URLSearchParams(location.search).get('ra') || '').trim().toLowerCase();
+  function reviewUnsub() {
+    root.innerHTML = '<h1>Unsubscribe</h1><p>Stop review emails from Two Hour Maids?</p><button id="go">Unsubscribe</button><div class="err" id="err" hidden></div>';
+    var go = document.getElementById('go');
+    go.addEventListener('click', function () {
+      go.disabled = true;
+      fetch(SUPABASE_URL + '/rest/v1/rpc/review_ask_unsubscribe', { method: 'POST', headers: { 'content-type': 'application/json', apikey: ANON, authorization: 'Bearer ' + ANON }, body: JSON.stringify({ p_token: ra }) })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { if (d && d.ok) root.innerHTML = '<h1>You are unsubscribed</h1><p>You will not get any more review emails from us. Nothing else is needed.</p>'; else invalid(); })
+        .catch(function () { go.disabled = false; var err = document.getElementById('err'); err.hidden = false; err.textContent = 'Could not reach us. Try again, or reply "unsubscribe" to the email.'; });
+    });
+  }
+
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(ra)) reviewUnsub();
+  else if (!/^[0-9a-f]{36}$/.test(token)) invalid();
   else fetch(FN + '?t=' + encodeURIComponent(token))
     .then(function (r) { return r.json(); })
     .then(function (d) { if (!d || !d.ok) invalid(); else if (d.unsubscribed) done(d); else ask(d); })

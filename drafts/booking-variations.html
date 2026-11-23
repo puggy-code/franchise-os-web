@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Booking Widget Variations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Ten booking widget designs for Jack (2026-11-08), each one fully working on the same price engine. They borrow the home page hero tile:
+   frosted white 14% + blur 14px, a 35% white edge, 26px corners, navy #0a2f51 and yellow #ffed00, Poppins headings, Inter text. Prices are
+   the site's current list prices (Two Hour Clean $189 / $200 / $222, Checklist Clean priced by home, Four Hour $385); a draft, books nothing. */
+:root {
+  --navy: #0a2f51; --navy-d: #072340; --yellow: #ffed00; --ink: #0b1b33; --muted: #5b6b88; --line: #e2e8ef; --soft: #f2f6fa; --green: #15803d;
+  --head: Poppins, "Segoe UI", Arial, sans-serif; --body: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --glass: rgba(255,255,255,.14); --glass-edge: rgba(255,255,255,.35); --blur: blur(14px);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font-family: var(--body); color: var(--ink); background: var(--soft); -webkit-font-smoothing: antialiased; }
+button { font: inherit; cursor: pointer; }
+.intro { max-width: 1100px; margin: 0 auto; padding: 48px 20px 8px; }
+.intro h1 { font: 800 clamp(28px, 5vw, 44px)/1.1 var(--head); color: var(--navy); margin: 0 0 10px; }
+.intro p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.6; max-width: 720px; }
+.toc { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.toc a { text-decoration: none; color: var(--navy); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 14px; }
+
+.v { position: relative; padding: 56px 20px 64px; overflow: hidden; }
+.v + .v { border-top: 1px solid rgba(10,47,81,.08); }
+.v-photo { background: linear-gradient(rgba(7,35,64,.55), rgba(7,35,64,.65)), url("banner-1920.webp") center/cover no-repeat; }
+.v-photo2 { background: linear-gradient(rgba(7,35,64,.5), rgba(7,35,64,.7)), url("drive-living.webp") center/cover no-repeat; }
+.v-soft { background: var(--soft); }
+.v-white { background: #fff; }
+.v-navy { background: radial-gradient(1200px 500px at 20% 0%, #12406c 0%, var(--navy-d) 60%); }
+.label { max-width: 1100px; margin: 0 auto 22px; display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.label b { font: 800 13px var(--body); letter-spacing: 1.4px; text-transform: uppercase; color: var(--yellow); background: var(--navy); border-radius: 999px; padding: 5px 12px; }
+.label h2 { margin: 0; font: 700 clamp(20px, 3vw, 26px) var(--head); color: var(--navy); }
+.label span { color: var(--muted); font-size: 14px; }
+.v-photo .label h2, .v-photo2 .label h2, .v-navy .label h2 { color: #fff; }
+.v-photo .label span, .v-photo2 .label span, .v-navy .label span { color: rgba(255,255,255,.8); }
+
+/* shared pieces */
+.glass { background: var(--glass); border: 1px solid var(--glass-edge); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); border-radius: 26px; box-shadow: 0 20px 50px rgba(0,0,0,.3); color: #fff; }
+.kick { font: 700 12px var(--body); letter-spacing: 1.6px; text-transform: uppercase; }
+.btn-y { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 60px; border: 0; border-radius: 16px; background: var(--yellow); color: var(--navy); font: 800 20px var(--head); box-shadow: 0 8px 20px rgba(255,237,0,.25); transition: transform .15s ease; }
+.btn-y:hover { transform: translateY(-1px); }
+.btn-n { display: flex; align-items: center; justify-content: center; width: 100%; min-height: 56px; border: 0; border-radius: 14px; background: var(--navy); color: #fff; font: 700 18px var(--head); }
+.stepper { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.stepper .sb { width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid currentColor; background: transparent; color: inherit; font-size: 22px; line-height: 1; display: grid; place-items: center; }
+.stepper .sv { font: 700 22px var(--head); min-width: 56px; text-align: center; }
+.seg { display: grid; gap: 8px; }
+.seg button { border-radius: 14px; padding: 12px 10px; text-align: left; border: 1.5px solid transparent; transition: all .15s ease; }
+.times { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.times button { border-radius: 14px; padding: 12px 6px; border: 1.5px solid transparent; font-weight: 700; }
+.times small { display: block; font-weight: 600; opacity: .85; font-size: 13px; margin-bottom: 2px; }
+.price { font: 800 44px/1 var(--head); letter-spacing: -1px; }
+.per { font-size: 14px; opacity: .8; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(120px); background: var(--navy); color: #fff; padding: 14px 20px; border-radius: 14px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,.3); transition: transform .3s ease; z-index: 50; max-width: calc(100% - 32px); }
+.toast.on { transform: translateX(-50%) translateY(0); }
+.note { font-size: 13px; opacity: .8; margin: 10px 0 0; line-height: 1.5; }
+
+/* 1. Hero glass, the home page's own tile */
+.w1 { max-width: 620px; margin: 0 auto; padding: 30px; }
+.w1 .kick { color: rgba(255,255,255,.85); text-align: center; }
+.w1 h3 { font: 800 clamp(26px, 4vw, 34px)/1.15 var(--head); margin: 8px 0 22px; text-align: center; }
+.w1 h3 em { font-style: normal; color: var(--yellow); }
+.w1 .rooms { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.w1 .room { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); border-radius: 16px; padding: 12px 14px; }
+.w1 .room label { display: block; font-size: 13px; font-weight: 600; opacity: .85; margin-bottom: 6px; }
+.w1 .seg { grid-template-columns: repeat(3, 1fr); margin-bottom: 14px; }
+.w1 .seg button { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.25); text-align: center; }
+.w1 .seg button b { display: block; font: 700 15px var(--head); }
+.w1 .seg button span { font-size: 13px; opacity: .85; }
+.w1 .seg button.on { background: #fff; color: var(--navy); border-color: #fff; }
+.w1 .freq { display: flex; gap: 6px; background: rgba(0,0,0,.18); padding: 5px; border-radius: 999px; margin-bottom: 16px; }
+.w1 .freq button { flex: 1; border: 0; border-radius: 999px; padding: 9px 6px; background: transparent; color: #fff; font-weight: 600; font-size: 14px; }
+.w1 .freq button.on { background: var(--yellow); color: var(--navy); }
+.w1 .times button { background: var(--navy); color: #fff; }
+.w1 .times button.on { border-color: var(--yellow); box-shadow: 0 0 0 2px var(--yellow) inset; }
+.w1 .sum { display: flex; align-items: flex-end; justify-content: space-between; margin: 18px 0 14px; }
+.w1 .pts { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 6px 16px; justify-content: center; font-size: 14px; background: rgba(255,255,255,.86); color: var(--navy); border-radius: 0 0 22px 22px; padding: 12px; margin: 18px -30px -30px; }
+
+/* 2. Sentence builder */
+.w2 { max-width: 980px; margin: 0 auto; background: #fff; border-radius: 28px; padding: clamp(24px, 5vw, 48px); box-shadow: 0 20px 60px rgba(10,47,81,.12); }
+.w2 p.s { font: 600 clamp(22px, 3.6vw, 36px)/1.6 var(--head); color: var(--navy); margin: 0 0 24px; }
+.w2 .pick { position: relative; display: inline-block; }
+.w2 .pick > button { border: 0; background: transparent; color: #1f5fd1; font: inherit; border-bottom: 3px solid var(--yellow); padding: 0 2px; }
+.w2 .menu { position: absolute; left: 0; top: 110%; z-index: 5; background: #fff; border-radius: 16px; box-shadow: 0 16px 40px rgba(10,47,81,.2); padding: 6px; min-width: 220px; display: none; }
+.w2 .pick.open .menu { display: block; }
+.w2 .menu button { display: block; width: 100%; text-align: left; border: 0; background: transparent; border-radius: 10px; padding: 10px 12px; font: 600 16px var(--body); color: var(--ink); }
+.w2 .menu button:hover, .w2 .menu button.on { background: var(--soft); color: var(--navy); }
+.w2 .row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 20px; }
+.w2 .price { color: var(--navy); }
+.w2 .btn-y { width: auto; padding: 0 34px; }
+
+/* 3. Step wizard */
+.w3 { max-width: 640px; margin: 0 auto; background: #fff; border-radius: 26px; box-shadow: 0 20px 60px rgba(10,47,81,.12); overflow: hidden; }
+.w3 .bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 18px 22px 0; }
+.w3 .bar i { height: 5px; border-radius: 3px; background: var(--line); transition: background .25s ease; }
+.w3 .bar i.on { background: var(--navy); }
+.w3 .body { padding: 22px 26px 26px; min-height: 360px; }
+.w3 .stepno { color: var(--muted); font-weight: 700; font-size: 13px; letter-spacing: 1px; text-transform: uppercase; }
+.w3 h3 { font: 700 26px var(--head); color: var(--navy); margin: 6px 0 18px; }
+.w3 .seg button { background: var(--soft); color: var(--ink); display: flex; justify-content: space-between; align-items: center; padding: 16px; }
+.w3 .seg button b { font: 700 17px var(--head); color: var(--navy); }
+.w3 .seg button.on { border-color: var(--navy); background: #fff; box-shadow: 0 6px 16px rgba(10,47,81,.1); }
+.w3 .stepper { background: var(--soft); border-radius: 16px; padding: 12px 16px; margin-bottom: 10px; color: var(--navy); }
+.w3 .times button { background: var(--soft); color: var(--navy); }
+.w3 .times button.on { background: var(--navy); color: #fff; }
+.w3 .nav { display: flex; gap: 10px; padding: 0 26px 26px; }
+.w3 .nav .back { flex: 0 0 120px; border: 1.5px solid var(--line); background: #fff; border-radius: 14px; color: var(--navy); font-weight: 700; }
+.w3 .recap { background: var(--soft); border-radius: 16px; padding: 16px; display: grid; gap: 8px; }
+.w3 .recap div { display: flex; justify-content: space-between; }
+
+/* 4. Live receipt */
+.w4 { max-width: 1060px; margin: 0 auto; display: grid; grid-template-columns: 1.35fr 1fr; gap: 0; border-radius: 28px; overflow: hidden; box-shadow: 0 30px 70px rgba(0,0,0,.35); }
+.w4 .l { background: rgba(255,255,255,.92); -webkit-backdrop-filter: var(--blur); backdrop-filter: var(--blur); padding: 30px; }
+.w4 .r { background: var(--navy); color: #fff; padding: 30px; display: flex; flex-direction: column; }
+.w4 h3 { font: 700 24px var(--head); color: var(--navy); margin: 0 0 18px; }
+.w4 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+.w4 .box { border: 1.5px solid var(--line); border-radius: 16px; padding: 12px 14px; color: var(--navy); }
+.w4 .box label { font-size: 13px; color: var(--muted); font-weight: 600; display: block; margin-bottom: 6px; }
+.w4 .seg { grid-template-columns: 1fr; margin-bottom: 18px; }
+.w4 .seg button { background: #fff; border-color: var(--line); display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; }
+.w4 .seg button b { font: 700 16px var(--head); color: var(--navy); }
+.w4 .seg button span { color: var(--muted); font-size: 14px; }
+.w4 .seg button em { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-style: normal; font-weight: 800; color: var(--navy); }
+.w4 .seg button.on { border-color: var(--navy); box-shadow: 0 0 0 1.5px var(--navy) inset; }
+.w4 .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.w4 .chips button { border: 1.5px solid var(--line); background: #fff; border-radius: 999px; padding: 9px 16px; font-weight: 700; color: var(--navy); }
+.w4 .chips button.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+.w4 .r .kick { color: var(--yellow); }
+.w4 .r h4 { font: 700 22px var(--head); margin: 6px 0 18px; }
+.w4 .line { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.14); font-size: 15px; }
+.w4 .line span:first-child { opacity: .8; }
+.w4 .tot { display: flex; justify-content: space-between; align-items: flex-end; margin: 18px 0; }
+.w4 .r .times button { background: rgba(255,255,255,.1); color: #fff; }
+.w4 .r .times button.on { background: var(--yellow); color: var(--navy); }
+.w4 .r .btn-y { margin-top: auto; }
+
+/* 5. Plan cards */
+.w5 { max-width: 1100px; margin: 0 auto; }
+.w5 .top { display: flex; justify-content: center; gap: 14px; flex-wrap: wrap; margin-bottom: 22px; }
+.w5 .pill { display: flex; gap: 4px; background: #fff; border-radius: 999px; padding: 5px; box-shadow: 0 6px 18px rgba(10,47,81,.08); }
+.w5 .pill button { border: 0; background: transparent; border-radius: 999px; padding: 10px 18px; font-weight: 700; color: var(--navy); }
+.w5 .pill button.on { background: var(--navy); color: #fff; }
+.w5 .mini { display: flex; gap: 10px; align-items: center; background: #fff; border-radius: 999px; padding: 6px 14px; box-shadow: 0 6px 18px rgba(10,47,81,.08); color: var(--navy); font-weight: 600; }
+.w5 .mini .sb { width: 32px; height: 32px; font-size: 18px; }
+.w5 .mini .sv { font-size: 16px; min-width: 64px; }
+.w5 .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; }
+.w5 .card { background: #fff; border-radius: 26px; padding: 26px; box-shadow: 0 16px 40px rgba(10,47,81,.1); display: flex; flex-direction: column; border: 2px solid transparent; transition: transform .2s ease, border-color .2s ease; }
+.w5 .card.on { border-color: var(--navy); transform: translateY(-4px); }
+.w5 .card.best { background: var(--navy); color: #fff; }
+.w5 .card .tag { align-self: flex-start; background: var(--yellow); color: var(--navy); font-weight: 800; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; border-radius: 999px; padding: 4px 10px; margin-bottom: 12px; }
+.w5 .card h4 { font: 700 22px var(--head); margin: 0 0 6px; }
+.w5 .card .sub { color: var(--muted); margin: 0 0 16px; }
+.w5 .card.best .sub { color: rgba(255,255,255,.75); }
+.w5 .card ul { list-style: none; margin: 18px 0; padding: 0; display: grid; gap: 10px; }
+.w5 .card li::before { content: "✓"; color: var(--green); font-weight: 900; margin-right: 8px; }
+.w5 .card.best li::before { color: var(--yellow); }
+.w5 .card .go { margin-top: auto; }
+.w5 .card:not(.best) .btn-y { background: var(--navy); color: #fff; box-shadow: none; }
+.w5 .timesbar { margin: 22px auto 0; max-width: 620px; }
+.w5 .times button { background: #fff; color: var(--navy); box-shadow: 0 6px 18px rgba(10,47,81,.08); }
+.w5 .times button.on { background: var(--yellow); }
+
+/* 6. Date first */
+.w6 { max-width: 760px; margin: 0 auto; padding: 26px; }
+.w6 .days { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin: 12px 0 18px; }
+.w6 .days button { border: 1px solid rgba(255,255,255,.3); background: rgba(255,255,255,.1); color: #fff; border-radius: 16px; padding: 10px 4px; }
+.w6 .days button small { display: block; font-size: 12px; opacity: .8; font-weight: 600; text-transform: uppercase; }
+.w6 .days button b { font: 700 22px var(--head); }
+.w6 .days button.on { background: #fff; color: var(--navy); }
+.w6 .times button { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.3); font-size: 18px; }
+.w6 .times button.on { background: var(--yellow); color: var(--navy); }
+.w6 .times button.gone { opacity: .35; text-decoration: line-through; pointer-events: none; }
+.w6 .then { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 10px; margin: 18px 0; }
+.w6 .then .room { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); border-radius: 16px; padding: 10px 12px; }
+.w6 .then .room label { display: block; font-size: 12px; opacity: .85; font-weight: 600; }
+.w6 .then .stepper .sb { width: 34px; height: 34px; font-size: 18px; }
+.w6 .then .stepper .sv { font-size: 18px; min-width: 40px; }
+.w6 select { width: 100%; height: 100%; min-height: 64px; border-radius: 16px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.12); color: #fff; font: 700 16px var(--head); padding: 0 12px; }
+.w6 select option { color: var(--ink); }
+.w6 .sum { display: flex; justify-content: space-between; align-items: center; gap: 14px; }
+.w6 .sum .btn-y { width: auto; flex: 1; max-width: 280px; }
+
+/* 7. Bottom sheet */
+.w7wrap { max-width: 420px; margin: 0 auto; }
+.phone { position: relative; height: 760px; border-radius: 44px; overflow: hidden; border: 10px solid #0b1220; box-shadow: 0 30px 70px rgba(0,0,0,.45); background: linear-gradient(rgba(7,35,64,.35), rgba(7,35,64,.55)), url("drive-living.webp") center/cover; }
+.phone .head { position: absolute; top: 0; left: 0; right: 0; padding: 26px 22px; color: #fff; }
+.phone .head h3 { font: 800 30px/1.1 var(--head); margin: 8px 0 0; }
+.phone .head h3 em { color: var(--yellow); font-style: normal; }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 28px 28px 0 0; padding: 12px 18px 18px; box-shadow: 0 -10px 30px rgba(0,0,0,.25); }
+.sheet .grab { width: 44px; height: 5px; background: var(--line); border-radius: 3px; margin: 0 auto 12px; }
+.sheet .row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 12px; scrollbar-width: none; }
+.sheet .row button { flex: 0 0 auto; border: 1.5px solid var(--line); background: #fff; border-radius: 16px; padding: 10px 14px; text-align: left; color: var(--navy); }
+.sheet .row button b { display: block; font: 700 15px var(--head); }
+.sheet .row button span { font-size: 13px; color: var(--muted); }
+.sheet .row button.on { border-color: var(--navy); background: var(--soft); }
+.sheet .rooms { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.sheet .rooms .stepper { border: 1.5px solid var(--line); border-radius: 16px; padding: 6px 10px; color: var(--navy); }
+.sheet .rooms .stepper .sb { width: 32px; height: 32px; font-size: 18px; }
+.sheet .rooms .stepper .sv { font-size: 15px; min-width: 50px; }
+.sheet .times button { background: var(--soft); color: var(--navy); }
+.sheet .times button.on { background: var(--navy); color: #fff; }
+.sheet .pay { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.sheet .pay .price { font-size: 30px; color: var(--navy); }
+.sheet .pay .btn-y { flex: 1; min-height: 54px; font-size: 18px; }
+
+/* 8. Chat */
+.w8 { max-width: 560px; margin: 0 auto; background: #fff; border-radius: 28px; box-shadow: 0 20px 60px rgba(10,47,81,.12); overflow: hidden; }
+.w8 .top { background: var(--navy); color: #fff; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
+.w8 .av { width: 40px; height: 40px; border-radius: 50%; background: var(--yellow); color: var(--navy); display: grid; place-items: center; font: 800 16px var(--head); }
+.w8 .top b { display: block; }
+.w8 .top span { font-size: 13px; opacity: .8; }
+.w8 .log { padding: 18px; display: flex; flex-direction: column; gap: 10px; min-height: 380px; max-height: 480px; overflow-y: auto; background: var(--soft); }
+.w8 .b { max-width: 82%; padding: 12px 14px; border-radius: 18px; line-height: 1.45; font-size: 15px; animation: pop .25s ease; }
+.w8 .b.them { background: #fff; color: var(--ink); border-bottom-left-radius: 6px; align-self: flex-start; box-shadow: 0 2px 8px rgba(10,47,81,.06); }
+.w8 .b.me { background: var(--navy); color: #fff; border-bottom-right-radius: 6px; align-self: flex-end; }
+@keyframes pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.w8 .opts { display: flex; flex-wrap: wrap; gap: 8px; padding: 14px 18px 18px; border-top: 1px solid var(--line); }
+.w8 .opts button { border: 1.5px solid var(--navy); background: #fff; color: var(--navy); border-radius: 999px; padding: 9px 16px; font-weight: 700; }
+.w8 .opts button.primary { background: var(--yellow); border-color: var(--yellow); }
+
+/* 9. Navy premium */
+.w9 { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: center; color: #fff; }
+.w9 .big { font: 800 clamp(64px, 10vw, 110px)/1 var(--head); letter-spacing: -3px; color: var(--yellow); }
+.w9 .big small { display: block; margin-top: 10px; font-size: 18px; letter-spacing: 0; color: rgba(255,255,255,.75); font-weight: 600; }
+.w9 .card { background: linear-gradient(145deg, rgba(255,255,255,.12), rgba(255,255,255,.04)); border: 1px solid rgba(255,255,255,.18); border-radius: 26px; padding: 24px; }
+.w9 .sl { margin-bottom: 18px; }
+.w9 .sl label { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 8px; }
+.w9 .sl label b { color: var(--yellow); }
+.w9 input[type=range] { width: 100%; accent-color: var(--yellow); height: 6px; }
+.w9 .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: rgba(0,0,0,.25); padding: 5px; border-radius: 14px; margin-bottom: 18px; }
+.w9 .tabs button { border: 0; background: transparent; color: rgba(255,255,255,.8); border-radius: 10px; padding: 10px 4px; font-weight: 700; font-size: 14px; }
+.w9 .tabs button.on { background: #fff; color: var(--navy); }
+.w9 .times button { background: rgba(255,255,255,.08); color: #fff; border-color: rgba(255,255,255,.2); }
+.w9 .times button.on { border-color: var(--yellow); color: var(--yellow); }
+.w9 .facts { display: grid; gap: 10px; margin: 20px 0 0; padding: 0; list-style: none; color: rgba(255,255,255,.85); }
+.w9 .facts li::before { content: "●"; color: var(--yellow); margin-right: 10px; font-size: 10px; vertical-align: middle; }
+
+/* 10. Instant quote */
+.w10 { max-width: 760px; margin: 0 auto; background: #fff; border-radius: 22px; box-shadow: 0 1px 3px rgba(60,64,67,.2), 0 10px 30px rgba(60,64,67,.12); padding: 28px; }
+.w10 h3 { font: 700 24px var(--head); color: var(--navy); margin: 0 0 4px; }
+.w10 .muted { color: var(--muted); margin: 0 0 18px; }
+.w10 .q { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 12px; }
+.w10 .f { border: 1.5px solid #c6cbd3; border-radius: 12px; padding: 8px 14px; position: relative; }
+.w10 .f:focus-within { border-color: #1a73e8; box-shadow: 0 0 0 1px #1a73e8 inset; }
+.w10 .f label { font-size: 12px; color: var(--muted); font-weight: 600; }
+.w10 .f input, .w10 .f select { display: block; width: 100%; border: 0; outline: 0; font: 600 18px var(--body); color: var(--ink); background: transparent; padding: 2px 0; }
+.w10 .reveal { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 18px; display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: start; }
+.w10 .opt { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.w10 .opt button { border: 1px solid #dadce0; background: #fff; border-radius: 999px; padding: 8px 14px; font-weight: 600; color: #3c4043; }
+.w10 .opt button.on { background: #e8f0fe; border-color: #1a73e8; color: #1967d2; }
+.w10 .times { grid-template-columns: repeat(3, 1fr); }
+.w10 .times button { background: #fff; border: 1px solid #dadce0; color: #1967d2; }
+.w10 .times button.on { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+.w10 .pbox { text-align: right; min-width: 180px; }
+.w10 .pbox .price { color: var(--navy); }
+.w10 .ok { color: var(--green); font-weight: 600; font-size: 14px; margin-top: 6px; }
+.w10 .bad { color: #b42318; font-weight: 600; font-size: 14px; margin-top: 6px; }
+.w10 .btn-n { margin-top: 16px; background: #1a73e8; border-radius: 999px; }
+
+@media (max-width: 860px) {
+  .w4, .w9 { grid-template-columns: 1fr; }
+  .w5 .cards { grid-template-columns: 1fr; }
+  .w6 .then { grid-template-columns: 1fr 1fr; }
+  .w6 .then select { grid-column: 1 / -1; }
+  .w10 .q { grid-template-columns: 1fr 1fr; }
+  .w10 .q .f:first-child { grid-column: 1 / -1; }
+  .w10 .reveal { grid-template-columns: 1fr; }
+  .w10 .pbox { text-align: left; }
+}
+@media (max-width: 520px) {
+  .w1 { padding: 22px 18px; }
+  .w1 .pts { margin: 18px -18px -22px; }
+  .w1 .seg { grid-template-columns: 1fr; }
+  .w6 .days { grid-template-columns: repeat(3, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<section class="intro">
+  <h1>Ten ways to book a clean</h1>
+  <p>Each one works: pick your home, the clean, how often and a start time, and the price updates live. All ten use the same prices and the same three start times, and borrow the home page hero's frosted tile, navy and yellow. Nothing here books anything.</p>
+  <nav class="toc" aria-label="Variations">
+    <a href="#v1">1 Hero glass</a><a href="#v2">2 Sentence</a><a href="#v3">3 Steps</a><a href="#v4">4 Live receipt</a><a href="#v5">5 Plan cards</a>
+    <a href="#v6">6 Date first</a><a href="#v7">7 Phone sheet</a><a href="#v8">8 Chat</a><a href="#v9">9 Navy premium</a><a href="#v10">10 Instant quote</a>
+  </nav>
+</section>
+
+<!-- 1 -->
+<section class="v v-photo" id="v1">
+  <div class="label"><b>1</b><h2>Hero glass</h2><span>The home page tile itself, extended into the booking form.</span></div>
+  <div class="glass w1" data-w="1">
+    <div class="kick">Minneapolis · St. Paul</div>
+    <h3>Book your <em>clean</em></h3>
+    <div class="rooms">
+      <div class="room"><label>Bedrooms</label><div class="stepper" data-step="beds"></div></div>
+      <div class="room"><label>Bathrooms</label><div class="stepper" data-step="baths"></div></div>
+    </div>
+    <div class="seg" data-svc></div>
+    <div class="freq" data-freq></div>
+    <div class="times" data-times></div>
+    <div class="sum"><div><div class="price" data-price></div><div class="per" data-per></div></div><div class="per" data-what style="text-align:right"></div></div>
+    <button class="btn-y" data-book>Book now <span aria-hidden="true">→</span></button>
+    <div class="pts"><span>Book it when you need it.</span><span>A photo report after every visit.</span><span>Trained, insured, background-checked.</span></div>
+  </div>
+</section>
+
+<!-- 2 -->
+<section class="v v-soft" id="v2">
+  <div class="label"><b>2</b><h2>Fill-in sentence</h2><span>One sentence you finish by tapping the blue words.</span></div>
+  <div class="w2" data-w="2">
+    <p class="s">I'd like a <span class="pick" data-pick="svc"></span> for my <span class="pick" data-pick="beds"></span>, <span class="pick" data-pick="baths"></span> home, <span class="pick" data-pick="freq"></span>, starting <span class="pick" data-pick="time"></span>.</p>
+    <div class="row"><div><div class="price" data-price></div><div class="per" data-per></div></div><button class="btn-y" data-book>Book this clean →</button></div>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="v v-white" id="v3">
+  <div class="label"><b>3</b><h2>Four calm steps</h2><span>One question per screen, a progress bar, and a recap before you book.</span></div>
+  <div class="w3" data-w="3">
+    <div class="bar"><i></i><i></i><i></i><i></i></div>
+    <div class="body" data-body></div>
+    <div class="nav"><button class="back" data-back>Back</button><button class="btn-n" data-next>Next</button></div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="v v-photo2" id="v4">
+  <div class="label"><b>4</b><h2>Live receipt</h2><span>Choices on the left, the price building itself on the right.</span></div>
+  <div class="w4" data-w="4">
+    <div class="l">
+      <h3>Your home</h3>
+      <div class="grid2">
+        <div class="box"><label>Bedrooms</label><div class="stepper" data-step="beds"></div></div>
+        <div class="box"><label>Bathrooms</label><div class="stepper" data-step="baths"></div></div>
+      </div>
+      <h3>Your clean</h3>
+      <div class="seg" data-svc></div>
+      <h3>How often</h3>
+      <div class="chips" data-freq></div>
+    </div>
+    <div class="r">
+      <div class="kick">Your clean</div>
+      <h4 data-what></h4>
+      <div class="line"><span>Home</span><span data-home></span></div>
+      <div class="line"><span>How often</span><span data-freqtxt></span></div>
+      <div class="line"><span>Team</span><span>A team of two</span></div>
+      <div class="line"><span>Photo report</span><span>Included</span></div>
+      <div class="tot"><div><div class="per">Per visit, before tax</div><div class="price" data-price></div></div><div class="per" data-per></div></div>
+      <div class="times" data-times style="margin-bottom:16px"></div>
+      <button class="btn-y" data-book>Book now →</button>
+    </div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="v v-soft" id="v5">
+  <div class="label"><b>5</b><h2>Plan cards</h2><span>All three cleans side by side, priced for your home.</span></div>
+  <div class="w5" data-w="5">
+    <div class="top">
+      <div class="pill" data-freq></div>
+      <div class="mini"><span>Beds</span><div class="stepper" data-step="beds"></div></div>
+      <div class="mini"><span>Baths</span><div class="stepper" data-step="baths"></div></div>
+    </div>
+    <div class="cards" data-cards></div>
+    <div class="timesbar"><div class="times" data-times></div></div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="v v-photo" id="v6">
+  <div class="label"><b>6</b><h2>Date first</h2><span>Start with the day and time, then the home. Like booking a table.</span></div>
+  <div class="glass w6" data-w="6">
+    <div class="kick" style="color:rgba(255,255,255,.85)">Pick a day</div>
+    <div class="days" data-days></div>
+    <div class="times" data-times></div>
+    <div class="then">
+      <div class="room"><label>Bedrooms</label><div class="stepper" data-step="beds"></div></div>
+      <div class="room"><label>Bathrooms</label><div class="stepper" data-step="baths"></div></div>
+      <select data-svcsel aria-label="Which clean"></select>
+    </div>
+    <div class="sum"><div><div class="price" data-price></div><div class="per" data-per></div></div><button class="btn-y" data-book>Hold this time →</button></div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="v v-white" id="v7">
+  <div class="label"><b>7</b><h2>Phone sheet</h2><span>Built for the phone: everything in one sheet, the price and Book always in reach.</span></div>
+  <div class="w7wrap">
+    <div class="phone" data-w="7">
+      <div class="head"><div class="kick">Two Hour Maids</div><h3>A clean home,<br><em>two hours</em> away.</h3></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="row" data-svc></div>
+        <div class="rooms"><div class="stepper" data-step="beds"></div><div class="stepper" data-step="baths"></div></div>
+        <div class="row" data-freq></div>
+        <div class="times" data-times></div>
+        <div class="pay"><div><div class="price" data-price></div><div class="per" data-per></div></div><button class="btn-y" data-book>Book</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="v v-soft" id="v8">
+  <div class="label"><b>8</b><h2>Chat</h2><span>A short conversation that ends on a booked clean. Same answers, friendlier.</span></div>
+  <div class="w8" data-w="8">
+    <div class="top"><div class="av">TH</div><div><b>Two Hour Maids</b><span>Usually replies in seconds</span></div></div>
+    <div class="log" data-log></div>
+    <div class="opts" data-opts></div>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="v v-navy" id="v9">
+  <div class="label"><b>9</b><h2>Navy premium</h2><span>The price as the hero number, sliders for the home.</span></div>
+  <div class="w9" data-w="9">
+    <div>
+      <div class="kick" style="color:var(--yellow)">Your price</div>
+      <div class="big"><span data-price></span><small data-per></small></div>
+      <ul class="facts"><li data-what></li><li>A team of two of our own employees</li><li>A photo report after every visit</li><li>No contract, book it when you need it</li></ul>
+    </div>
+    <div class="card">
+      <div class="tabs" data-svc></div>
+      <div class="sl"><label>Bedrooms <b data-bedsv></b></label><input type="range" min="1" max="6" data-range="beds" aria-label="Bedrooms"></div>
+      <div class="sl"><label>Bathrooms <b data-bathsv></b></label><input type="range" min="1" max="5" step="0.5" data-range="baths" aria-label="Bathrooms"></div>
+      <div class="tabs" data-freq></div>
+      <div class="times" data-times style="margin-bottom:16px"></div>
+      <button class="btn-y" data-book>Book now →</button>
+    </div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="v v-white" id="v10">
+  <div class="label"><b>10</b><h2>Instant quote</h2><span>Three fields, the price appears, then a time grid. The Google booking feel.</span></div>
+  <div class="w10" data-w="10">
+    <h3>Get your price in 10 seconds</h3>
+    <p class="muted">No account, no call. See it, then pick a time.</p>
+    <div class="q">
+      <div class="f"><label for="zip10">ZIP code</label><input id="zip10" inputmode="numeric" maxlength="5" placeholder="55401" data-zip></div>
+      <div class="f"><label for="bed10">Bedrooms</label><select id="bed10" data-sel="beds"></select></div>
+      <div class="f"><label for="bath10">Bathrooms</label><select id="bath10" data-sel="baths"></select></div>
+    </div>
+    <div class="reveal">
+      <div>
+        <div class="opt" data-svc></div>
+        <div class="opt" data-freq></div>
+        <div class="times" data-times></div>
+      </div>
+      <div class="pbox"><div class="price" data-price></div><div class="per" data-per></div><div data-zipok></div></div>
+    </div>
+    <button class="btn-n" data-book>Continue to book</button>
+  </div>
+</section>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// One price engine for all ten. List prices from the site (2026-11-08); the Checklist Clean is priced by home size here as an estimate.
+var SVC = {
+  two_hour: { name: 'Two Hour Clean', short: '2 Hour', sub: 'A team of two, two hours', price: { monthly: 200, biweekly: 189, once: 222 }, best: 'For well-kept homes' },
+  checklist: { name: 'The Checklist Clean', short: 'Checklist', sub: 'Every room, every visit', base: { monthly: 205, biweekly: 195, once: 222 }, best: 'Our most complete clean' },
+  four_hour: { name: 'Four Hour Home Detailing', short: '4 Hour', sub: 'Your list, ranked', price: { monthly: 385, biweekly: 385, once: 385 }, best: 'Our highest level of clean' },
+};
+var FREQ = { biweekly: 'Every 2 weeks', monthly: 'Monthly', once: 'One time' };
+var ZIPS = /^55[0-4]\d\d$/; // the Twin Cities ZIPs we serve (draft rule)
+function priceOf(s) {
+  var v = SVC[s.svc];
+  if (v.price) return v.price[s.freq];
+  var extra = Math.max(0, s.beds - 2) * 28 + Math.max(0, s.baths - 1) * 22;
+  return v.base[s.freq] + extra;
+}
+function money(n) { return '$' + Math.round(n); }
+function nextDays() {
+  var out = [], d = new Date(); d.setDate(d.getDate() + 1);
+  while (out.length < 6) { if (d.getDay() !== 0 && d.getDay() !== 6) out.push(new Date(d)); d.setDate(d.getDate() + 1); }
+  return out;
+}
+var DAYS = nextDays();
+var TIMES = ['9:00 AM', '11:40 AM', '2:40 PM'];
+function timeLabel(s) { var d = DAYS[s.day]; return (s.day === 0 ? 'Tomorrow' : d.toLocaleDateString('en-US', { weekday: 'short' })) + ' · ' + TIMES[s.time]; }
+function homeTxt(s) { return s.beds + ' bed' + (s.beds > 1 ? 's' : '') + ', ' + s.baths + ' bath' + (s.baths > 1 ? 's' : ''); }
+function toast(msg) { var t = document.getElementById('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(function () { t.classList.remove('on'); }, 3200); }
+function el(tag, attrs, html) { var e = document.createElement(tag); for (var k in attrs) e.setAttribute(k, attrs[k]); if (html != null) e.innerHTML = html; return e; }
+
+function Widget(root) {
+  var s = { beds: 2, baths: 1, svc: 'two_hour', freq: 'biweekly', day: 0, time: 0, zip: '' };
+  var all = function (sel) { return root.querySelectorAll(sel); };
+  function render() {
+    all('[data-step]').forEach(function (st) {
+      var k = st.getAttribute('data-step');
+      st.innerHTML = '';
+      var minus = el('button', { class: 'sb', type: 'button', 'aria-label': 'Fewer ' + k }, '−');
+      var val = el('span', { class: 'sv' }, k === 'beds' ? s.beds + ' bd' : s.baths + ' ba');
+      var plus = el('button', { class: 'sb', type: 'button', 'aria-label': 'More ' + k }, '+');
+      minus.onclick = function () { if (k === 'beds') s.beds = Math.max(1, s.beds - 1); else s.baths = Math.max(1, s.baths - 0.5); render(); };
+      plus.onclick = function () { if (k === 'beds') s.beds = Math.min(6, s.beds + 1); else s.baths = Math.min(5, s.baths + 0.5); render(); };
+      st.append(minus, val, plus);
+    });
+    all('[data-svc]').forEach(function (g) {
+      g.innerHTML = '';
+      Object.keys(SVC).forEach(function (k) {
+        var v = SVC[k]; var b = el('button', { type: 'button', class: s.svc === k ? 'on' : '' });
+        if (root.dataset.w === '9' || root.dataset.w === '10') b.textContent = v.short;
+        else if (root.dataset.w === '4') b.innerHTML = '<b>' + v.name + '</b><span>' + v.sub + '</span><em>' + money(priceOf(Object.assign({}, s, { svc: k }))) + '</em>';
+        else b.innerHTML = '<b>' + (root.dataset.w === '1' ? v.short : v.name) + '</b><span>' + v.sub + '</span>';
+        b.onclick = function () { s.svc = k; render(); };
+        g.appendChild(b);
+      });
+    });
+    all('[data-freq]').forEach(function (g) {
+      g.innerHTML = '';
+      Object.keys(FREQ).forEach(function (k) {
+        var b = el('button', { type: 'button', class: s.freq === k ? 'on' : '' }, root.dataset.w === '7' ? '<b>' + FREQ[k] + '</b><span>' + money(priceOf(Object.assign({}, s, { freq: k }))) + '</span>' : FREQ[k]);
+        b.onclick = function () { s.freq = k; render(); };
+        g.appendChild(b);
+      });
+    });
+    all('[data-times]').forEach(function (g) {
+      g.innerHTML = '';
+      TIMES.forEach(function (t, i) {
+        var d = DAYS[s.day];
+        var dayTxt = root.dataset.w === '6' ? '' : (s.day === 0 ? 'Tomorrow' : d.toLocaleDateString('en-US', { weekday: 'long' }));
+        var gone = root.dataset.w === '6' && s.day === 1 && i === 1; // one taken slot, to show how a full time looks
+        var b = el('button', { type: 'button', class: (s.time === i ? 'on' : '') + (gone ? ' gone' : '') }, (dayTxt ? '<small>' + dayTxt + '</small>' : '') + t);
+        b.onclick = function () { s.time = i; render(); };
+        g.appendChild(b);
+      });
+    });
+    all('[data-days]').forEach(function (g) {
+      g.innerHTML = '';
+      DAYS.forEach(function (d, i) {
+        var b = el('button', { type: 'button', class: s.day === i ? 'on' : '' }, '<small>' + d.toLocaleDateString('en-US', { weekday: 'short' }) + '</small><b>' + d.getDate() + '</b>');
+        b.onclick = function () { s.day = i; if (s.day === 1 && s.time === 1) s.time = 0; render(); };
+        g.appendChild(b);
+      });
+    });
+    all('[data-svcsel]').forEach(function (sel) {
+      sel.innerHTML = Object.keys(SVC).map(function (k) { return '<option value="' + k + '"' + (s.svc === k ? ' selected' : '') + '>' + SVC[k].name + '</option>'; }).join('');
+      sel.onchange = function () { s.svc = sel.value; render(); };
+    });
+    all('[data-sel]').forEach(function (sel) {
+      var k = sel.getAttribute('data-sel'); var opts = k === 'beds' ? [1, 2, 3, 4, 5, 6] : [1, 1.5, 2, 2.5, 3, 3.5, 4];
+      sel.innerHTML = opts.map(function (n) { return '<option' + ((k === 'beds' ? s.beds : s.baths) === n ? ' selected' : '') + '>' + n + '</option>'; }).join('');
+      sel.onchange = function () { s[k] = Number(sel.value); render(); };
+    });
+    all('[data-range]').forEach(function (r) {
+      var k = r.getAttribute('data-range'); r.value = s[k];
+      r.oninput = function () { s[k] = Number(r.value); paint(); };
+    });
+    paint();
+    if (root.dataset.w === '2') sentence();
+    if (root.dataset.w === '3') wizard();
+    if (root.dataset.w === '5') cards();
+  }
+  function paint() {
+    var p = priceOf(s);
+    all('[data-price]').forEach(function (e) { e.textContent = money(p); });
+    all('[data-per]').forEach(function (e) { e.textContent = s.freq === 'once' ? 'one visit' : 'per visit, ' + FREQ[s.freq].toLowerCase(); });
+    all('[data-what]').forEach(function (e) { e.textContent = SVC[s.svc].name + ' · ' + SVC[s.svc].sub; });
+    all('[data-home]').forEach(function (e) { e.textContent = homeTxt(s); });
+    all('[data-freqtxt]').forEach(function (e) { e.textContent = FREQ[s.freq]; });
+    all('[data-bedsv]').forEach(function (e) { e.textContent = s.beds; });
+    all('[data-bathsv]').forEach(function (e) { e.textContent = s.baths; });
+    all('[data-zipok]').forEach(function (e) {
+      e.className = !s.zip ? '' : ZIPS.test(s.zip) ? 'ok' : 'bad';
+      e.textContent = !s.zip ? 'Enter your ZIP to check we come to you' : ZIPS.test(s.zip) ? '✓ We clean in your area' : 'We are not in that ZIP yet';
+    });
+  }
+  all('[data-zip]').forEach(function (z) { z.oninput = function () { s.zip = z.value.replace(/\D/g, ''); z.value = s.zip; paint(); }; });
+  all('[data-book]').forEach(function (b) {
+    b.onclick = function () {
+      if (root.dataset.w === '10' && !ZIPS.test(s.zip)) { toast('Enter a Twin Cities ZIP first.'); return; }
+      toast('Draft: ' + SVC[s.svc].name + ', ' + homeTxt(s) + ', ' + FREQ[s.freq].toLowerCase() + ', ' + timeLabel(s) + ' · ' + money(priceOf(s)));
+    };
+  });
+
+  // 2. sentence picks
+  function sentence() {
+    var picks = {
+      // 'a Checklist Clean', not 'a The Checklist Clean' (Jack, 2026-11-08)
+      svc: { val: SVC[s.svc].name.replace(/^The /, ''), opts: Object.keys(SVC).map(function (k) { return [k, SVC[k].name.replace(/^The /, '')]; }), set: function (v) { s.svc = v; } },
+      beds: { val: s.beds + ' bedroom', opts: [1, 2, 3, 4, 5, 6].map(function (n) { return [n, n + ' bedroom']; }), set: function (v) { s.beds = Number(v); } },
+      baths: { val: s.baths + ' bath', opts: [1, 1.5, 2, 2.5, 3, 3.5, 4].map(function (n) { return [n, n + ' bath']; }), set: function (v) { s.baths = Number(v); } },
+      freq: { val: FREQ[s.freq].toLowerCase(), opts: Object.keys(FREQ).map(function (k) { return [k, FREQ[k].toLowerCase()]; }), set: function (v) { s.freq = v; } },
+      time: { val: timeLabel(s).replace(' · ', ' at '), opts: [0, 1, 2].map(function (i) { return [i, 'tomorrow at ' + TIMES[i]]; }).concat([1, 2].map(function (d) { return ['d' + d, DAYS[d].toLocaleDateString('en-US', { weekday: 'long' }) + ' at 9:00 AM']; })),
+        set: function (v) { if (String(v)[0] === 'd') { s.day = Number(String(v).slice(1)); s.time = 0; } else { s.day = 0; s.time = Number(v); } } },
+    };
+    root.querySelectorAll('[data-pick]').forEach(function (p) {
+      var k = p.getAttribute('data-pick'), d = picks[k];
+      p.innerHTML = '<button type="button">' + d.val + '</button><div class="menu">' + d.opts.map(function (o) { return '<button type="button" data-v="' + o[0] + '">' + o[1] + '</button>'; }).join('') + '</div>';
+      p.firstChild.onclick = function (e) { e.stopPropagation(); var was = p.classList.contains('open'); root.querySelectorAll('.pick.open').forEach(function (x) { x.classList.remove('open'); }); if (!was) p.classList.add('open'); };
+      p.querySelectorAll('.menu button').forEach(function (b) { b.onclick = function () { d.set(b.getAttribute('data-v')); render(); }; });
+    });
+  }
+  document.addEventListener('click', function () { root.querySelectorAll('.pick.open').forEach(function (x) { x.classList.remove('open'); }); });
+
+  // 3. wizard
+  var step = 0;
+  function wizard() {
+    var body = root.querySelector('[data-body]');
+    root.querySelectorAll('.bar i').forEach(function (i, n) { i.classList.toggle('on', n <= step); });
+    var titles = ['Tell us about your home', 'Pick your clean', 'How often?', 'Pick a start time'];
+    body.innerHTML = '<div class="stepno">Step ' + (step + 1) + ' of 4</div><h3>' + titles[step] + '</h3><div data-slot></div>';
+    var slot = body.querySelector('[data-slot]');
+    if (step === 0) { slot.innerHTML = '<div class="stepper" data-step="beds"></div><div class="stepper" data-step="baths"></div>'; }
+    if (step === 1) { slot.innerHTML = '<div class="seg" data-svc></div>'; }
+    if (step === 2) { slot.innerHTML = '<div class="seg" data-freq></div>'; }
+    if (step === 3) { slot.innerHTML = '<div class="times" data-times></div><div class="recap" style="margin-top:16px"><div><span>Clean</span><b>' + SVC[s.svc].name + '</b></div><div><span>Home</span><b>' + homeTxt(s) + '</b></div><div><span>How often</span><b>' + FREQ[s.freq] + '</b></div><div><span>Price</span><b data-price></b></div></div>'; }
+    // fill the new slot with the shared renderers, without looping back into wizard()
+    var saved = root.dataset.w; root.dataset.w = '3x';
+    renderInto(slot);
+    root.dataset.w = saved;
+    if (step === 2) slot.querySelectorAll('[data-freq] button').forEach(function (b, i) { var k = Object.keys(FREQ)[i]; b.innerHTML = '<b>' + FREQ[k] + '</b><span>' + money(priceOf(Object.assign({}, s, { freq: k }))) + '</span>'; });
+    root.querySelector('[data-back]').style.visibility = step ? 'visible' : 'hidden';
+    var next = root.querySelector('[data-next]');
+    next.textContent = step < 3 ? 'Next' : 'Book for ' + money(priceOf(s));
+    next.onclick = function () { if (step < 3) { step++; wizard(); } else root.querySelector('[data-next]').dispatchEvent(new CustomEvent('book')); };
+    root.querySelector('[data-back]').onclick = function () { if (step) { step--; wizard(); } };
+  }
+  function renderInto(scope) {
+    var prevAll = all; all = function (sel) { return scope.querySelectorAll(sel); };
+    var savedRender = render; render = function () { all = prevAll; render = savedRender; wizard(); };
+    try { savedRender.call(null, true); } finally { all = prevAll; render = savedRender; }
+  }
+  root.addEventListener('book', function () { toast('Draft: ' + SVC[s.svc].name + ', ' + homeTxt(s) + ', ' + FREQ[s.freq].toLowerCase() + ', ' + timeLabel(s) + ' · ' + money(priceOf(s))); }, true);
+
+  // 5. plan cards
+  function cards() {
+    var box = root.querySelector('[data-cards]'); box.innerHTML = '';
+    var feats = {
+      two_hour: ['Kitchen, 2-3 baths and floors', 'Quick tidy and dust in bedrooms', 'A photo report after every visit'],
+      checklist: ['A dedicated checklist, room by room', 'Goes through more of your home', 'Every task inspected by a second cleaner'],
+      four_hour: ['Pick the details that matter to you', 'One flat price for four hours', 'A photo report after every visit'],
+    };
+    Object.keys(SVC).forEach(function (k) {
+      var v = SVC[k], p = priceOf(Object.assign({}, s, { svc: k }));
+      var c = el('div', { class: 'card' + (k === 'checklist' ? ' best' : '') + (s.svc === k ? ' on' : '') });
+      c.innerHTML = (k === 'checklist' ? '<span class="tag">Most complete</span>' : '') + '<h4>' + v.name + '</h4><p class="sub">' + v.best + '</p><div class="price">' + money(p) + '</div><div class="per">' + (s.freq === 'once' ? 'one visit' : 'per visit, ' + FREQ[s.freq].toLowerCase()) + '</div><ul>' + feats[k].map(function (f) { return '<li>' + f + '</li>'; }).join('') + '</ul><button class="btn-y go" type="button">Choose</button>';
+      c.querySelector('button').onclick = function () { s.svc = k; render(); toast(v.name + ' picked. Now pick a start time below.'); };
+      box.appendChild(c);
+    });
+  }
+
+  // 8. chat
+  if (root.dataset.w === '8') {
+    var log = root.querySelector('[data-log]'), opts = root.querySelector('[data-opts]'), stage = 0;
+    var say = function (who, txt) { log.appendChild(el('div', { class: 'b ' + who }, txt)); log.scrollTop = log.scrollHeight; };
+    var ask = function (list) { opts.innerHTML = ''; list.forEach(function (o) { var b = el('button', { type: 'button', class: o.primary ? 'primary' : '' }, o.t); b.onclick = function () { say('me', o.t); o.go(); }; opts.appendChild(b); }); };
+    var flow = [
+      function () { say('them', 'Hi! Let us get you a price. How many bedrooms?'); ask([1, 2, 3, 4, 5].map(function (n) { return { t: n + (n === 5 ? '+' : ''), go: function () { s.beds = n; next(); } }; })); },
+      function () { say('them', 'And bathrooms?'); ask([1, 1.5, 2, 2.5, 3].map(function (n) { return { t: String(n), go: function () { s.baths = n; next(); } }; })); },
+      function () { say('them', 'Which clean sounds right?'); ask(Object.keys(SVC).map(function (k) { return { t: SVC[k].name, go: function () { s.svc = k; next(); } }; })); },
+      function () { say('them', 'How often should we come?'); ask(Object.keys(FREQ).map(function (k) { return { t: FREQ[k] + ' · ' + money(priceOf(Object.assign({}, s, { freq: k }))), go: function () { s.freq = k; next(); } }; })); },
+      function () { say('them', 'Here are the next open times:'); ask(TIMES.map(function (t, i) { return { t: 'Tomorrow ' + t, go: function () { s.day = 0; s.time = i; next(); } }; })); },
+      function () { say('them', 'Perfect: <b>' + SVC[s.svc].name + '</b> for your ' + homeTxt(s) + ' home, ' + FREQ[s.freq].toLowerCase() + ', starting ' + timeLabel(s) + '. That is <b>' + money(priceOf(s)) + '</b> a visit before tax.'); ask([{ t: 'Book it', primary: true, go: function () { say('them', 'Booked (draft). You will get a text with the details.'); toast('Draft: booked ' + money(priceOf(s))); ask([{ t: 'Start over', go: restart }]); } }, { t: 'Change something', go: restart }]); },
+    ];
+    var next = function () { stage++; setTimeout(flow[stage], 350); };
+    var restart = function () { log.innerHTML = ''; stage = 0; flow[0](); };
+    flow[0]();
+  }
+  render();
+}
+document.querySelectorAll('[data-w]').forEach(function (r) { Widget(r); });
+</script>
+</body>
+</html>

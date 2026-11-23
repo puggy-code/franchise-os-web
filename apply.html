@@ -5,8 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Apply to Two Hour Maids</title>
 <!--
-  Five-question job application (2026-10-21; migration 0341). Posts to public-signup (kind 'applicant'). A manager reviews every application;
-  nothing here decides anything. English only (public page). Deploy: public-signup with --no-verify-jwt.
+  Job application (2026-10-21; migration 0341). Posts to public-signup (kind 'applicant'), the same pipeline as the website's /jobs. A
+  manager reviews every application; nothing here decides anything. English only (public page). Deploy: public-signup with --no-verify-jwt.
+  2026-11-03 (HIRING-ADS.md G5, Jack via the go-live session): no selfie, no license and no car question. Jack: neither a car nor a
+  license is needed; a photo on an application shows race, age and sex before anyone has met the person, and managers see the person at
+  the interview. Never add criminal history, date of birth, a photo, marital status, nationality or public assistance; the website test
+  checks this page too.
 -->
 <style>
   :root { --brand: #0A47A8; --ink: #10151E; --muted: #5E6776; --bg: #F4F5F7; }
@@ -22,38 +26,37 @@
   button:disabled { opacity: .6; }
   .hp { position: absolute; left: -5000px; }
   .ok { color: #157347; font-weight: 700; } .err { color: #B42318; font-weight: 700; }
-  #prev { display: none; width: 96px; height: 96px; object-fit: cover; border-radius: 50%; margin-top: 8px; }
+  .fine { font-size: 13px; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="card" id="form">
     <h1>Join Two Hour Maids</h1>
-    <p>Five quick things and you are in line for an interview. It takes about two minutes.</p>
+    <p>A few quick questions and you are in line for an interview. It takes about two minutes.</p>
     <label for="n">Your name</label><input id="n" autocomplete="name">
     <label for="p">Mobile number</label><input id="p" type="tel" autocomplete="tel">
     <label for="m">Email (optional)</label><input id="m" type="email" autocomplete="email">
-    <label for="s">1. A quick selfie</label>
-    <input id="s" type="file" accept="image/*" capture="user"><img id="prev" alt="">
-    <label for="j1">2. Three jobs you have had</label>
-    <input id="j1" placeholder="Job 1 (where, what you did)"><input id="j2" placeholder="Job 2" style="margin-top:8px"><input id="j3" placeholder="Job 3" style="margin-top:8px">
-    <label for="e">3. School</label>
+    <label for="j1">1. Three jobs you have had</label>
+    <input id="j1" placeholder="Job 1 (where, what you did)"><input id="j2" aria-label="Job 2" placeholder="Job 2" style="margin-top:8px"><input id="j3" aria-label="Job 3" placeholder="Job 3" style="margin-top:8px">
+    <label for="e">2. School</label>
     <select id="e"><option value="">Choose one</option><option value="high_school">High school</option><option value="college">College</option><option value="neither">Neither</option></select>
-    <label for="a">4. Are you authorized to work in the United States?</label>
+    <label for="a">3. Are you authorized to work in the United States?</label>
     <select id="a"><option value="">Choose one</option><option value="yes">Yes</option><option value="no">No</option></select>
-    <label for="l">5. Do you have a driver's license?</label>
-    <select id="l"><option value="">Choose one</option><option value="yes">Yes</option><option value="no">No</option></select>
+    <label for="o">4. Are you 18 or older?</label>
+    <select id="o"><option value="">Choose one</option><option value="yes">Yes</option><option value="no">No</option></select>
+    <label for="lift">5. Can you lift 25 pounds and be on your feet for hours?</label>
+    <select id="lift"><option value="">Choose one</option><option value="yes">Yes</option><option value="no">No</option></select>
+    <label for="ws">6. Do you like to work alone or with a partner?</label>
+    <select id="ws"><option value="">Choose one</option><option value="partner">With a partner</option><option value="alone">Alone</option><option value="either">Either is fine</option></select>
     <label for="av">Days and hours you can work</label>
     <input id="av" placeholder="For example: Mon to Fri, 8 AM to 4 PM">
-    <label for="car">Do you have a car you can drive to jobs?</label>
-    <select id="car"><option value="">Choose one</option><option value="yes">Yes</option><option value="no">No</option></select>
-    <label for="lift">Can you lift 25 pounds and be on your feet for hours?</label>
-    <select id="lift"><option value="">Choose one</option><option value="yes">Yes</option><option value="no">No</option></select>
     <label for="hh">How did you hear about us?</label>
     <input id="hh" placeholder="A sign, a friend, Indeed, Facebook...">
     <input id="w" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
     <button id="go">Send my application</button>
     <p id="note"></p>
+    <p class="fine">W-2 employee. Must be 18+. Equal opportunity employer. We will never ask you to pay for anything.</p>
   </div>
 </div>
 <script>
@@ -61,28 +64,15 @@
   var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
   var ORG_SLUG = 'two-hour-maids';
   var v = function (id) { return document.getElementById(id).value.trim(); };
-  var selfie = '';
-  document.getElementById('s').onchange = function () {
-    var f = this.files && this.files[0]; if (!f) return;
-    var img = new Image(), url = URL.createObjectURL(f);
-    img.onload = function () {
-      var max = 480, k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement('canvas');
-      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      selfie = c.toDataURL('image/jpeg', 0.7);
-      var p = document.getElementById('prev'); p.src = selfie; p.style.display = 'block';
-      URL.revokeObjectURL(url);
-    };
-    img.src = url;
-  };
   document.getElementById('go').onclick = function () {
     var note = document.getElementById('note'), b = this;
     if (v('n').length < 2 || v('p').replace(/\D/g, '').length < 10) { note.className = 'err'; note.textContent = 'Please add your name and a mobile number.'; return; }
-    if (!selfie || !v('j1') || !v('e') || !v('a') || !v('l') || !v('car') || !v('lift')) { note.className = 'err'; note.textContent = 'Please answer all five questions (at least one job).'; return; }
+    if (!v('j1') || !v('e') || !v('a') || !v('o') || !v('lift') || !v('ws')) { note.className = 'err'; note.textContent = 'Please answer all six questions (at least one job).'; return; }
+    if (v('o') !== 'yes') { note.className = 'err'; note.textContent = 'This job is for people 18 or older.'; return; }
     b.disabled = true; note.className = ''; note.textContent = 'Sending...';
     fetch(SUPABASE_URL + '/functions/v1/public-signup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
-      kind: 'applicant', org_slug: ORG_SLUG, name: v('n'), phone: v('p'), email: v('m'), selfie: selfie, jobs: [v('j1'), v('j2'), v('j3')],
-      education: v('e'), authorized: v('a') === 'yes', license: v('l') === 'yes', availability: v('av'), has_car: v('car') === 'yes', can_lift: v('lift') === 'yes', how_heard: v('hh'), website: v('w') }) })
+      kind: 'applicant', org_slug: ORG_SLUG, name: v('n'), phone: v('p'), email: v('m'), jobs: [v('j1'), v('j2'), v('j3')],
+      education: v('e'), authorized: v('a') === 'yes', availability: v('av'), can_lift: v('lift') === 'yes', work_style: v('ws'), how_heard: v('hh'), lang: 'en', website: v('w') }) })
       .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
       .then(function () { document.getElementById('form').innerHTML = '<h1>Thank you!</h1><p class="ok">We have your application. Someone from our team will text you about an interview.</p>'; })
       .catch(function () { b.disabled = false; note.className = 'err'; note.textContent = 'That did not send. Please check your phone number and try again.'; });

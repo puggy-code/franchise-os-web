@@ -43,7 +43,7 @@
 (function () {
   "use strict";
   var FN = "https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/contractor-offer";
-  var q = new URLSearchParams(location.search), O = q.get("o"), S = q.get("s");
+  var q = new URLSearchParams(location.search), O = q.get("o"), C = q.get("c"), S = q.get("s");
   var app = document.getElementById("app");
   var lang = q.get("l") === "es" ? "es" : q.get("l") === "en" ? "en" : null;
   if (!lang) { try { lang = localStorage.getItem("pcoff_lang"); } catch (e) { /* private window */ } }
@@ -112,7 +112,7 @@
     var dcl = h("button", { class: "ghost", id: "dec", text: t("decline"), onclick: function () { send("decline"); } });
     function send(action) {
       a.disabled = true; dcl.disabled = true; msg.textContent = "";
-      postJson({ o: O, action: action }).then(function (r) {
+      postJson(O ? { o: O, action: action } : { c: C, action: action }).then(function (r) {
         if (r.ok && r.status === "accepted") { last = function () { show(h("h1", { text: t("you_accepted") }), h("p", { class: "ok", text: t("thanks") }), h("p", { text: t("confirm_soon") + " " + o.title + ", " + when(o) + ", " + money(o.offered_cents) + " " + t("flat_word") + "." })); }; last(); return; }
         if (r.ok && r.status === "declined") { last = function () { show(h("h1", { text: t("h_declined") }), h("p", { text: t("declined") })); }; last(); return; }
         a.disabled = false; dcl.disabled = false;
@@ -148,7 +148,7 @@
       s.consent ? h("button", { class: "ghost", onclick: function () { if (confirm(t("withdraw_confirm"))) ask("withdraw_consent", t("withdraw_ok")); }, text: t("withdraw") }) : null, msg);
   }
 
-  if (O) getJson("o=" + encodeURIComponent(O)).then(offerPage).catch(function () { last = null; show(h("h1", { text: t("wrong") }), h("p", { text: t("wrong_p") })); });
+  if (O || C) getJson(O ? "o=" + encodeURIComponent(O) : "c=" + encodeURIComponent(C)).then(offerPage).catch(function () { last = null; show(h("h1", { text: t("wrong") }), h("p", { text: t("wrong_p") })); });
   else if (S) getJson("s=" + encodeURIComponent(S) + "&view=1").then(statementPage).catch(function () { last = null; show(h("h1", { text: t("wrong") }), h("p", { text: t("wrong_p") })); });
   else { last = function () { show(h("h1", { text: t("bad_link") }), h("p", { text: t("bad_link_p") })); }; last(); }
 })();

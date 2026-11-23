@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Join the spring waitlist</title>
+<!--
+  Customer page: the spring waitlist (migration 0431, function seasonal-waitlist). Link or embed:
+      https://<your-host>/season-waitlist.html?org=two-hour-maids
+  We text ONE confirmation; only people who reply YES are told when the season opens. Nothing here needs a Supabase key. English only (customer pages are English, settled).
+-->
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; background: #f6f5fb; color: #15121f; margin: 0; padding: 20px 16px 48px; line-height: 1.5; }
+  .wrap { max-width: 520px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 18px; padding: 22px; margin: 0 0 16px; }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  p { color: #6b6880; margin: 0 0 14px; }
+  label { display: block; font-size: 13px; font-weight: 700; margin: 12px 0 4px; }
+  input[type=text], input[type=tel], input[type=email] { width: 100%; padding: 11px 12px; border: 1px solid #d9d6e8; border-radius: 10px; font: inherit; }
+  .svc { display: flex; gap: 10px; align-items: center; padding: 8px 0; font-size: 15px; }
+  .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; font-size: 13px; color: #3c3950; }
+  .btn { display: block; width: 100%; background: #6d4aff; color: #fff; border: 0; border-radius: 12px; padding: 14px; font: inherit; font-weight: 800; margin-top: 18px; cursor: pointer; }
+  .btn[disabled] { opacity: .55; }
+  #msg { margin-top: 12px; font-weight: 700; font-size: 14px; }
+  .err { color: #b3261e; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card" id="form-card">
+    <h1>Join the spring waitlist</h1>
+    <p>Carpet, air duct, window and car cleaning open in the spring. Leave your number and we will text you once when they open.</p>
+    <div class="svc"><input type="checkbox" id="s-carpet_cleaning" checked><label for="s-carpet_cleaning" style="margin:0;font-weight:400">Carpet cleaning</label></div>
+    <div class="svc"><input type="checkbox" id="s-air_ducts"><label for="s-air_ducts" style="margin:0;font-weight:400">Air duct cleaning</label></div>
+    <div class="svc"><input type="checkbox" id="s-window_cleaning"><label for="s-window_cleaning" style="margin:0;font-weight:400">Window cleaning</label></div>
+    <div class="svc"><input type="checkbox" id="s-car_cleaning"><label for="s-car_cleaning" style="margin:0;font-weight:400">Car cleaning</label></div>
+    <label for="name">Your name</label><input type="text" id="name" autocomplete="name">
+    <label for="phone">Mobile number</label><input type="tel" id="phone" autocomplete="tel">
+    <label for="email">Email (optional)</label><input type="email" id="email" autocomplete="email">
+    <div class="check"><input type="checkbox" id="consent"><label for="consent" style="font-weight:400;margin:0">Yes, text me to confirm and once when these services open. Message and data rates may apply. Reply STOP to opt out.</label></div>
+    <button class="btn" id="go">Join the list</button>
+    <div id="msg"></div>
+  </div>
+  <div class="card" id="done-card" style="display:none">
+    <h1>One more step</h1>
+    <p id="done-text">We texted you. Reply YES to confirm your spot.</p>
+  </div>
+</div>
+<script>
+  var FN = 'https://isbhlmihbibdnajvicrj.supabase.co/functions/v1/seasonal-waitlist';
+  var org = (new URLSearchParams(location.search).get('org') || '').toLowerCase();
+  var SVCS = ['carpet_cleaning', 'air_ducts', 'window_cleaning', 'car_cleaning'];
+  var ERR = { bad_phone: 'Please enter a 10-digit mobile number.', bad_name: 'Please add your name.', pick_a_service: 'Please pick at least one service.', bad_email: 'That email does not look right.', too_many: 'You have already tried a few times today.', busy: 'We are busy right now. Please try again in a little while.', opted_out: 'That number has opted out of our texts. Please call us instead.', consent_required: 'Please tick the box so we can text you.', rate_limited: 'Please try again a little later.' };
+  function say(t, bad) { var m = document.getElementById('msg'); m.textContent = t; m.className = bad ? 'err' : ''; }
+  document.getElementById('go').addEventListener('click', function () {
+    var btn = this;
+    var services = SVCS.filter(function (s) { return document.getElementById('s-' + s).checked; });
+    if (!services.length) return say(ERR.pick_a_service, true);
+    if (!document.getElementById('consent').checked) return say(ERR.consent_required, true);
+    btn.disabled = true; say('Sending…');
+    fetch(FN, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ org_slug: org, name: document.getElementById('name').value.trim(), phone: document.getElementById('phone').value.trim(), email: document.getElementById('email').value.trim(), services: services, consent: true }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.ok) { document.getElementById('form-card').style.display = 'none'; document.getElementById('done-text').textContent = j.confirm || 'We texted you. Reply YES to confirm your spot.'; document.getElementById('done-card').style.display = 'block'; }
+        else { btn.disabled = false; say(ERR[j.error] || 'Something went wrong. Please try again.', true); }
+      }).catch(function () { btn.disabled = false; say('Something went wrong. Please try again.', true); });
+  });
+</script>
+<!-- Meta Pixel: consent-aware, off until the pixel ID is set in pixel.js (PAID-ADS.md) -->
+<script src="pixel.js" defer></script>
+</body>
+</html>

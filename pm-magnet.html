@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Property manager magnet and price card</title>
+<!--
+  PRINT FILE for the property-manager magnet and its price card (Jack, 2026-10-22: "your last-minute cleaning specialist: need a cleaning tomorrow, text us";
+  and a simple price sheet with a little price grid). Not a customer page: open it, check the numbers, then use Print > Save as PDF and send the PDF to the magnet printer.
+    pm-magnet.html                          the defaults below
+    pm-magnet.html?rate=50&phone=7632306795 override the hourly rate (dollars) and the text number
+  The grid is the SAME rule the text assistant uses for property-manager turnovers (supabase/functions/_shared/turnover.ts: hours by size x the account's hourly rate), so the card and the quote
+  a manager gets by text agree. CONFIRM before printing: (1) the hourly rate, (2) the hours table, (3) the phone number. The magnet itself carries no prices on purpose, so it never goes out of date.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --blue: #004aad; --ink: #0b1a33; --soft: #eaf1fd; --gold: #ffc233; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #d9deea; font-family: "Work Sans", -apple-system, "Segoe UI", Arial, sans-serif; color: var(--ink); }
+  .note { max-width: 900px; margin: 14px auto; padding: 0 16px; font-size: 13px; color: #3c4a63; }
+  .sheet { display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; padding: 8px 16px 40px; }
+  .card { position: relative; overflow: hidden; background: #fff; box-shadow: 0 6px 22px rgba(11,26,51,.25); }
+  .label { text-align: center; font-size: 12px; color: #55627d; margin: 0 0 6px; }
+
+  /* MAGNET: 4 x 3 in, with 1/8 in safe margin. Magnet printers add their own bleed; keep text inside the margin. */
+  .magnet { width: 4in; height: 3in; background: var(--blue); color: #fff; padding: .2in .22in; display: flex; flex-direction: column; justify-content: space-between; }
+  .magnet .brand { font-weight: 800; letter-spacing: .6px; font-size: 11pt; text-transform: uppercase; opacity: .95; }
+  .magnet h1 { margin: 0; font-size: 22pt; line-height: 1.04; font-weight: 800; }
+  .magnet h1 span { color: var(--gold); }
+  .magnet .ask { font-size: 12pt; font-weight: 500; line-height: 1.25; }
+  .magnet .num { background: #fff; color: var(--blue); border-radius: .12in; padding: .07in .14in; font-weight: 800; font-size: 19pt; text-align: center; letter-spacing: .5px; }
+  .magnet .foot { font-size: 8pt; opacity: .9; text-align: center; margin-top: 3px; }
+
+  /* PRICE CARD: 5.5 x 4.25 in (the 4-up landscape postcard size Puggy OS uses) */
+  .price { width: 5.5in; height: 4.25in; padding: .18in .26in; display: flex; flex-direction: column; }
+  .price .top { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 3px solid var(--blue); padding-bottom: 4px; }
+  .price .top b { color: var(--blue); font-size: 15pt; font-weight: 800; }
+  .price .top i { font-style: normal; font-size: 8.5pt; font-weight: 700; color: #55627d; text-transform: uppercase; letter-spacing: .5px; }
+  .price h2 { margin: 4px 0 3px; font-size: 12pt; font-weight: 800; }
+  table { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  th { text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: .5px; color: #55627d; padding: 2px 4px; }
+  td { padding: 1.5px 4px; border-top: 1px solid #e4e9f3; }
+  td.p { text-align: right; font-weight: 800; color: var(--blue); }
+  tr:nth-child(even) td { background: #f6f9ff; }
+  .how { margin-top: 6px; display: flex; gap: .15in; align-items: center; background: var(--soft); border-radius: .1in; padding: .06in .12in; }
+  .how .n { font-weight: 800; font-size: 15pt; color: var(--blue); white-space: nowrap; }
+  .how .t { font-size: 8.5pt; line-height: 1.3; }
+  .fine { font-size: 6.5pt; color: #55627d; margin-top: 3px; }
+
+  @page { margin: 0; }
+  @media print {
+    body { background: #fff; }
+    .note, .label { display: none; }
+    .sheet { display: block; padding: 0; }
+    .card { box-shadow: none; page-break-after: always; margin: 0; }
+    .magnet { width: 4in; height: 3in; }
+    .price { width: 5.5in; height: 4.25in; }
+  }
+</style>
+</head>
+<body>
+<p class="note"><b>Print file.</b> Check the three things marked in the comment at the top of this file (rate, hours, phone). Then Print, choose Save as PDF, background graphics ON, scale 100%, and send the PDF to the printer. Page 1 is the 4 x 3 in magnet; page 2 is the 5.5 x 4.25 in price card (printed on card stock or sent as a flyer with the magnet).</p>
+<div class="sheet">
+  <div>
+    <p class="label">Magnet, 4 x 3 in</p>
+    <div class="card magnet" id="magnet">
+      <div class="brand">Two Hour Maids</div>
+      <h1>Your <span>last-minute</span> cleaning specialist.</h1>
+      <div class="ask">Need a clean tomorrow? Text us. We can be there.</div>
+      <div><div class="num" id="mphone">(763) 230-6795</div><div class="foot">Background-checked &middot; Fully insured &middot; Locally owned</div></div>
+    </div>
+  </div>
+  <div>
+    <p class="label">Price card, 5.5 x 4.25 in</p>
+    <div class="card price" id="price">
+      <div class="top"><b>Two Hour Maids</b><i>Property managers</i></div>
+      <h2>What a turnover clean costs</h2>
+      <table><thead><tr><th>Unit size</th><th style="text-align:right">Price</th></tr></thead><tbody id="rows"></tbody></table>
+      <div class="how"><div class="n" id="hphone">(763) 230-6795</div><div class="t"><b>How it works:</b> text the unit and size, like <i>Unit 4B, 2 bed 2 bath</i>. We text back your price and the next open time. Reply YES to book. Need it tomorrow? Text before noon.</div></div>
+      <div class="fine" id="fine">Prices are for a standard turnover clean of a well-kept unit with a two-person crew; final price confirmed by text before we start. Sales tax added where it applies.</div>
+    </div>
+  </div>
+</div>
+<script>
+  // THE ONE PLACE TO EDIT: keep in step with supabase/functions/_shared/turnover.ts (DEFAULT_HOURS_BY_SIZE) and the property account's hourly rate.
+  var HOURS = [['Studio', 2], ['1 bed / 1 bath', 2.5], ['2 bed / 1 bath', 3], ['2 bed / 2 bath', 3.5], ['3 bed / 1 bath', 4], ['3 bed / 2 bath', 4.5], ['3 bed / 3 bath', 5], ['4 bed / 2 bath', 5.5], ['4 bed / 3 bath', 6]];
+  var q = new URLSearchParams(location.search);
+  var rate = Math.max(1, Number(q.get('rate')) || 50);
+  var raw = String(q.get('phone') || '7632306795').replace(/\D/g, '').slice(-10);
+  var phone = '(' + raw.slice(0, 3) + ') ' + raw.slice(3, 6) + '-' + raw.slice(6);
+  document.getElementById('mphone').textContent = phone; document.getElementById('hphone').textContent = phone;
+  document.getElementById('rows').innerHTML = HOURS.map(function (r) {
+    var h = r[1]; return '<tr><td>' + r[0] + '</td><td class="p">$' + Math.round(rate * h) + '</td></tr>'; // no hours column (Jack 2026-11-22 #1642 U1382)
+  }).join('');
+</script>
+</body>
+</html>
