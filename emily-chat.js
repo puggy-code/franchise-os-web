@@ -18,8 +18,8 @@
 
   var es = /^es\b/i.test(navigator.language || '');
   var T = es
-    ? { open: 'Preguntas? Chatee con Emily', title: 'Emily, Two Hour Maids', hello: 'Hola, soy Emily de Two Hour Maids. En que le puedo ayudar?', ph: 'Escriba su pregunta', send: 'Enviar', book: 'Ver precios y horarios', phone: 'Su telefono para que una gerente le escriba', save: 'Enviar', close: 'Cerrar', err: 'No pude enviar eso. Intente otra vez o escribanos al (763) 227-9124.' }
-    : { open: 'Questions? Chat with Emily', title: 'Emily, Two Hour Maids', hello: "Hi, I'm Emily from Two Hour Maids. What can I help you with?", ph: 'Type your question', send: 'Send', book: 'See prices and open times', phone: 'Your phone, so a manager can text you', save: 'Send', close: 'Close', err: "That didn't go through. Try again, or text us at (763) 227-9124." };
+    ? { open: 'Preguntas? Chatee con Emily', title: 'Emily, Two Hour Maids', hello: 'Hola, soy Emily de Two Hour Maids. En que le puedo ayudar?', ph: 'Escriba su pregunta', send: 'Enviar', book: 'Ver precios y horarios', phone: 'Su telefono para que una gerente le escriba', save: 'Enviar', close: 'Cerrar', err: 'No pude enviar eso. Intente otra vez o escribanos al (763) 230-6795.' }
+    : { open: 'Questions? Chat with Emily', title: 'Emily, Two Hour Maids', hello: "Hi, I'm Emily from Two Hour Maids. What can I help you with?", ph: 'Type your question', send: 'Send', book: 'See prices and open times', phone: 'Your phone, so a manager can text you', save: 'Send', close: 'Close', err: "That didn't go through. Try again, or text us at (763) 230-6795." };
 
   function sid() {
     var k = 'emily_chat_session', v = '';

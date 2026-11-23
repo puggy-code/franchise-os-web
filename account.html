@@ -166,7 +166,7 @@
   var SUPABASE_URL = 'https://isbhlmihbibdnajvicrj.supabase.co';
   var SAVED = null; // the saved card for one-tap tips (brand, last4), set on each render
   var FN = SUPABASE_URL + '/functions/v1';
-  var TEXT_NUMBER = '(763) 227-9124'; // the one company number everywhere (Jack, 2026-11-02; booking-widget.html BUSINESS_PHONE, pm-portal.html)
+  var TEXT_NUMBER = '(763) 230-6795'; // the one company number everywhere (Jack, 2026-11-02; booking-widget.html BUSINESS_PHONE, pm-portal.html)
   var token = window.DEMO_TOKEN || new URLSearchParams(location.search).get('t') || '';
   // "Add a card" (Jack, 2026-10-25): opens Stripe's own card page (setup mode). Nothing is charged; we never see the card number.
   window.addCardClick = function (btn) {
@@ -317,7 +317,7 @@
       (rd.video_url ? '<a class="chip" href="' + esc(rd.video_url) + '" target="_blank" rel="noopener">Watch how we clean</a>' : '') +
       '<a class="chip" href="#home">Add a house note</a></div>' +
       '<div class="panel" id="p-plan">' + (rd.plan && rd.plan.length ? rd.plan.map(function (r) { return '<div class="room"><b>' + esc(r.room) + '</b><ul>' + r.items.map(function (i) { return '<li>' + esc(i) + '</li>'; }).join('') + '</ul></div>'; }).join('') : '<p>Your cleaning plan will appear here once your clean is scheduled.</p>') + '</div>' +
-      '<div class="panel" id="p-team">' + (rd.team && rd.team.length ? rd.team.map(function (m) { return '<div class="room"><b>' + esc(m.first_name) + '</b>' + (m.video_url ? '<video controls playsinline preload="metadata" style="width:100%;border-radius:12px;margin:8px 0" src="' + esc(m.video_url) + '"></video>' : '') + (m.fun_facts && m.fun_facts.length ? '<ul>' + m.fun_facts.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') + '<p class="sub">' + (m.background_checked ? '✅ Background checked' : '') + (m.insured ? ' &nbsp; ✅ Insured' : '') + (m.cleans ? ' &nbsp; ' + m.cleans + ' cleans' : '') + (m.avg_rating ? ' &nbsp; ★ ' + m.avg_rating : '') + '</p></div>'; }).join('') : '<p>' + (crewNames.length ? 'Your team on this clean: <b>' + esc(crewNames.join(', ')) + '</b>.' : '') + '</p>') + '</div>';
+      '<div class="panel" id="p-team">' + (rd.team && rd.team.length ? rd.team.map(function (m) { return '<div class="room"><b>' + esc(m.first_name) + '</b>' + (m.video_url ? '<video controls playsinline preload="metadata" style="width:100%;border-radius:12px;margin:8px 0" src="' + esc(m.video_url) + '"></video>' : '') + (m.fun_facts && m.fun_facts.length ? '<ul>' + m.fun_facts.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>' : '') + '<p class="sub">' + (m.insured ? '✅ Insured' : '') + (m.cleans ? ' &nbsp; ' + m.cleans + ' cleans' : '') + (m.avg_rating ? ' &nbsp; ★ ' + m.avg_rating : '') + '</p></div>'; }).join('') : '<p>' + (crewNames.length ? 'Your team on this clean: <b>' + esc(crewNames.join(', ')) + '</b>.' : '') + '</p>') + '</div>';
     var later = d.current.slice(1);
     if (later.length || (ex.free_skips && ex.free_skips.total != null && ex.free_skips.left != null)) {
       h += '<details class="inner" id="status"><summary>Also coming up' + (later.length ? ' (' + later.length + ')' : '') + '</summary>' +
