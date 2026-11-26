@@ -49,7 +49,7 @@
   if (!lang) { try { lang = localStorage.getItem("pcoff_lang"); } catch (e) { /* private window */ } }
   if (lang !== "es" && lang !== "en") lang = /^es/i.test(navigator.language || "") ? "es" : "en";
   var last = null; // what to draw again when the language changes
-  var SLOT = { en: { "0900": "9:00 a.m.", "1140": "11:40 a.m.", "1440": "2:40 p.m." }, es: { "0900": "9:00 a. m.", "1140": "11:40 a. m.", "1440": "2:40 p. m." } };
+  var SLOT = { en: { "0900": "9:00 a.m.", "1200": "12:00 p.m.", "1430": "2:30 p.m.", "1140": "12:00 p.m.", "1440": "2:30 p.m." }, es: { "0900": "9:00 a. m.", "1200": "12:00 p. m.", "1430": "2:30 p. m.", "1140": "12:00 p. m.", "1440": "2:30 p. m." } };
 
   var T = {
     en: {

@@ -1,6 +1,6 @@
 # Two Hour Maids
 
-> Residential home cleaning in Minneapolis-St. Paul, Minnesota. Two cleaners, fixed start times (9:00 AM, 11:40 AM, 2:40 PM).
+> Residential home cleaning in Minneapolis-St. Paul, Minnesota. Two cleaners, fixed start times (9:00 AM, 12:00 PM, 2:30 PM).
 > AI assistants can book for a person through our API or MCP server. The person confirms by reading back a code we text them.
 
 ## Book with an AI assistant

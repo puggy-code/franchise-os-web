@@ -8,7 +8,7 @@
 <!--
   MANAGER BOOKING APP (2026-10-18, MANAGER-PORTAL.md). A manager or hq_admin signs in with the app's phone + PIN and runs bookings:
     Bookings   the next days, search, open one to move / change team / notes / cancel
-    Calendar   a week by time (9:00 / 11:40 / 2:40) with each team's bookings and what is still open; tap an open time to book it
+    Calendar   a week by time (9:00 / 12:00 / 2:30) with each team's bookings and what is still open; tap an open time to book it
     Customers  search, a customer's details (edit), their bookings, book again
     New        book a customer: phone lookup, service, size, how often, price, open time, team, notes
   Everything goes through RLS as that person with the anon key (publishable by design). No service_role key, ever. Anyone else signed
@@ -393,8 +393,8 @@
   var LATE_CANCEL_WINDOW_HOURS = 48, LATE_CANCEL_FEE_CENTS = 5000; // src/lib/dispatch.ts
   var SLOTS = [ // _shared/slots.ts
     { key: "0900", time: "09:00", label: "9:00", ampm: "AM" },
-    { key: "1140", time: "11:40", label: "11:40", ampm: "AM" },
-    { key: "1440", time: "14:40", label: "2:40", ampm: "PM" }
+    { key: "1200", time: "12:00", label: "12:00", ampm: "PM" }, // 2026-11-23 (2010): was 11:40
+    { key: "1430", time: "14:30", label: "2:30", ampm: "PM" } // was 2:40
   ];
   var SLOT_TOLERANCE_MIN = 15, TWO_TIME_OVER_MIN = 145;
 
@@ -669,7 +669,7 @@
       return id;
     }
     [-14, -7, 0, 0, 1, 1, 1, 2, 3, 3, 5, 6, 8, 9, 12].forEach(function (d, i) {
-      var slot = SLOTS[i % 3], ci = i % 8, works = i % 3 === 1 && slot.key !== "1440";
+      var slot = SLOTS[i % 3], ci = i % 8, works = i % 3 === 1 && slot.key !== "1430";
       var mins = works ? 189 : 120, st = slot.time + ":00";
       addJob({ customer_id: "c" + ci, scheduled_date: isoAdd(t0, d), start_time: st, end_time: fromMin(toMin(slot.time) + mins),
         service: works ? "works" : "two_hour", team_id: i % 5 === 4 ? null : teams[i % 2].id, address: streets[ci], estimated_minutes: mins,
@@ -740,9 +740,9 @@
       customerByPhone: function (p) { var v = phoneVariants(p); return delay(clone(customers.filter(function (c) { return v.indexOf(c.phone) >= 0; })[0] || null)); },
       series: function (customerId) {
         var plans = [
-          { id: "s1", customer_id: "c2", frequency: "biweekly", start_date: isoAdd(t0, (4 - dow(t0) + 7) % 7 || 7), start_time: "11:40:00", service: "works", service_label: "The Checklist Clean", price_cents: 21900, team_id: "t1", status: "active", paused_until: null },
+          { id: "s1", customer_id: "c2", frequency: "biweekly", start_date: isoAdd(t0, (4 - dow(t0) + 7) % 7 || 7), start_time: "12:00:00", service: "works", service_label: "The Checklist Clean", price_cents: 21900, team_id: "t1", status: "active", paused_until: null },
           { id: "s2", customer_id: "c3", frequency: "weekly", start_date: isoAdd(t0, 1), start_time: "09:00:00", service: "two_hour", service_label: "Two Hour Clean", price_cents: 18900, team_id: "t2", status: "active", paused_until: null },
-          { id: "s3", customer_id: "c0", frequency: "every_4_weeks", start_date: isoAdd(t0, 10), start_time: "14:40:00", service: "two_hour", service_label: "Two Hour Clean", price_cents: 20000, team_id: null, status: "paused", paused_until: isoAdd(t0, 21) }
+          { id: "s3", customer_id: "c0", frequency: "every_4_weeks", start_date: isoAdd(t0, 10), start_time: "14:30:00", service: "two_hour", service_label: "Two Hour Clean", price_cents: 20000, team_id: null, status: "paused", paused_until: isoAdd(t0, 21) }
         ];
         return delay(clone(plans.filter(function (x) { return x.customer_id === customerId; })));
       },
