@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Kit tags go-live · Two Hour Maids</title>
+<!-- Kit tags go-live checklist (Jack 2026-11-26, set 14; web + desktop only). Read-only: what has to be true before
+     organizations.kit_tags_enabled (2004) is switched on. Kits come from kits_status() (2004); the switch from switch_list() (2009);
+     who gets restock reports (2006: the covering market maker, else managers, else the owner) from profiles. Stickers are written on the
+     phone (app: Kit tags), because that is where the NFC reader is. Nothing is changed or sent. Manager sign-in. ?demo=1 = sample data. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #10151E; margin: 0; background: #f5f7fa; }
+  main { max-width: 760px; margin: 0 auto; padding: 20px; }
+  h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 18px 0 8px; } .sub { color: #5E6776; font-size: 14px; margin: 0 0 14px; }
+  ul.check { list-style: none; padding: 0; margin: 0; } ul.check li { background: #fff; border-radius: 10px; padding: 11px 14px; margin-bottom: 8px; display: flex; gap: 10px; }
+  .mark { width: 22px; height: 22px; border-radius: 50%; flex: none; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+  .done .mark { background: #e6f4ea; color: #157347; } .todo .mark { background: #eef0f4; color: #5E6776; }
+  .how { color: #5E6776; font-size: 13px; margin-top: 2px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; } th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid #eef0f4; font-size: 14px; }
+  th { background: #f0f3f8; font-weight: 600; } .note { color: #5E6776; } .ready { background: #FFF7B8; border-radius: 10px; padding: 12px 14px; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Kit tags: ready to go live?</h1>
+  <p class="sub">What has to be true before the kit tags switch goes on. This page only reads; it changes nothing.</p>
+  <div id="out"><p class="note">Loading…</p></div>
+</main>
+<script>
+  var SUPABASE_URL = "https://isbhlmihbibdnajvicrj.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzYmhsbWloYmliZG5hanZpY3JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MzU4NDMsImV4cCI6MjEwNTAxMTg0M30.VOKtXSF8z8A9_NiaI6zq1w_qXcrgHdW4DjiT-C4haK0";
+  var q = new URLSearchParams(location.search);
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function day(t) { return t ? String(t).slice(0, 10) : "–"; }
+  // kits: kits_status() rows; on: kit_tags_enabled; mm: active market makers; mgr: active managers
+  function render(kits, on, mm, mgr) {
+    var numbered = kits.filter(function (k) { return k.number != null; }).length, written = kits.filter(function (k) { return k.tag_written_at; }).length;
+    var nums = kits.map(function (k) { return k.number; }).filter(function (n) { return n != null; });
+    var unique = new Set(nums).size === nums.length;
+    var steps = [
+      [kits.length > 0, "At least one kit is set up", kits.length + " kit" + (kits.length === 1 ? "" : "s") + " in the app."],
+      [kits.length > 0 && numbered === kits.length && unique, "Every kit has its own number (Kit 1, Kit 2…)", numbered + " of " + kits.length + " numbered. Set on the phone: app, Kit tags."],
+      [kits.length > 0 && written === kits.length, "Every kit's sticker is written", written + " of " + kits.length + " written. Tap Write on the phone (app, Kit tags) while holding the sticker."],
+      [mm + mgr > 0, "Someone gets the restock reports", mm ? mm + " market maker" + (mm === 1 ? "" : "s") + " (the covering one gets them)." : (mgr ? "No market maker yet: reports go to the " + mgr + " manager" + (mgr === 1 ? "" : "s") + ", then you." : "No market maker or manager: reports would come to you.")],
+      [on, "The kit tags switch is on", on ? "On." : "Off. When everything above is done, tell Claude \"turn kit tags on\"."]
+    ];
+    var ready = steps.slice(0, 4).every(function (s) { return s[0]; });
+    document.getElementById("out").innerHTML =
+      (on ? "<p class=\"ready\">Kit tags are live.</p>" : ready ? "<p class=\"ready\">Everything is ready. Tell Claude \"turn kit tags on\" when you want it live.</p>" : "") +
+      "<ul class=\"check\">" + steps.map(function (s, i) { return "<li class=\"" + (s[0] ? "done" : "todo") + "\"><span class=\"mark\">" + (s[0] ? "✓" : i + 1) + "</span><div><div>" + esc(s[1]) + "</div><div class=\"how\">" + esc(s[2]) + "</div></div></li>"; }).join("") + "</ul>" +
+      "<h2>Kits</h2><table><thead><tr><th>Kit</th><th>Number</th><th>Sticker written</th><th>Open items</th><th>Last restocked</th></tr></thead><tbody>" +
+      (kits.map(function (k) { return "<tr><td>" + esc(k.label || k.slug) + "</td><td>" + (k.number == null ? "–" : esc(k.number)) + "</td><td>" + day(k.tag_written_at) + "</td><td>" + esc(k.open_items) + "</td><td>" + day(k.last_restocked_at) + "</td></tr>"; }).join("") || "<tr><td colspan=\"5\" class=\"note\">No kits yet.</td></tr>") + "</tbody></table>";
+  }
+  function fail(m) { document.getElementById("out").innerHTML = "<p class=\"note\">" + m + "</p>"; }
+  if (q.get("demo") === "1") {
+    render([{ slug: "kit-a", label: "Kit A", number: 1, tag_written_at: "2026-11-26T10:00:00Z", open_items: 2, last_restocked_at: null }, { slug: "kit-b", label: "Kit B", number: null, tag_written_at: null, open_items: 0, last_restocked_at: null }], false, 0, 1);
+  } else if (!window.supabase) { fail("Could not load. Check your connection and reload."); }
+  else {
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "tdm-manager-portal" } });
+    sb.auth.getSession().then(function (s) {
+      if (!s.data || !s.data.session) return fail('Sign in on the <a href="manager.html">manager page</a> first, then come back.');
+      return Promise.all([
+        sb.rpc("kits_status"),
+        sb.rpc("switch_list"),
+        sb.from("profiles").select("role").eq("is_active", true).in("role", ["market_maker", "manager"])
+      ]).then(function (r) {
+        var bad = r.filter(function (x) { return x.error; })[0];
+        if (bad) return fail(/not allowed|managers only/.test(bad.error.message) ? "Owners and managers only." : "Could not load: " + esc(bad.error.message));
+        var sw = (r[1].data || []).filter(function (x) { return x.name === "kit_tags_enabled"; })[0];
+        var roles = (r[2].data || []).map(function (p) { return p.role; });
+        render(r[0].data || [], !!(sw && sw.is_on), roles.filter(function (x) { return x === "market_maker"; }).length, roles.filter(function (x) { return x === "manager"; }).length);
+      });
+    });
+  }
+</script>
+</body>
+</html>
