@@ -16,7 +16,7 @@
   button { padding: 8px 12px; border: 1px solid #d5dae2; background: #fff; border-radius: 8px; cursor: pointer; font-size: 14px; } button.on { background: #0A47A8; color: #fff; border-color: #0A47A8; }
   table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; } th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eef0f4; font-size: 14px; vertical-align: top; }
   th { background: #f0f3f8; font-weight: 600; } .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-  .yes { background: #e6f4ea; color: #157347; } .no { background: #eef0f4; color: #5E6776; } .name { font-family: ui-monospace, Menlo, monospace; font-size: 13px; } .note { color: #5E6776; }
+  .yes { background: #e6f4ea; color: #157347; } .hold { background: #FFF7B8; color: #10151E; } .no { background: #eef0f4; color: #5E6776; } .name { font-family: ui-monospace, Menlo, monospace; font-size: 13px; } .note { color: #5E6776; }
 </style>
 </head>
 <body>
@@ -31,14 +31,15 @@
   var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzYmhsbWloYmliZG5hanZpY3JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MzU4NDMsImV4cCI6MjEwNTAxMTg0M30.VOKtXSF8z8A9_NiaI6zq1w_qXcrgHdW4DjiT-C4haK0";
   var q = new URLSearchParams(location.search), rows = [], filter = "all";
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  var HOLDS = { test_mode: 1, charges_frozen: 1, lockout_customer_texts: 1 };
   function plain(n) { return n.replace(/_(enabled|on)$/, "").replace(/_/g, " "); }
   function render() {
     var term = document.getElementById("q").value.trim().toLowerCase();
     var list = rows.filter(function (r) { return (filter === "all" || (filter === "on") === r.is_on) && (!term || (r.name + " " + (r.description || "")).toLowerCase().indexOf(term) >= 0); });
-    var on = rows.filter(function (r) { return r.is_on; }).length;
-    document.getElementById("sub").textContent = on + " of " + rows.length + " switches are on. Read-only: tell Claude which one to change.";
+    var on = rows.filter(function (r) { return r.is_on && !HOLDS[r.name]; }).length, holding = rows.filter(function (r) { return r.is_on && HOLDS[r.name]; }).length;
+    document.getElementById("sub").textContent = (holding ? "Cutover hold is ON: customers get no texts, emails or charges from the app. " : "") + on + (on === 1 ? " switch is" : " switches are") + " on. Read-only: tell Claude which one to change.";
     document.getElementById("rows").innerHTML = list.length ? list.map(function (r) {
-      return "<tr><td><b>" + esc(plain(r.name)) + "</b><br><span class=\"name\">" + esc(r.name) + "</span></td><td><span class=\"pill " + (r.is_on ? "yes\">On" : "no\">Off") + "</span></td><td>" + (r.description ? esc(r.description) : "<span class=\"note\">No description yet.</span>") + "</td></tr>";
+      return "<tr><td><b>" + esc(plain(r.name)) + "</b><br><span class=\"name\">" + esc(r.name) + "</span></td><td>" + (HOLDS[r.name] ? "<span class=\"pill hold\">" + (r.is_on ? "Holding" : "Released") + "</span>" : "<span class=\"pill " + (r.is_on ? "yes\">On" : "no\">Off") + "</span>") + "</td><td>" + (r.description ? esc(r.description) : "<span class=\"note\">No description yet.</span>") + "</td></tr>";
     }).join("") : "<tr><td colspan=\"3\" class=\"note\">No switch matches.</td></tr>";
   }
   function setFilter(f, id) { filter = f; ["all", "onlyOn", "onlyOff"].forEach(function (b) { document.getElementById(b).className = b === id ? "on" : ""; }); render(); }
@@ -48,7 +49,7 @@
   document.getElementById("q").oninput = render;
   function fail(msg) { document.getElementById("rows").innerHTML = "<tr><td colspan=\"3\" class=\"note\">" + msg + "</td></tr>"; }
   if (q.get("demo") === "1") {
-    rows = [{ name: "tips_enabled", is_on: true, description: "Customers can add a tip." }, { name: "kit_tags_enabled", is_on: false, description: "Kit NFC tags (2004). OFF until Jack switches it on." }, { name: "review_ask_enabled", is_on: false, description: null }];
+    rows = [{ name: "test_mode", is_on: true, description: "CUTOVER HOLD: customer texts, emails and pushes go to the owner's test phone/email; charges are blocked." }, { name: "tips_enabled", is_on: true, description: "Customers can add a tip." }, { name: "kit_tags_enabled", is_on: false, description: "Kit NFC tags (2004). OFF until Jack switches it on." }, { name: "review_ask_enabled", is_on: false, description: null }];
     render();
   } else if (!window.supabase) { fail("Could not load. Check your connection and reload."); }
   else {

@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Hiring desk · Two Hour Maids</title>
+<!-- Hiring desk (Jack 2026-11-26, set 3; web + desktop only). 1930: Indeed CSV -> holding list (never texted; not in job_applicants),
+     interview scorecards (one row per scoring, never edited), reference-check DRAFTS (copied by a person; nothing here sends).
+     The group interview scheduler already exists in the app (0370) and is not repeated here. Managers and the owner. ?demo=1 = sample data. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #10151E; margin: 0; background: #f5f7fa; }
+  main { max-width: 1000px; margin: 0 auto; padding: 20px; } h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 17px; margin: 0 0 8px; }
+  .sub, .note { color: #5E6776; font-size: 14px; } section { background: #fff; border-radius: 12px; padding: 14px 16px; margin: 14px 0; }
+  .tabs { display: flex; gap: 8px; margin: 12px 0; } button { padding: 8px 12px; border: 1px solid #d5dae2; background: #fff; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  button.on, button.go { background: #0A47A8; color: #fff; border-color: #0A47A8; } input, select, textarea { padding: 7px 9px; border: 1px solid #d5dae2; border-radius: 8px; font-size: 14px; font-family: inherit; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 70px; } .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+  table { width: 100%; border-collapse: collapse; } th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eef0f4; font-size: 13px; vertical-align: top; } th { background: #f0f3f8; }
+  .crit { display: grid; grid-template-columns: 200px auto; gap: 6px 12px; align-items: center; margin: 8px 0; } .stars button { padding: 4px 9px; margin-right: 2px; } .stars button.on { background: #FFED00; color: #10151E; border-color: #e5d400; }
+  .draft { background: #f5f7fa; border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; font-size: 13px; } .ok { color: #157347; font-weight: 600; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Hiring desk</h1>
+  <p class="sub">Indeed applicants wait in a holding list (nobody is texted). Score interviews and draft reference checks here. The group interview scheduler is in the app.</p>
+  <div class="tabs"><button data-tab="hold" class="on">Holding list</button><button data-tab="score">Scorecard</button><button data-tab="refs">References</button></div>
+  <p class="note" id="msg"></p>
+
+  <section id="tab-hold">
+    <h2>Import from Indeed</h2>
+    <p class="note">In Indeed: Candidates, select all, Export (CSV). Choose the file here. People already in the app or this list are skipped. Nobody is contacted.</p>
+    <div class="row"><input type="file" id="csv" accept=".csv,text/csv"><span id="preview" class="note"></span><button class="go" id="import" disabled>Add to holding list</button></div>
+    <table><thead><tr><th>Name</th><th>Phone</th><th>Email</th><th>Location</th><th>Applied</th><th>Source</th></tr></thead><tbody id="holdRows"></tbody></table>
+  </section>
+
+  <section id="tab-score" hidden>
+    <h2>Interview scorecard</h2>
+    <div class="row"><select id="scorePerson"></select></div>
+    <div class="crit" id="crit"></div>
+    <textarea id="scoreNote" placeholder="Notes from the interview (optional)"></textarea>
+    <div class="row"><button class="go" id="saveScore">Save scorecard</button><span class="note">Criteria are a first draft: tell Claude to change them.</span></div>
+    <table><thead><tr><th>Person</th><th>Average</th><th>Scores</th><th>Note</th><th>When</th></tr></thead><tbody id="scoreRows"></tbody></table>
+  </section>
+
+  <section id="tab-refs" hidden>
+    <h2>Reference checks</h2>
+    <div class="row"><select id="refPerson"></select><input id="refName" placeholder="Reference's name"><input id="refPhone" placeholder="Phone or email"><input id="refRel" placeholder="How they know them"></div>
+    <div class="draft" id="refDraft"></div>
+    <div class="row"><button class="go" id="saveRef">Save draft</button><span class="note">Nothing is sent from here: copy the draft and send it yourself.</span></div>
+    <table><thead><tr><th>Applicant</th><th>Reference</th><th>Draft</th><th>Status</th></tr></thead><tbody id="refRows"></tbody></table>
+  </section>
+</main>
+<script>
+  var SUPABASE_URL = "https://isbhlmihbibdnajvicrj.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzYmhsbWloYmliZG5hanZpY3JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MzU4NDMsImV4cCI6MjEwNTAxMTg0M30.VOKtXSF8z8A9_NiaI6zq1w_qXcrgHdW4DjiT-C4haK0";
+  var CRITERIA = [["on_time", "Shows up on time"], ["detail", "Careful with detail"], ["attitude", "Good attitude"], ["communication", "Clear communicator"], ["schedule", "Fits the schedule"]];
+  var q = new URLSearchParams(location.search), sb = null, orgId = null, parsed = [];
+  var S = { hold: [], apps: [], scores: [], refs: [] }, picked = {};
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function say(t) { $("msg").textContent = t; }
+  function first(n) { return String(n || "").trim().split(/\s+/)[0] || ""; }
+
+  // CSV with quoted fields. Header names are matched loosely (Indeed's export names change).
+  function parseCsv(text) {
+    var rows = [], row = [], f = "", i = 0, inQ = false;
+    for (; i < text.length; i++) {
+      var c = text[i];
+      if (inQ) { if (c === '"' && text[i + 1] === '"') { f += '"'; i++; } else if (c === '"') inQ = false; else f += c; }
+      else if (c === '"') inQ = true; else if (c === ",") { row.push(f); f = ""; } else if (c === "\n" || c === "\r") { if (c === "\r" && text[i + 1] === "\n") i++; row.push(f); rows.push(row); row = []; f = ""; } else f += c;
+    }
+    if (f || row.length) { row.push(f); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (x) { return x.trim(); }); });
+  }
+  function toApplicants(rows) {
+    if (rows.length < 2) return [];
+    var h = rows[0].map(function (x) { return x.trim().toLowerCase(); });
+    function col(re) { for (var j = 0; j < h.length; j++) if (re.test(h[j])) return j; return -1; }
+    var cName = col(/^(name|full name|candidate( name)?)$/), cFirst = col(/first/), cLast = col(/last/), cPhone = col(/phone/), cEmail = col(/e-?mail/),
+        cLoc = col(/location|city/), cJob = col(/job( title)?|position/), cDate = col(/date|applied/);
+    return rows.slice(1).map(function (r) {
+      var name = cName >= 0 ? r[cName] : [cFirst >= 0 ? r[cFirst] : "", cLast >= 0 ? r[cLast] : ""].join(" ");
+      var d = cDate >= 0 ? new Date(r[cDate]) : null, raw = {};
+      h.forEach(function (k, j) { raw[k] = r[j]; });
+      return { full_name: (name || "").trim(), phone: cPhone >= 0 ? r[cPhone].trim() : "", email: cEmail >= 0 ? r[cEmail].trim() : "", location: cLoc >= 0 ? r[cLoc] : "",
+               job_title: cJob >= 0 ? r[cJob] : "", applied_on: d && !isNaN(d) ? d.toISOString().slice(0, 10) : "", raw: raw };
+    }).filter(function (a) { return a.full_name && (a.phone || a.email); });
+  }
+
+  function people() {
+    return S.hold.map(function (h) { return { key: "h:" + h.id, name: h.full_name + " (holding list)" }; })
+      .concat(S.apps.map(function (a) { return { key: "a:" + a.id, name: a.full_name + " (" + a.status + ")" }; }));
+  }
+  function nameOf(row) {
+    var h = row.holding_id && S.hold.filter(function (x) { return x.id === row.holding_id; })[0], a = row.applicant_id && S.apps.filter(function (x) { return x.id === row.applicant_id; })[0];
+    return (h && h.full_name) || (a && a.full_name) || "–";
+  }
+  function link(key) { return key.charAt(0) === "h" ? { holding_id: key.slice(2) } : { applicant_id: key.slice(2) }; }
+  function draftText() {
+    var p = people().filter(function (x) { return x.key === $("refPerson").value; })[0];
+    var who = p ? first(p.name) : "the applicant", ref = first($("refName").value) || "there";
+    return "Hi " + ref + ", " + who + " gave your name as a reference for a cleaning job with Two Hour Maids. Do you have 2 minutes to tell me what they were like to work with? Thank you.";
+  }
+  function render() {
+    $("holdRows").innerHTML = S.hold.map(function (h) { return "<tr><td>" + esc(h.full_name) + "</td><td>" + esc(h.phone) + "</td><td>" + esc(h.email) + "</td><td>" + esc(h.location) + "</td><td>" + esc(h.applied_on || "") + "</td><td>" + esc(h.source) + "</td></tr>"; }).join("") || "<tr><td colspan=\"6\" class=\"note\">Nobody on the holding list yet.</td></tr>";
+    var opts = "<option value=\"\">Pick a person…</option>" + people().map(function (p) { return "<option value=\"" + esc(p.key) + "\">" + esc(p.name) + "</option>"; }).join("");
+    ["scorePerson", "refPerson"].forEach(function (id) { var v = $(id).value; $(id).innerHTML = opts; $(id).value = v; });
+    $("crit").innerHTML = CRITERIA.map(function (c) {
+      return "<div>" + esc(c[1]) + "</div><div class=\"stars\">" + [1, 2, 3, 4, 5].map(function (n) { return "<button data-c=\"" + c[0] + "\" data-n=\"" + n + "\" class=\"" + (picked[c[0]] === n ? "on" : "") + "\">" + n + "</button>"; }).join("") + "</div>";
+    }).join("");
+    Array.prototype.forEach.call(document.querySelectorAll(".stars button"), function (b) { b.onclick = function () { picked[b.getAttribute("data-c")] = Number(b.getAttribute("data-n")); render(); }; });
+    $("scoreRows").innerHTML = S.scores.map(function (s) {
+      var v = Object.keys(s.scores).map(function (k) { return Number(s.scores[k]); }), avg = v.length ? (v.reduce(function (a, b) { return a + b; }, 0) / v.length).toFixed(1) : "–";
+      return "<tr><td>" + esc(nameOf(s)) + "</td><td>" + avg + "</td><td>" + CRITERIA.map(function (c) { return s.scores[c[0]] ? esc(c[1]) + " " + s.scores[c[0]] : ""; }).filter(Boolean).join(" · ") + "</td><td>" + esc(s.note || "") + "</td><td>" + esc(String(s.scored_at).slice(0, 10)) + "</td></tr>";
+    }).join("") || "<tr><td colspan=\"5\" class=\"note\">No scorecards yet.</td></tr>";
+    $("refDraft").textContent = draftText();
+    $("refRows").innerHTML = S.refs.map(function (r, i) {
+      return "<tr><td>" + esc(nameOf(r)) + "</td><td>" + esc(r.ref_name) + "<br><span class=\"note\">" + esc([r.ref_phone || r.ref_email, r.relation].filter(Boolean).join(" · ")) + "</span></td><td><div class=\"draft\">" + esc(r.draft) + "</div><button data-copy=\"" + i + "\">Copy</button></td><td>" +
+        (r.status === "done" ? "<span class=\"ok\">Done</span>" + (r.answer_note ? "<br>" + esc(r.answer_note) : "") : "<button data-done=\"" + i + "\">Mark done</button>") + "</td></tr>";
+    }).join("") || "<tr><td colspan=\"4\" class=\"note\">No reference checks yet.</td></tr>";
+    Array.prototype.forEach.call(document.querySelectorAll("[data-copy]"), function (b) { b.onclick = function () { navigator.clipboard.writeText(S.refs[Number(b.getAttribute("data-copy"))].draft).then(function () { say("Copied. Send it yourself."); }); }; });
+    Array.prototype.forEach.call(document.querySelectorAll("[data-done]"), function (b) { b.onclick = function () { markDone(S.refs[Number(b.getAttribute("data-done"))]); }; });
+  }
+
+  function markDone(r) {
+    var note = prompt("What did they say? (optional)") || null;
+    if (!sb) { r.status = "done"; r.answer_note = note; say("Demo: not saved."); return render(); }
+    sb.from("applicant_references").update({ status: "done", answer_note: note }).eq("id", r.id).select().single().then(function (x) { if (x.error) return say("Could not save: " + x.error.message); Object.assign(r, x.data); render(); });
+  }
+  $("csv").onchange = function () {
+    var f = this.files[0]; if (!f) return;
+    f.text().then(function (t) { parsed = toApplicants(parseCsv(t)); $("preview").textContent = parsed.length + " applicants found in the file."; $("import").disabled = !parsed.length; });
+  };
+  $("import").onclick = function () {
+    if (!sb) { parsed.forEach(function (p, i) { S.hold.push(Object.assign({ id: "demo" + i, source: "indeed" }, p)); }); say("Demo: " + parsed.length + " added (not saved)."); parsed = []; $("import").disabled = true; return render(); }
+    $("import").disabled = true;
+    sb.rpc("hiring_hold_import", { p_source: "indeed", p_rows: parsed }).then(function (r) {
+      if (r.error) return say("Could not import: " + r.error.message);
+      say(r.data.added + " added to the holding list, " + r.data.skipped + " skipped (already in the app or missing a phone and email). Nobody was contacted.");
+      parsed = []; loadAll();
+    });
+  };
+  $("saveScore").onclick = function () {
+    var who = $("scorePerson").value; if (!who) return say("Pick a person first.");
+    if (!Object.keys(picked).length) return say("Give at least one score.");
+    var row = Object.assign({ org_id: orgId, scores: picked, note: $("scoreNote").value.trim() || null }, link(who));
+    if (!sb) { S.scores.unshift(Object.assign({ scored_at: new Date().toISOString() }, row)); picked = {}; $("scoreNote").value = ""; say("Demo: not saved."); return render(); }
+    sb.from("applicant_scores").insert(row).select().single().then(function (r) { if (r.error) return say("Could not save: " + r.error.message); S.scores.unshift(r.data); picked = {}; $("scoreNote").value = ""; say("Scorecard saved."); render(); });
+  };
+  ["refPerson", "refName"].forEach(function (id) { $(id).oninput = $(id).onchange = function () { $("refDraft").textContent = draftText(); }; });
+  $("saveRef").onclick = function () {
+    var who = $("refPerson").value, name = $("refName").value.trim(), contact = $("refPhone").value.trim();
+    if (!who || !name) return say("Pick the applicant and type the reference's name.");
+    var row = Object.assign({ org_id: orgId, ref_name: name, ref_phone: /@/.test(contact) ? null : contact || null, ref_email: /@/.test(contact) ? contact : null, relation: $("refRel").value.trim() || null, draft: draftText() }, link(who));
+    if (!sb) { S.refs.unshift(Object.assign({ status: "draft" }, row)); say("Demo: not saved."); return render(); }
+    sb.from("applicant_references").insert(row).select().single().then(function (r) { if (r.error) return say("Could not save: " + r.error.message); S.refs.unshift(r.data); say("Draft saved. Copy it and send it yourself."); render(); });
+  };
+  Array.prototype.forEach.call(document.querySelectorAll(".tabs button"), function (b) {
+    b.onclick = function () { Array.prototype.forEach.call(document.querySelectorAll(".tabs button"), function (x) { x.className = x === b ? "on" : ""; }); ["hold", "score", "refs"].forEach(function (t) { $("tab-" + t).hidden = t !== b.getAttribute("data-tab"); }); };
+  });
+
+  function loadAll() {
+    return Promise.all([
+      sb.from("applicant_holding").select("id, full_name, phone, email, location, applied_on, source").order("imported_at", { ascending: false }).limit(500),
+      sb.from("job_applicants").select("id, full_name, status").in("status", ["new", "contacted", "interviewing"]).order("created_at", { ascending: false }).limit(300),
+      sb.from("applicant_scores").select("*").order("scored_at", { ascending: false }).limit(300),
+      sb.from("applicant_references").select("*").order("created_at", { ascending: false }).limit(300)
+    ]).then(function (r) {
+      var bad = r.filter(function (x) { return x.error; })[0];
+      if (bad) return say("Could not load: " + bad.error.message);
+      S.hold = r[0].data || []; S.apps = r[1].data || []; S.scores = r[2].data || []; S.refs = r[3].data || []; render();
+    });
+  }
+  if (q.get("demo") === "1") {
+    S.hold = [{ id: "h1", full_name: "Ana Lopez", phone: "612-555-0101", email: "ana@example.com", location: "Minneapolis, MN", applied_on: "2026-11-24", source: "indeed" }];
+    S.apps = [{ id: "a1", full_name: "Rosa Diaz", status: "interviewing" }];
+    render();
+  } else if (!window.supabase) { say("Could not load. Check your connection and reload."); }
+  else {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "tdm-manager-portal" } });
+    sb.auth.getSession().then(function (s) {
+      if (!s.data || !s.data.session) return say("Sign in on the manager page (manager.html) first, then come back.");
+      return sb.from("profiles").select("org_id").eq("id", s.data.session.user.id).single().then(function (p) { orgId = p.data && p.data.org_id; return loadAll(); });
+    });
+  }
+</script>
+</body>
+</html>
