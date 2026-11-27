@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Supply cost · Two Hour Maids</title>
+<!-- D14 / M070 (Jack 2026-11-26: manager web page, alert on this page only, nothing texted; web + desktop, not the phone app).
+     Supply cost per clean over the last 28 days, with an alert above $6 a clean. Read-only. Same counting as
+     src/lib/supplyCostPerClean.ts: supply orders approved/ordered/received + staff expense reports in 'supplies' approved/reimbursed,
+     over jobs completed in the window. The summarize() block below is a copy of summarizeSupplyCost/supplyCostLine; jest
+     (supplyCostPage.test.ts) checks the two agree. Uses the manager page's sign-in (same saved session). ?demo=1 shows sample data. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #10151E; margin: 0; background: #f5f7fa; }
+  main { max-width: 760px; margin: 0 auto; padding: 20px 16px; }
+  h1 { font-size: 22px; margin: 0 0 4px; } .sub { color: #5E6776; font-size: 14px; margin: 0 0 16px; }
+  .card { background: #fff; border: 1px solid #e3e7ee; border-radius: 12px; padding: 18px; margin-bottom: 12px; }
+  .big { font-size: 40px; font-weight: 700; letter-spacing: -.5px; } .unit { color: #5E6776; font-size: 14px; }
+  .line { margin-top: 10px; font-size: 15px; line-height: 1.4; }
+  .alert { border-color: #E5484D; background: #FDECEC; } .alert .line { color: #9B1C1F; font-weight: 600; }
+  .ok .line { color: #157347; }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .grid .card { margin: 0; } .k { color: #5E6776; font-size: 13px; } .v { font-size: 20px; font-weight: 600; margin-top: 4px; }
+  @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
+  .note { color: #5E6776; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Supply cost per clean</h1>
+  <p class="sub">Last 28 days. The line is $6.00 a clean. This page only: nothing is texted or pushed.</p>
+  <div class="card" id="head"><div class="note">Loading…</div></div>
+  <div class="grid">
+    <div class="card"><div class="k">Supply orders</div><div class="v" id="orders">–</div></div>
+    <div class="card"><div class="k">Expense reports (supplies)</div><div class="v" id="expenses">–</div></div>
+    <div class="card"><div class="k">Completed cleans</div><div class="v" id="cleans">–</div></div>
+  </div>
+  <p class="note">Counts supply orders that were approved, ordered or received, plus supply expense reports a manager approved or reimbursed.</p>
+</main>
+<script>
+  // ---- summarize: keep in step with src/lib/supplyCostPerClean.ts (jest checks) ----
+  var LIMIT_CENTS = 600, WINDOW_DAYS = 28;
+  function dollars(c) { return "$" + (c / 100).toFixed(2); }
+  function summarize(rows, cleans) {
+    function sum(s) { return rows.filter(function (r) { return r.source === s; }).reduce(function (n, r) { return n + Math.max(0, Math.round(r.cents || 0)); }, 0); }
+    var fromOrdersCents = sum("order"), fromExpensesCents = sum("expense"), spendCents = fromOrdersCents + fromExpensesCents;
+    var perCleanCents = cleans > 0 ? Math.round(spendCents / cleans) : null;
+    return { spendCents: spendCents, cleans: cleans, perCleanCents: perCleanCents, overLimit: perCleanCents != null && perCleanCents > LIMIT_CENTS, fromOrdersCents: fromOrdersCents, fromExpensesCents: fromExpensesCents };
+  }
+  function costLine(s) {
+    if (s.perCleanCents == null) return "No completed cleans in the last " + WINDOW_DAYS + " days, so no cost per clean yet (" + dollars(s.spendCents) + " spent).";
+    var base = dollars(s.perCleanCents) + " per clean: " + dollars(s.spendCents) + " of supplies over " + s.cleans + " cleans in the last " + WINDOW_DAYS + " days.";
+    return s.overLimit ? "Over " + dollars(LIMIT_CENTS) + " a clean. " + base + " Check the last orders and expense reports." : base;
+  }
+  // ---- end summarize ----
+
+  var SUPABASE_URL = "https://isbhlmihbibdnajvicrj.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzYmhsbWloYmliZG5hanZpY3JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MzU4NDMsImV4cCI6MjEwNTAxMTg0M30.VOKtXSF8z8A9_NiaI6zq1w_qXcrgHdW4DjiT-C4haK0";
+  function $(id) { return document.getElementById(id); }
+  function show(s) {
+    var head = $("head");
+    head.className = "card " + (s.perCleanCents == null ? "" : s.overLimit ? "alert" : "ok");
+    head.innerHTML = (s.perCleanCents == null ? "" : '<div class="big">' + dollars(s.perCleanCents) + '</div><div class="unit">per clean · last 28 days</div>') +
+      '<div class="line"></div>';
+    head.querySelector(".line").textContent = costLine(s) + (s.perCleanCents != null && !s.overLimit ? " Under the $6 line." : "");
+    $("orders").textContent = dollars(s.fromOrdersCents);
+    $("expenses").textContent = dollars(s.fromExpensesCents);
+    $("cleans").textContent = String(s.cleans);
+  }
+  function fail(html) { $("head").className = "card"; $("head").innerHTML = '<div class="note">' + html + "</div>"; }
+  var q = new URLSearchParams(location.search);
+  if (q.get("demo") === "1") {
+    show(summarize([{ cents: 38060, source: "order" }, { cents: 13000, source: "expense" }], 69));
+  } else if (!window.supabase) { fail("Could not load. Check your connection and reload."); }
+  else {
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "tdm-manager-portal" } });
+    var since = new Date(Date.now() - WINDOW_DAYS * 86400000).toISOString();
+    sb.auth.getSession().then(function (s) {
+      if (!s.data || !s.data.session) return fail('Sign in on the <a href="manager.html">manager page</a> first, then come back.');
+      return Promise.all([
+        sb.from("supply_orders").select("total_cents, created_at").in("status", ["approved", "ordered", "received"]).gte("created_at", since),
+        sb.from("expense_reports").select("amount_cents, created_at").eq("category", "supplies").in("status", ["approved", "reimbursed"]).gte("created_at", since),
+        sb.from("jobs").select("id", { count: "exact", head: true }).eq("status", "completed").gte("completed_at", since),
+      ]).then(function (r) {
+        var err = r[0].error || r[1].error || r[2].error;
+        if (err) return fail("Could not load: " + String(err.message).replace(/[<>&]/g, ""));
+        var rows = (r[0].data || []).map(function (o) { return { cents: o.total_cents, source: "order" }; })
+          .concat((r[1].data || []).map(function (e) { return { cents: e.amount_cents || 0, source: "expense" }; }));
+        show(summarize(rows, r[2].count || 0));
+      });
+    });
+  }
+</script>
+</body>
+</html>
