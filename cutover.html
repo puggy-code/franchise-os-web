@@ -38,6 +38,7 @@
     return "<details><summary>Show " + rows.length + "</summary><table>" + rows.map(function (r) { return "<tr>" + (typeof r === "string" ? "<td>" + esc(r) + "</td>" : cols.map(function (c) { return "<td>" + esc(c[1] ? c[1](r[c[0]]) : r[c[0]]) + "</td>"; }).join("")) + "</tr>"; }).join("") + "</table></details>";
   }
   function render(r) {
+    var h = r.holds || {};
     var miss = r.missing_in_app || [], only = r.only_in_app || [], diff = r.time_differs || [], card = r.customers_no_card || [], txt = r.customers_not_textable || [];
     var items = [
       [miss.length === 0, "Every BookingKoala visit is in the app", miss.length + " of " + r.bk_upcoming + " upcoming BookingKoala visits are not in the app (same customer, same day).", list(miss, [["date"], ["name"], ["time", t]])],
@@ -46,11 +47,12 @@
       [card.length === 0, "Every booked customer has a saved card", card.length + " customers with an upcoming visit have no card on file, so the app could not charge them after the cutover.", list(card)],
       [txt.length === 0, "Every booked customer can get reminder texts", txt.length + " have no phone or opted out of texts.", list(txt)],
       [!r.past_still_scheduled, "Past visits are closed out", r.past_still_scheduled + " past visits still say scheduled. They must be closed without running charges, points or gift codes.", ""],
-      [r.clock_ins_14d > 0, "Crews clock in on the app", r.clock_ins_14d + " clock-ins in the last 14 days.", ""]
+      [r.clock_ins_14d > 0, "Crews clock in on the app", r.clock_ins_14d + " clock-ins in the last 14 days.", ""],
+      // Jack 2026-11-26: the test phone (…9124) stays unsubscribed from the Twilio number until the app is live; then he turns it back on.
+      [!(h.test_mode || h.charges_frozen), "Jack texts START from 9124 to the Twilio number", "At go-live: text START from 9124 to the Twilio number, then confirm one test text arrives. Until then test sends show only on these pages and in the logs.", ""]
     ];
     var left = items.filter(function (i) { return !i[0]; }).length;
     document.getElementById("sub").textContent = (left ? left + " things left" : "Everything is ready") + " before the app takes over. BookingKoala export loaded " + (r.export_date ? String(r.export_date).slice(0, 10) : "never") + ". This page only reads.";
-    var h = r.holds || {};
     document.getElementById("out").innerHTML =
       "<div class=\"hold\">" + (h.test_mode || h.charges_frozen ? "Cutover hold is ON: the app charges no one and every customer message goes to your test phone (" + (r.redirected_14d || 0) + " redirected in 14 days)." : "Cutover hold is OFF: the app is live with customers.") + "</div>" +
       "<ul class=\"check\">" + items.map(function (i, n) { return "<li class=\"" + (i[0] ? "done" : "todo") + "\"><div class=\"head\"><span class=\"mark\">" + (i[0] ? "✓" : n + 1) + "</span><b>" + esc(i[1]) + "</b></div><div class=\"how\">" + esc(i[2]) + "</div>" + i[3] + "</li>"; }).join("") + "</ul>";
