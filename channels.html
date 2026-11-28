@@ -10,6 +10,7 @@
   shared by Franchise OS, the Two Hour Maids app, Puggy OS (the Mac) and the websites (migrations 1560-1562).
     Marketing / Hiring   every channel by category: an on/off switch, a level slider (0-100) and a weekly budget dial, with its KPIs
     Outreach             the lead sequence, email days and holds, pilot + launch, this week's plan, the outreach switches (from the Mac)
+    Emily texts          (owner only, 2026-11-25) Emily's text sequences: reorder, edit words/timing/reply rules, versions. Sends OFF.
     Emily                the phone + text agent: line, what she answers, her auto-replies, last 7 days. "Calls people: Off" is shown,
                          never a control (Jack 2026-11-19: Emily answers, she does not call people)
     Ideas                ideas, workflows, agents, specs and plans from the last 7 weeks, by category (the Mac syncs them nightly)
@@ -276,8 +277,10 @@
       <button class="tab" data-tab="hiring" role="tab">Hiring<span class="n" id="n-hiring"></span></button>
       <button class="tab" data-tab="outreach" role="tab">Outreach</button>
       <button class="tab" data-tab="emily" role="tab">Emily</button>
+      <button class="tab" data-tab="emilytexts" role="tab" id="tab-emilytexts" hidden>Emily texts</button>
       <button class="tab" data-tab="ideas" role="tab">Ideas &amp; workflows<span class="n" id="n-ideas"></span></button>
       <button class="tab" data-tab="hub" role="tab">Review Hub<span class="n" id="n-hub"></span></button>
+      <button class="tab" data-tab="backoffice" role="tab" id="tab-backoffice" hidden>Back office</button>
       <button class="tab" data-tab="log" role="tab">Log</button>
     </div>
     <section data-pane="overview"></section>
@@ -285,14 +288,19 @@
     <section data-pane="hiring" hidden></section>
     <section data-pane="outreach" class="stackp" hidden></section>
     <section data-pane="emily" class="stackp" hidden></section>
+    <section data-pane="emilytexts" hidden></section>
     <section data-pane="ideas" hidden></section>
     <section data-pane="hub" class="stackp" hidden></section>
+    <section data-pane="backoffice" hidden></section>
     <section data-pane="log" hidden></section>
   </main>
 </div>
 
 <!-- Rules check before a channel is turned on (Jack 2026-11-22 #1075). Same list as src/lib/channelRules.ts; a test keeps them equal. -->
 <script id="channel-rules" type="application/json">{"kinds":{"lead_texts":"texts","winback_texts":"texts","speed_to_lead":"texts","hiring_blast":"texts","recurring_upsell":"texts","callie_ai":"texts","cold_calling":"calls","cold_email":"email","winback_email":"email","newsletter":"email","meta_ads":"ads","google_ads":"ads","bing_ads":"ads","google_lsa":"ads","nextdoor_ads":"ads","pinterest_ads":"ads","reddit_ads":"ads","tiktok_ads":"ads","youtube_ads":"ads","linkedin_ads":"ads","streaming_tv":"ads","indeed":"hiring_ads","ziprecruiter":"hiring_ads","glassdoor":"hiring_ads","snagajob":"hiring_ads","craigslist_jobs":"hiring_ads","facebook_jobs":"hiring_ads","google_jobs":"hiring_ads","nextdoor_jobs":"hiring_ads","instagram_hiring":"hiring_ads","postcards":"mail","letters":"mail","facility_postcards":"mail","clover_mail":"mail","door_hangers":"mail"},"rules":{"texts":["Only numbers that agreed to texts from us (consent on file).","Every text can be stopped: STOP and HELP work, and STOP is honored right away.","The sending number is registered for business texting (10DLC).","Quiet hours: nothing before 8 AM or after 9 PM their time.","The do-not-contact list is checked first.","Texts go through the outbox and your Approve inbox."],"calls":["Numbers are checked against the national Do Not Call list and our do-not-contact list.","Calls only between 8 AM and 9 PM their time.","Caller ID shows our real number.","No recorded or AI voice calls to cell phones without written consent.","If a call is recorded, the caller says so at the start.","Only the approved call script."],"email":["A real From name and an honest subject line.","Our mailing address (535 Sandhill Drive) in every email.","A working unsubscribe link, honored within 10 business days.","SPF, DKIM and DMARC are set on the sending domain.","The do-not-contact list is checked first."],"ads":["Only approved words and pictures (no \"two maids\"; real photos).","Claims are true: insured, prices pre-tax, no promises we cannot keep.","The weekly budget cap is set before it runs.","The landing page and phone number are the live ones."],"hiring_ads":["The job ad is filed as an employment ad (no age, gender or ZIP-only targeting).","Pay range is the real one on the job post.","Equal opportunity employer line is in the ad.","W-2 job, 18+, no fee to apply."],"mail":["Our return address (535 Sandhill Drive) is on it.","Postage or the permit mark is right for the mail type.","Only approved words and pictures (no \"two maids\").","The reply phone line and QR code are the live ones."]},"labels":{"texts":"Texts","calls":"Calls","email":"Email","ads":"Ads","hiring_ads":"Job ads","mail":"Mail"}}</script>
+<!-- Emily texts (Jack 2026-11-25): the owner's editor for Emily's text sequences. Owner only; sends stay OFF (emily_sequence_sends_on = 0). -->
+<script src="emily-texts.js"></script>
+<script src="back-office-tab.js"></script>
 <script>
   // Rules check (Jack 2026-11-22 #1075): before a texting, calling, email, ad or mail channel goes ON, show its legal and opt-out checks.
   var CHANNEL_RULES = (function () { try { return JSON.parse(document.getElementById("channel-rules").textContent); } catch (e) { return { kinds: {}, rules: {}, labels: {} }; } })();
@@ -342,9 +350,12 @@
           .then(function (r) { if (r.error) throw new Error("Phone number or PIN is incorrect."); });
       },
       signOut: function () { return sb.auth.signOut(); },
+      sb: sb, // Emily texts (emily-texts.js) reads its own tables through the same signed-in client
       me: function (uid) { return sb.from("profiles").select("id, full_name, role").eq("id", uid).maybeSingle().then(ok); },
       channels: function () { return sb.from("channel_control").select("*").order("sort").then(ok); },
-      kpis: function () { return sb.from("channel_kpis").select("*").then(ok); },
+      // Through channel_kpis_mine() (1885, live; M264): the channel_kpis view sums job money, which no signed-in user may select since 0310,
+      // so reading the view directly failed for everyone. The function returns this franchise's rows to the owner and managers only.
+      kpis: function () { return sb.rpc("channel_kpis_mine").then(ok); },
       weeks: function () { return sb.from("channel_kpi_weeks").select("key, week, leads, spend_cents, bookings, revenue_cents, applicants, calls").order("week").then(ok); },
       items: function () { return all("channel_items", "ext_id, area, category, channel_key, kind, title, detail, source, link, made_on, status, rank", "ext_id"); },
       // Emily's after-call form (emily_calls, reason 'job'): only the date, language and area are read, for counts. No names or numbers.
@@ -447,6 +458,8 @@
       return api.me(s.user.id).then(function (me) {
         if (!me || (me.role !== "hq_admin" && me.role !== "manager")) { $("signin-wrap").hidden = false; fail("This page is for the owner and managers."); return api.signOut(); }
         S.me = me; S.canEdit = me.role === "hq_admin";
+        $("tab-backoffice").hidden = !window.BackOfficeTab; // owner + managers; hidden until back-office-tab.js is published next to this page (Jack 2026-11-26)
+        $("tab-emilytexts").hidden = !S.canEdit || !window.EmilyTexts; // owner only; hidden until emily-texts.js is published next to this page
         $("signin-wrap").hidden = true; $("app").hidden = false; $("demo-note").hidden = !DEMO;
         $("who").textContent = (me.full_name || "") + (S.canEdit ? "" : " · view only");
         return loadData().then(function () {
@@ -547,8 +560,10 @@
     if (S.tab === "overview") renderOverview(pane);
     else if (S.tab === "marketing" || S.tab === "hiring") renderChannels(pane, S.tab);
     else if (S.tab === "outreach" || S.tab === "emily") renderMac(pane, S.tab);
+    else if (S.tab === "emilytexts" && window.EmilyTexts) window.EmilyTexts.render(pane, { sb: api.sb, demo: DEMO, canEdit: S.canEdit });
     else if (S.tab === "ideas") renderIdeas(pane);
     else if (S.tab === "hub") renderHub(pane);
+    else if (S.tab === "backoffice" && window.BackOfficeTab) window.BackOfficeTab.render(pane, { sb: api.sb, demo: DEMO, canEdit: S.canEdit });
     else if (S.tab === "log") renderLog(pane);
   }
 
