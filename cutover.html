@@ -38,7 +38,8 @@
     return "<details><summary>Show " + rows.length + "</summary><table>" + rows.map(function (r) { return "<tr>" + (typeof r === "string" ? "<td>" + esc(r) + "</td>" : cols.map(function (c) { return "<td>" + esc(c[1] ? c[1](r[c[0]]) : r[c[0]]) + "</td>"; }).join("")) + "</tr>"; }).join("") + "</table></details>";
   }
   function render(r) {
-    var h = r.holds || {};
+    var h = r.holds || {}, cad = r.cadence || null;
+    var cadMissing = cad ? (cad.issues || []).reduce(function (a, x) { return a + (x.missing || []).length; }, 0) : 0, cadExtra = cad ? (cad.issues || []).reduce(function (a, x) { return a + (x.extra || []).length; }, 0) : 0;
     var miss = r.missing_in_app || [], only = r.only_in_app || [], diff = r.time_differs || [], card = r.customers_no_card || [], txt = r.customers_not_textable || [];
     var items = [
       [miss.length === 0, "Every BookingKoala visit is in the app", miss.length + " of " + r.bk_upcoming + " upcoming BookingKoala visits are not in the app (same customer, same day).", list(miss, [["date"], ["name"], ["time", t]])],
@@ -49,6 +50,7 @@
       [!r.past_still_scheduled, "Past visits are closed out", r.past_still_scheduled + " past visits still say scheduled. They must be closed without running charges, points or gift codes.", ""],
       [r.clock_ins_14d > 0, "Crews clock in on the app", r.clock_ins_14d + " clock-ins in the last 14 days.", ""],
       // Jack 2026-11-26: the test phone (…9124) stays unsubscribed from the Twilio number until the app is live; then he turns it back on.
+      [cad && !(cad.issues || []).length, "Recurring visits follow BookingKoala's rhythm", cad ? (cad.issues || []).length + " of " + cad.regulars_checked + " regulars have a different rhythm in the app: " + cadMissing + " visits BookingKoala's rhythm expects are missing, " + cadExtra + " app visits are off it. Fix each on the app's schedule." : "Rhythm check not available yet.", cad ? list((cad.issues || []).map(function (x) { return { name: x.name, freq: x.bk_frequency, missing: (x.missing || []).join(", ") || "–", extra: (x.extra || []).join(", ") || "–" }; }), [["name"], ["freq"], ["missing", function (v) { return "missing: " + v; }], ["extra", function (v) { return "extra: " + v; }]]) : ""],
       [!(h.test_mode || h.charges_frozen), "Jack texts START from 9124 to the Twilio number", "At go-live: text START from 9124 to the Twilio number, then confirm one test text arrives. Until then test sends show only on these pages and in the logs.", ""]
     ];
     var left = items.filter(function (i) { return !i[0]; }).length;
@@ -61,13 +63,14 @@
   if (q.get("demo") === "1") {
     render({ export_date: "2026-11-26", holds: { test_mode: true, charges_frozen: true }, bk_upcoming: 54, app_upcoming: 176, redirected_14d: 226,
       missing_in_app: [{ date: "2026-12-02", name: "Sample Customer", time: "09:00:00" }], only_in_app: [{ date: "2026-12-04", name: "Another Customer", time: "11:40:00" }], time_differs: [],
-      customers_no_card: ["Sample Customer"], customers_not_textable: [], past_still_scheduled: 54, clock_ins_14d: 0 });
+      customers_no_card: ["Sample Customer"], customers_not_textable: [], past_still_scheduled: 54, clock_ins_14d: 0,
+      cadence: { regulars_checked: 29, ok: 28, issues: [{ name: "Sample Customer", bk_frequency: "Every Other Week", missing: ["2026-12-17"], extra: ["2026-12-31"] }] } });
   } else if (!window.supabase) { fail("Could not load. Check your connection and reload."); }
   else {
     var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "tdm-manager-portal" } });
     sb.auth.getSession().then(function (s) {
       if (!s.data || !s.data.session) return fail('Sign in on the <a href="manager.html">manager page</a> first, then come back.');
-      return sb.rpc("cutover_readiness").then(function (x) { if (x.error) return fail(/managers only/.test(x.error.message) ? "Owners and managers only." : "Could not load: " + esc(x.error.message)); render(x.data || {}); });
+      return Promise.all([sb.rpc("cutover_readiness"), sb.rpc("cutover_cadence_check")]).then(function (res) { var x = res[0]; if (x.error) return fail(/managers only/.test(x.error.message) ? "Owners and managers only." : "Could not load: " + esc(x.error.message)); var d = x.data || {}; if (!res[1].error) d.cadence = res[1].data; render(d); });
     });
   }
 </script>
