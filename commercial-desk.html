@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Commercial and PM desk · Two Hour Maids</title>
+<!-- Jack's 46, set 12 (2026-11-26: web + desktop, not the phone app). Managers. Read only.
+     Renewals: commercial_renewals_due() (2350), active contracts whose yearly review (12-month price lock, 0553) is in the next 90 days.
+     An email draft goes to the Approve inbox 45 days ahead only when the commercial_renewal_drafts switch is on (OFF now).
+     Turnover price check: pm_turnover_price_check() (2350), property-manager visits priced under the floor (the account's turnover minimum,
+     else price_book pm_turnover_min). Statements and printable invoices are in the PM portal. Access codes: owner-only page access-codes.html.
+     Uses the manager page's sign-in (same saved session). ?demo=1 shows sample data. -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #10151E; margin: 0; background: #f5f7fa; }
+  main { max-width: 900px; margin: 0 auto; padding: 20px 16px; }
+  h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 0 0 10px; } .sub { color: #5E6776; font-size: 14px; margin: 0 0 16px; }
+  .card { background: #fff; border: 1px solid #e3e7ee; border-radius: 12px; padding: 18px; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; } th, td { text-align: left; padding: 7px 6px; border-bottom: 1px solid #eef1f5; }
+  th { color: #5E6776; font-weight: 600; font-size: 12px; } td.n { text-align: right; font-variant-numeric: tabular-nums; } .note { color: #5E6776; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Commercial and PM desk</h1>
+  <p class="sub">Yearly reviews coming up and turnovers priced under the floor. This page only: nothing is sent.</p>
+  <div class="card"><h2>Yearly reviews, next 90 days</h2><div id="ren"><div class="note">Loading…</div></div>
+    <p class="note">45 days ahead an email draft goes to the Approve inbox (switch off until Jack turns it on).</p></div>
+  <div class="card"><h2>Turnovers under the price floor</h2><div id="turn"><div class="note">Loading…</div></div>
+    <p class="note">60 days back to 30 days ahead. The floor is the account's turnover minimum, else the price list's property-manager minimum.</p></div>
+  <div class="card"><p class="note">Statements and printable invoices: PM portal. Door and alarm codes: <a href="access-codes.html">access codes</a> (owner only).</p></div>
+</main>
+<script>
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlzYmhsbWloYmliZG5hanZpY3JqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0MzU4NDMsImV4cCI6MjEwNTAxMTg0M30.VOKtXSF8z8A9_NiaI6zq1w_qXcrgHdW4DjiT-C4haK0";
+  var SUPABASE_URL = "https://isbhlmihbibdnajvicrj.supabase.co";
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function money(c) { return "$" + (Math.round(c || 0) / 100).toFixed(2); }
+  function renewals(rows) {
+    $("ren").innerHTML = rows.length ? "<table><tr><th>Review</th><th>Account</th><th>Term</th><th>Billing</th><th class=n>Monthly</th></tr>" + rows.map(function (r) {
+      return "<tr><td>" + esc(r.review_date) + " <span class=note>(" + esc(r.days_left) + " days)</span></td><td>" + esc(r.account_name) + "</td><td>" + esc(r.term === "12_month" ? "12 months" : "Month to month") +
+        "</td><td>" + esc(r.billing_contact_name || r.billing_email || "no billing contact") + "</td><td class=n>" + money(r.monthly_cents) + "</td></tr>";
+    }).join("") + "</table>" : '<div class="note">No yearly reviews in the next 90 days.</div>';
+  }
+  function turnovers(rows) {
+    $("turn").innerHTML = rows.length ? "<table><tr><th>Date</th><th>Account</th><th>Service</th><th>Status</th><th class=n>Price</th><th class=n>Floor</th><th class=n>Short</th></tr>" + rows.map(function (r) {
+      return "<tr><td>" + esc(r.scheduled_date) + "</td><td>" + esc(r.account_name) + "</td><td>" + esc(r.service_label) + "</td><td>" + esc(r.status) +
+        "</td><td class=n>" + money(r.price_cents) + "</td><td class=n>" + money(r.floor_cents) + "</td><td class=n>" + money(r.short_cents) + "</td></tr>";
+    }).join("") + "</table>" : '<div class="note">Every turnover is at or above its floor.</div>';
+  }
+  function fail(msg) { $("ren").innerHTML = '<div class="note">' + msg + "</div>"; $("turn").innerHTML = ""; }
+  if (new URLSearchParams(location.search).get("demo") === "1") {
+    renewals([{ review_date: "2027-01-04", days_left: 39, account_name: "Maple Court Apartments", term: "month_to_month", billing_contact_name: "Dana L.", monthly_cents: 85000 }]);
+    turnovers([{ scheduled_date: "2026-12-02", account_name: "Maple Court Apartments", service_label: "Turnover", status: "scheduled", price_cents: 19000, floor_cents: 21354, short_cents: 2354 }]);
+  } else if (!window.supabase) { fail("Could not load. Check your connection and reload."); }
+  else {
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "tdm-manager-portal" } });
+    function bothSessions() { return sb.auth.getSession().then(function (s) { if (s.data && s.data.session) return s; var cc = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: "tdm-channel-control" } }); return cc.auth.getSession().then(function (t) { if (t.data && t.data.session) sb = cc; return t; }); }); } // the manager page or Channel Control sign-in
+    bothSessions().then(function (s) {
+      if (!s.data || !s.data.session) return fail('Sign in on the <a href="manager.html">manager page</a> or <a href="channels.html">Channel Control</a> first, then come back.');
+      return Promise.all([sb.rpc("commercial_renewals_due", { p_days: 90 }), sb.rpc("pm_turnover_price_check", { p_back: 60, p_ahead: 30 })]).then(function (r) {
+        if (r[0].error) $("ren").innerHTML = '<div class="note">Could not load: ' + esc(r[0].error.message) + "</div>"; else renewals(r[0].data || []);
+        if (r[1].error) $("turn").innerHTML = '<div class="note">Could not load: ' + esc(r[1].error.message) + "</div>"; else turnovers(r[1].data || []);
+      });
+    });
+  }
+</script>
+</body>
+</html>
